@@ -41,7 +41,7 @@ steps: {
   "panel.oct": { t: "OCT− と OCT+", d: "鍵盤のオクターブを上下します（両方同時で 0 に戻ります）。アクションのページやダイアログでは NO / YES になり、[OCT+] で決定、[OCT−] でキャンセルまたは戻ります。" },
 
   "sound.home": { t: "HOME：生態系", d: "[HOME] に触れてください。各トラックは顔を持つ生き物です。形はノブから生まれ、自分の音でふくらんで熱を帯び、音が鳴るたびに目を閉じます。選んでいるトラックがいちばん大きく描かれます。" },
-  "sound.track": { t: "トラックを選ぶ", d: "[ALGORITHM] を回します。起動時は T1 DRUM-X（ドラム）、T2 VOICE（歌います）、T3 ANIMAL（鳥）、T4 LOFI。T5 ANALOG と T6 FM6 は TRACKS 6 のときに現れます。" },
+  "sound.track": { t: "トラックを選ぶ", d: "[ALGORITHM] を回します。起動時は T1 DRUM-X（ドラム）、T2 VOICE（歌います）、T3 ANIMAL（鳥）、T4 MATH。T5 ANALOG と T6 FM6 は TRACKS 6 のときに現れます。" },
   "sound.browse": { t: "音色を変える", d: "[PRESETS] を回すと、すべてのエンジンのファクトリー音色、続いてあなたの音色を順にたどります。鳴っている音を途切れさせずに音色が変わります。" },
   "sound.play": { t: "弾く", d: "鍵盤を弾いてみましょう。たとえば [E4]。[OCT−] と [OCT+] でオクターブを下げたり上げたりできます。" },
   "sound.shape": { t: "音を形づくる", d: "HOME では [KNOB 1]〜[KNOB 4] がエンジンのいちばん便利な 4 つのコントロールです（例：CUT、RES、ATK、REL）。[KNOB 2] を回して、生き物が変わるのを見てください。" },
@@ -64,7 +64,7 @@ steps: {
   "gen.parts": { t: "パートを調整する", d: "[SELECT] を右に 1 クリック回すと GEN 2 です。ノブで DRUMS や ARP を下げて OCT+ に触れると、そこだけ変えた同じ曲になります。" },
   "gen.undo": { t: "元に戻す", d: "[GLO] を押さえて [G4] に触れると UNDO で、直前の大きな変更の前に戻ります（もう一度で REDO）。REC だけを長押しして、ほかに何も触れずに離しても同じです。" },
 
-  "edit.engines": { t: "12 のエンジン", d: "どのトラックでも、どのエンジンでも使えます。DRUM-X、VOICE、ANIMAL、LOFI、ANALOG、FM6、PHASE、WHEEL、NOISE、STRING、ADD、そして INPUT（USB から入ってくる音）。すべてシンセシスで、サンプルは使いません。[EDIT] に触れて、トラックのエンジンを編集しましょう。" },
+  "edit.engines": { t: "12 のエンジン", d: "どのトラックでも、どのエンジンでも使えます。DRUM-X、ANALOG、PHASE、FM6、VOICE、ANIMAL、MATH、WHEEL、NOISE、STRING、ADD、そして EXT（USB から入ってくる音）。すべてシンセシスで、サンプルは使いません。[EDIT] に触れて、トラックのエンジンを編集しましょう。" },
   "edit.pages": { t: "EDIT のページ", d: "[SELECT] を回すと、EDIT 1 と EDIT 2（エンジンのパラメーター）、続いて FILTER と VOICE のある TONE、そして各エンジン固有のページ。どのエンジンも、自分の生き物とスコープを描きます。" },
   "edit.focus": { t: "FOCUS", d: "FOCUS まで [EDIT] を軽く押します。パラメーターを 1 つ大きく表示します。KNOB 1 で選び、KNOB 2 で値を設定、KNOB 3 でモジュレーション・ソースを割り当て、KNOB 4 でその量を決めます。" },
   "edit.fm6": { t: "FM6", d: "32 のアルゴリズムを持つ 6 オペレーター FM で、DX7 のバンクも使えます（Web エディターから送ります）。OPERATOR のページで各オペレーターを編集し、KNOB 1 でオペレーターを選びます。" },
@@ -113,12 +113,12 @@ steps: {
   "song.arrange": { t: "ARRANGE：つなげる", d: "[SELECT] を右に 2 クリックで ARRANGE、曲の行です。OCT+ で行を追加し、KNOB 2 でそのセクション、KNOB 3 で小節数を決めます。A の行と B の行を作って PLAY すると、曲が行の順に再生されます。" },
   "song.timeline": { t: "TIMELINE", d: "[SAVE] で TIMELINE が開きます。曲を左から右へ、トラックごとのレーンで表示します。各行は別のセクションからトラックを持ってきたり（FROM）、そこだけ変化をつけたりできます（VAR：MUTE、FILL、HALF、REV、OCT…）。" },
   "song.live": { t: "ライブでセクション", d: "[SAVE] を押さえて、[F3] G3 A3 B3 でセクション A〜D を再生（次の小節から）、C4〜F4 で A〜D に保存、D5 で LOOP / SONG を切り替えます。SAVE + OCT+ で、再生中のセクションに保存します。" },
-  "song.projects": { t: "プロジェクトと自動保存", d: "SAVE › PROJECT › PROJECTS で 8 つのプロジェクトから 1 つを選びます。設定は自動で保存され、音楽はあなたが指示したときにセクションへ保存されます。Web エディターですべてをバックアップしておきましょう。" },
+  "song.projects": { t: "プロジェクトと自動保存", d: "SAVE › PROJECT › PROJECTS で 6 つのプロジェクトから 1 つを選びます。設定は自動で保存され、音楽はあなたが指示したときにセクションへ保存されます。Web エディターですべてをバックアップしておきましょう。" },
 
   "connect.menu": { t: "MENU", d: "[HOME] を長押しで MENU。DISPLAY（スキン AIR、COLORS、BOTTOM、HUD と配色）、CONTROL（HOLD、MIDI OUT、MIDI MAP、LEARN）、AUDIO（クリック、カウントイン、TRACKS、LOAD）、SYSTEM（USB、BLUETOOTH、キャリブレーション、ABOUT）。" },
   "connect.tracks": { t: "4 トラックか 6 トラックか", d: "SYSTEM まで [GLO] を軽く押します。KNOB 1 TRACKS で 4（初期値、軽め）か 6 トラックを選び、LOAD でプロセッサーをどれだけ働かせるかを決めます。" },
   "connect.usb": { t: "USB：オーディオと MIDI", d: "MENU › SYSTEM › USB（または GLO › SYSTEM 2）：STEREO、STEMS（各トラックを別チャンネルで DAW へ）、IN+OUT（双方向のオーディオ）、HOST（USB MIDI キーボードを直接接続）。MIDI は USB、TRS、Bluetooth に対応。" },
-  "connect.input": { t: "INPUT エンジン", d: "INPUT は USB から入ってくる音をトラックに載せます（IN 1、IN 2、1+2 またはステレオ）。エフェクトもシーケンスも使えます。MOD の FOLLOW ソースを使うと、その音でほかのものをモジュレーションできます。" },
+  "connect.input": { t: "EXT エンジン", d: "EXT は USB から入ってくる音をトラックに載せます（IN 1、IN 2、1+2 またはステレオ）。エフェクトもシーケンスも使えます。MOD の FOLLOW ソースを使うと、その音でほかのものをモジュレーションできます。" },
   "connect.bt": { t: "Bluetooth MIDI と PROX", d: "MENU › SYSTEM › BLUETOOTH を ON（または GLO › SYSTEM 2）：Bluetooth MIDI アプリから接続します（JIANT FM-1 と表示されます）。PROX はスマートフォンの近さによるモジュレーションソースです。" },
   "connect.editor": { t: "Web エディター", d: "Web エディター（Chrome または Edge）は、FM-1 が鳴り続けたまま音色と設定をパソコンの画面に表示し、DX7 のバンクを FM6 に送り、すべてのプロジェクトをワンクリックでバックアップします。" },
 

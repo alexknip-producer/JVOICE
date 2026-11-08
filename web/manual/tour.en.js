@@ -41,7 +41,7 @@ steps: {
   "panel.oct": { t: "OCT− and OCT+", d: "They shift the keyboard's octave (both together: back to 0). On action pages and in dialogs they are NO / YES: [OCT+] confirms, [OCT−] cancels or goes back." },
 
   "sound.home": { t: "HOME: the ecosystem", d: "Touch [HOME]. Each track is a creature with a face: its shape comes from its knobs, it swells and heats up with its own sound and shuts its eyes on every hit. The selected track is the biggest." },
-  "sound.track": { t: "Pick a track", d: "Turn [ALGORITHM]. At power-on: T1 DRUM-X (drums), T2 VOICE (it sings), T3 ANIMAL (a bird), T4 LOFI. T5 ANALOG and T6 FM6 appear with TRACKS 6." },
+  "sound.track": { t: "Pick a track", d: "Turn [ALGORITHM]. At power-on: T1 DRUM-X (drums), T2 VOICE (it sings), T3 ANIMAL (a bird), T4 MATH. T5 ANALOG and T6 FM6 appear with TRACKS 6." },
   "sound.browse": { t: "Change the sound", d: "Turn [PRESETS]: it goes through every engine's factory sounds, then yours. The sound changes without cutting what is playing." },
   "sound.play": { t: "Play", d: "Play the keys, for example [E4]. [OCT−] and [OCT+] shift the octave down or up." },
   "sound.shape": { t: "Shape it", d: "On HOME, [KNOB 1] to [KNOB 4] are the engine's four most useful controls (e.g. CUT, RES, ATK, REL). Turn [KNOB 2] and watch the creature change." },
@@ -64,7 +64,7 @@ steps: {
   "gen.parts": { t: "Adjust the parts", d: "Turn [SELECT] one detent right: GEN 2. Lower DRUMS or ARP with the knobs and touch OCT+: the same piece with that changed." },
   "gen.undo": { t: "Undo", d: "Hold [GLO] and touch [G4]: UNDO, back to what was there before the last big change (again: redo). Also: hold REC alone and let go without touching anything else." },
 
-  "edit.engines": { t: "Twelve engines", d: "Any track can use any engine: DRUM-X, VOICE, ANIMAL, LOFI, ANALOG, FM6, PHASE, WHEEL, NOISE, STRING, ADD and INPUT (the audio coming in over USB). Everything is synthesis: no samples. Touch [EDIT] to edit the track's." },
+  "edit.engines": { t: "Twelve engines", d: "Any track can use any engine: DRUM-X, ANALOG, PHASE, FM6, VOICE, ANIMAL, MATH, WHEEL, NOISE, STRING, ADD and EXT (the audio coming in over USB). Everything is synthesis: no samples. Touch [EDIT] to edit the track's." },
   "edit.pages": { t: "EDIT's pages", d: "Turn [SELECT]: EDIT 1 and EDIT 2 (the engine's parameters), then TONE with FILTER, VOICE and each engine's own pages. Every engine draws its creature and its scope." },
   "edit.focus": { t: "FOCUS", d: "Tap [EDIT] until FOCUS: one parameter, large. KNOB 1 picks it, KNOB 2 sets it, KNOB 3 gives it a modulation source and KNOB 4 how much." },
   "edit.fm6": { t: "FM6", d: "Six-operator FM with 32 algorithms and DX7 banks (sent from the web editor). Its OPERATOR pages edit each operator; KNOB 1 picks it." },
@@ -113,12 +113,12 @@ steps: {
   "song.arrange": { t: "ARRANGE: chaining", d: "[SELECT] two detents right: ARRANGE, the song's rows. OCT+ adds a row, KNOB 2 its section and KNOB 3 how many bars. One row for A, one for B, then PLAY: the song plays the rows in order." },
   "song.timeline": { t: "TIMELINE", d: "[SAVE] opens TIMELINE: the song left to right, a lane per track. Each row can take a track from another section (FROM) and vary it there only (VAR: MUTE, FILL, HALF, REV, OCT…)." },
   "song.live": { t: "Sections live", d: "Hold [SAVE]: [F3] G3 A3 B3 play section A–D (on the next bar), C4–F4 store into A–D, D5 toggles LOOP / SONG. SAVE + OCT+ stores into the section playing." },
-  "song.projects": { t: "Projects and autosave", d: "On SAVE › PROJECT › PROJECTS you pick one of 8 projects. Settings save themselves; the music is stored into a section when you ask. Back everything up with the web editor." },
+  "song.projects": { t: "Projects and autosave", d: "On SAVE › PROJECT › PROJECTS you pick one of 6 projects. Settings save themselves; the music is stored into a section when you ask. Back everything up with the web editor." },
 
   "connect.menu": { t: "The MENU", d: "Hold [HOME]: the MENU. DISPLAY (skins AIR, COLORS, BOTTOM, HUD and colours), CONTROL (HOLD, MIDI OUT, MIDI MAP and LEARN), AUDIO (click, count-in, TRACKS, LOAD) and SYSTEM (USB, BLUETOOTH, calibration, ABOUT)." },
   "connect.tracks": { t: "4 or 6 tracks", d: "Tap [GLO] until SYSTEM: KNOB 1 TRACKS picks 4 (the default, lighter) or 6 tracks, and LOAD how hard the processor works." },
   "connect.usb": { t: "USB: audio and MIDI", d: "MENU › SYSTEM › USB (or GLO › SYSTEM 2): STEREO, STEMS (each track on its own channel into your DAW), IN+OUT (audio both ways) or HOST (a USB-MIDI keyboard plugged straight in). MIDI over USB, TRS and Bluetooth." },
-  "connect.input": { t: "The INPUT engine", d: "INPUT puts the audio coming in over USB on a track (IN 1, IN 2, 1+2 or stereo), with its effects and its sequence. MOD's FOLLOW source lets that audio modulate other things." },
+  "connect.input": { t: "The EXT engine", d: "EXT puts the audio coming in over USB on a track (IN 1, IN 2, 1+2 or stereo), with its effects and its sequence. MOD's FOLLOW source lets that audio modulate other things." },
   "connect.bt": { t: "Bluetooth MIDI and PROX", d: "MENU › SYSTEM › BLUETOOTH ON (or GLO › SYSTEM 2): connect a Bluetooth MIDI app (it shows as JIANT FM-1). PROX is a modulation source from how close the phone is." },
   "connect.editor": { t: "The web editor", d: "The web editor (Chrome or Edge) shows your sounds and settings on the computer screen while the FM-1 keeps playing, sends DX7 banks to FM6 and backs up every project with one click." },
 

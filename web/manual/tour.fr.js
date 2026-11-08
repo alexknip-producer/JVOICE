@@ -41,7 +41,7 @@ steps: {
   "panel.oct": { t: "OCT− et OCT+", d: "Ils décalent l'octave du clavier (les deux ensemble : retour à 0). Sur les pages d'action et dans les dialogues, c'est NON / OUI : [OCT+] confirme, [OCT−] annule ou revient en arrière." },
 
   "sound.home": { t: "HOME : l'écosystème", d: "Touche [HOME]. Chaque piste est une créature avec un visage : sa forme vient de ses potards, elle gonfle et chauffe avec son propre son et ferme les yeux à chaque coup. La piste sélectionnée est la plus grande." },
-  "sound.track": { t: "Choisis une piste", d: "Tourne [ALGORITHM]. À l'allumage : T1 DRUM-X (batterie), T2 VOICE (elle chante), T3 ANIMAL (un oiseau), T4 LOFI. T5 ANALOG et T6 FM6 apparaissent avec TRACKS 6." },
+  "sound.track": { t: "Choisis une piste", d: "Tourne [ALGORITHM]. À l'allumage : T1 DRUM-X (batterie), T2 VOICE (elle chante), T3 ANIMAL (un oiseau), T4 MATH. T5 ANALOG et T6 FM6 apparaissent avec TRACKS 6." },
   "sound.browse": { t: "Change le son", d: "Tourne [PRESETS] : il passe par les sons d'usine de chaque moteur, puis par les tiens. Le son change sans couper ce qui joue." },
   "sound.play": { t: "Joue", d: "Joue les touches, par exemple [E4]. [OCT−] et [OCT+] descendent ou montent l'octave." },
   "sound.shape": { t: "Façonne-le", d: "Sur HOME, [KNOB 1] à [KNOB 4] sont les quatre réglages les plus utiles du moteur (ex. CUT, RES, ATK, REL). Tourne [KNOB 2] et regarde la créature changer." },
@@ -64,7 +64,7 @@ steps: {
   "gen.parts": { t: "Ajuste les parties", d: "Tourne [SELECT] d'un cran vers la droite : GEN 2. Baisse DRUMS ou ARP avec les potards et touche OCT+ : le même morceau, avec ce changement." },
   "gen.undo": { t: "Annuler", d: "Maintiens [GLO] et touche [G4] : UNDO, retour à ce qu'il y avait avant le dernier grand changement (encore une fois : rétablir). Autre façon : maintiens REC seul et relâche sans rien toucher d'autre." },
 
-  "edit.engines": { t: "Douze moteurs", d: "Chaque piste peut utiliser n'importe quel moteur : DRUM-X, VOICE, ANIMAL, LOFI, ANALOG, FM6, PHASE, WHEEL, NOISE, STRING, ADD et INPUT (l'audio qui arrive par l'USB). Tout est synthèse : aucun sample. Touche [EDIT] pour éditer celui de la piste." },
+  "edit.engines": { t: "Douze moteurs", d: "Chaque piste peut utiliser n'importe quel moteur : DRUM-X, ANALOG, PHASE, FM6, VOICE, ANIMAL, MATH, WHEEL, NOISE, STRING, ADD et EXT (l'audio qui arrive par l'USB). Tout est synthèse : aucun sample. Touche [EDIT] pour éditer celui de la piste." },
   "edit.pages": { t: "Les pages d'EDIT", d: "Tourne [SELECT] : EDIT 1 et EDIT 2 (les paramètres du moteur), puis TONE avec FILTER, VOICE et les pages propres à chaque moteur. Chaque moteur dessine sa créature et son oscilloscope." },
   "edit.focus": { t: "FOCUS", d: "Appuie sur [EDIT] jusqu'à FOCUS : un seul paramètre, en grand. KNOB 1 le choisit, KNOB 2 le règle, KNOB 3 lui donne une source de modulation et KNOB 4 sa quantité." },
   "edit.fm6": { t: "FM6", d: "FM à six opérateurs avec 32 algorithmes et des banques DX7 (envoyées depuis l'éditeur web). Ses pages OPERATOR éditent chaque opérateur ; KNOB 1 le choisit." },
@@ -113,12 +113,12 @@ steps: {
   "song.arrange": { t: "ARRANGE : enchaîner", d: "[SELECT] de deux crans vers la droite : ARRANGE, les lignes du morceau. OCT+ ajoute une ligne, KNOB 2 choisit sa section et KNOB 3 le nombre de mesures. Une ligne pour A, une pour B, puis PLAY : le morceau joue les lignes dans l'ordre." },
   "song.timeline": { t: "TIMELINE", d: "[SAVE] ouvre TIMELINE : le morceau de gauche à droite, une ligne par piste. Chaque rangée peut prendre une piste d'une autre section (FROM) et la varier uniquement là (VAR : MUTE, FILL, HALF, REV, OCT…)." },
   "song.live": { t: "Les sections en live", d: "Maintiens [SAVE] : [F3] G3 A3 B3 lancent la section A–D (à la mesure suivante), C4–F4 enregistrent dans A–D, D5 bascule LOOP / SONG. SAVE + OCT+ enregistre dans la section en cours." },
-  "song.projects": { t: "Projets et sauvegarde auto", d: "Dans SAVE › PROJECT › PROJECTS, tu choisis un des 8 projets. Les réglages se sauvegardent tout seuls ; la musique est enregistrée dans une section quand tu le demandes. Sauvegarde tout avec l'éditeur web." },
+  "song.projects": { t: "Projets et sauvegarde auto", d: "Dans SAVE › PROJECT › PROJECTS, tu choisis un des 6 projets. Les réglages se sauvegardent tout seuls ; la musique est enregistrée dans une section quand tu le demandes. Sauvegarde tout avec l'éditeur web." },
 
   "connect.menu": { t: "Le MENU", d: "Maintiens [HOME] : le MENU. DISPLAY (skins AIR, COLORS, BOTTOM, HUD et couleurs), CONTROL (HOLD, MIDI OUT, MIDI MAP et LEARN), AUDIO (clic, décompte, TRACKS, LOAD) et SYSTEM (USB, BLUETOOTH, calibration, ABOUT)." },
   "connect.tracks": { t: "4 ou 6 pistes", d: "Appuie sur [GLO] jusqu'à SYSTEM : KNOB 1 TRACKS choisit 4 (par défaut, plus léger) ou 6 pistes, et LOAD à quel point le processeur travaille." },
   "connect.usb": { t: "USB : audio et MIDI", d: "MENU › SYSTEM › USB (ou GLO › SYSTEM 2) : STEREO, STEMS (chaque piste sur son propre canal vers ta DAW), IN+OUT (audio dans les deux sens) ou HOST (un clavier MIDI USB branché directement). MIDI par USB, TRS et Bluetooth." },
-  "connect.input": { t: "Le moteur INPUT", d: "INPUT met sur une piste l'audio qui arrive par l'USB (IN 1, IN 2, 1+2 ou stéréo), avec ses effets et sa séquence. La source FOLLOW de MOD permet à cet audio de moduler d'autres choses." },
+  "connect.input": { t: "Le moteur EXT", d: "EXT met sur une piste l'audio qui arrive par l'USB (IN 1, IN 2, 1+2 ou stéréo), avec ses effets et sa séquence. La source FOLLOW de MOD permet à cet audio de moduler d'autres choses." },
   "connect.bt": { t: "MIDI Bluetooth et PROX", d: "MENU › SYSTEM › BLUETOOTH sur ON (ou GLO › SYSTEM 2) : connecte une app MIDI Bluetooth (elle apparaît comme JIANT FM-1). PROX est une source de modulation selon la proximité du téléphone." },
   "connect.editor": { t: "L'éditeur web", d: "L'éditeur web (Chrome ou Edge) affiche tes sons et réglages sur l'écran de l'ordinateur pendant que le FM-1 continue de jouer, envoie des banques DX7 à FM6 et sauvegarde chaque projet en un clic." },
 

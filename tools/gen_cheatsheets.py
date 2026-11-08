@@ -4,12 +4,12 @@
 # Chakra Petch, the thermal palette, the signature), then tools/render_cheatsheets.mjs makes the PNGs and PDFs:
 #   python3 tools/gen_cheatsheets.py && node tools/render_cheatsheets.mjs
 # The content follows firmware/src/params.c (pages, labels) and the README's manual; update both together. The V line's
-# firmware (V10..) is not this tree's: its pages are read from the commit web/STABLE names (ui_lens.c, params.c).
+# firmware is the commit web/STABLE names on main (firmware/src/ui_lens.c, params.c); the firmware branch's own tree.
 import html, os
 
 R = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 OUT = os.path.join(R, 'docs', 'cheatsheet')
-VERSION = 'V10.61 · V10.6c'   # (the public V10.6c is V10.61 with the USB input fixes)
+VERSION = 'V10.6z9'   # (the release; a rename is this one line)
 
 HEAT = ['#22d3ee', '#3b82f6', '#8b5cf6', '#d946ef', '#ef4444', '#ff7a00', '#facc15', '#f4f1ea']
 
@@ -155,14 +155,14 @@ def controls():
         ('OCT− · OCT+', 'The keyboard\'s octave (both together: back to 0); on DRUM the kit stays put: +1/+2/+3 ratchet x2/x4/x8, −1 SHORT, −2 GHOST, −3 FLAM, each sound its own (grid KNOB 3 HIT). On action pages and dialogs: back / confirm.'),
         ('PLAY', 'Start / stop. GLO + PLAY: restart from the top.'),
         ('REC', 'Arms live recording on the selected track (notes and knob moves, overdub).'),
-        ('HOME', 'Tap: HOME (on HOME the next group: ECO · BEING · GEN). <b>Hold: the MENU.</b>'),
+        ('HOME', 'Tap: HOME (on HOME the next group: ECO · BEING · GENE). <b>Hold: the MENU.</b>'),
         ('KEYS', '27 keys play the selected track in its scale; with a layer held they become that layer\'s.'),
     ]
     t = '<table>' + ''.join(f'<tr><td class="n">{e(n)}</td><td>{d}</td></tr>' for n, d in rows) + '</table>'
     pb = [
-        ('HOME', 'ECO: ECO · MACROS  |  BEING: BEING · ROUTES  |  GEN: GEN 1 · GEN 2 · GEN 3', 'MENU'),
-        ('EDIT', 'SOUND: EDIT 1 · EDIT 2  |  TONE: FILTER · MORPH · RETRIG · ROTOR · WORDS · STEREO  |  FOCUS  |  VOICE: VOICE · VOICE 2 (V10.50: last). INPUT: EDIT 1 / 2 are INPUT and SHAPE. FM6: SOUND  |  TONE: FILTER · STEREO  |  OPERATOR: OPERATOR · OP ENV · OPERATOR 2  |  VOICE. DRUM: KIT: KIT · KIT 2 · KIT 3 · KIT 4  |  SOUND: SOUND 1–4  |  LEVELS 1–2  |  TONE: X-MOD · FILTER · STEREO · VOICE', 'INIT · RECALL · sound mutes'),
-        ('SEQ', 'STEP  |  LENGTH: LENGTH · TRACK  |  EUCLID: EUCLID · MODES · MUTATE  |  PLAYHEADS  |  STRETCH  |  COMP: COMP · COMP 2  |  AUTO: AUTOMATION · AUTO LIST', 'SEQ TOOLS'),
+        ('HOME', 'ECO: ECO · MACROS  |  BEING: BEING · ROUTES  |  GENE: GENE 1 · GENE 2 · GENE 3', 'MENU'),
+        ('EDIT', 'SOUND: EDIT 1 · EDIT 2  |  TONE: FILTER · MORPH · RETRIG · ROTOR · WORDS · STEREO · SWARM · SWARM 2  |  FOCUS  |  VOICE: VOICE · VOICE 2 (V10.50: last). EXT: EDIT 1 / 2 are EXT and SHAPE. FM6: SOUND  |  TONE: FILTER · STEREO  |  OPERATOR: OPERATOR · OP ENV · OPERATOR 2  |  VOICE. DRUM: KIT: KIT · KIT 2 · KIT 3 · KIT 4  |  SOUND: SOUND 1–4  |  LEVELS 1–2  |  TONE: X-MOD · FILTER · STEREO · VOICE', 'INIT · RECALL · sound mutes'),
+        ('SEQ', 'STEP  |  LENGTH: LENGTH · RHYTHM · TRACK  |  EUCLID: EUCLID · MODES · MUTATE  |  PLAYHEADS  |  STRETCH  |  COMP: COMP · COMP 2  |  AUTO: AUTOMATION · AUTO LIST · LYRIC STEP  |  GENERATE', 'SEQ TOOLS'),
         ('FX', 'TRACK: SENDS · DIST · AUTO PAN  |  BUSES  |  DELAY: DLY 1–3  |  REVERB 1–2  |  CHORUS  |  SLICER: SLICER · SL BUS 1–2 · SL PITCH  |  PUNCH  |  MASTER · TAPE · EQ',
          'PUNCH-IN FX'),
         ('GLO', 'LIVE: MANO · RIELES  |  MIX: MIXER · SENDS  |  COMPS: COMPS · COMPS 2  |  GLOBAL  |  SYSTEM: SYSTEM · SYSTEM 2 (at power-on GLO opens MIXER)', 'MUTE · SOLO · LEVEL · TAP'),
@@ -170,7 +170,7 @@ def controls():
         ('LFO', 'MOD  |  LFO: LFO · LFO 2 · LFO DEST  |  MSEQ: MSEQ · MSEQ 2', 'MACROS M1–M4 (stay latched)'),
         ('SCL', 'KEY  |  CHORD  |  SCENE', 'ROOT by key'),
         ('ARP', 'ARP: ARP · ARP 2', '—'),
-        ('SAVE', 'SONG: TIMELINE · SECTIONS  |  PROJECT: PROJECTS · ARRANGE · TOOLS  |  SOUND: USER · PRESETS (from outside, USER / SECTIONS come armed)', 'SONG layer · C5 NAME'),
+        ('SAVE', 'SONG: TIMELINE · PARTS · CLIPS · SECTIONS  |  PROJECT: PROJECTS · ARRANGE · TOOLS · SAVE SONG AS  |  SOUND: USER · PRESETS (from outside, USER / SECTIONS come armed)', 'SONG layer · C5 NAME'),
         ('REC', '(transport)', 'CLEAR · CLICK · held alone: UNDO'),
     ]
     t2 = ('<table class="pages"><tr><th>BUTTON</th><th>GROUPS (A TAP: THE NEXT) · PAGES (SELECT)</th><th>HOLD</th></tr>' +
@@ -229,7 +229,7 @@ def controls():
 
     b.append(sec('COMBOS'))
     combos = [
-        (k('HOME', cls='v') + ' + ' + k('SELECT', cls='v'), 'GEN, the song generator (HOME\'s last pages).'),
+        (k('HOME', cls='v') + ' + ' + k('SELECT', cls='v'), 'GENE, the song generator (HOME\'s last pages).'),
         (k('EDIT · SEQ · LFO · FX', cls='v') + ' + ' + k('SELECT', cls='v'), 'Their dice: sound · sequence · LFO · effects (KEEP? OK / CANCEL).'),
         (k('ENV · SCL · ARP · SAVE', cls='v') + ' + ' + k('SELECT', cls='v'), 'Into that section and along its chain.'),
         (k('SEQ') + ' + ' + k('G5'), 'CLR STEP: the cursor step and its locks (AUTO LIST: deletes the record).'),
@@ -243,9 +243,10 @@ def controls():
         (k('STEP HELD', cls='a') + ' + ' + k('KNOB'), 'A parameter lock on that step (roll, grid).'),
         (k('HOME', cls='a') + ' held', 'MENU, four tabs DISPLAY · CONTROL · AUDIO · SYSTEM (ALGORITHM the tab, PRESETS the row, OCT−/+ the value; '
          'each knob its card): skins (AIR · COLORS · BOTTOM · HUD), SCOPE, palettes, knob accel, FX latch, hold time, USB level; '
-         'SYSTEM › USB: CONSOLE · STEREO · STEMS · IN+OUT · STEMS+IN · <b>HOST</b> (a USB-MIDI keyboard or a USB audio interface, '
-         'on a powered hub; never saved); SYSTEM › BLUETOOTH: OFF · ON (MIDI, app JIANT FM-1) · AIR (PROX from the devices around), '
-         'OCT+ the PROX page.'),
+         'SYSTEM › USB: AUDIO · STEREO · STEMS · IN+OUT · STEMS+IN · <b>HOST</b> (a USB-MIDI keyboard or a USB audio interface, '
+         'on a powered hub; never saved); SYSTEM › BLUETOOTH: OFF · ON (MIDI, app JIANT FM-1) · AIR (PROX and SWARM from the devices around), '
+         'OCT+ the PROX page (FAR / NEAR from 2.5 s, HOLD STILL). CONTROL › <b>VELOCITY</b> · VEL MIN · <b>AFTERTOUCH</b> · VEL LEARN '
+         '(V10.6z7, F3..C5); AUDIO › <b>OCT BEND</b> (a note held + OCT− vibrato, OCT+ bend).'),
     ]
     t3 = '<table>' + ''.join(f'<tr><td style="white-space:nowrap;width:1%;padding-right:18px">{a}</td><td>{d}</td></tr>'
                              for a, d in combos) + '</table>'
@@ -257,7 +258,7 @@ def controls():
                           ('ENV 2 →', 'a second ADSR: MOD SRC ENV2, any DEST (V10.22)'), ('STAGE', 'STAGE VALUE LOOP -')]),
         ('LFO', HEAT[1], [('LFO', 'RATE WAVE MODE FADE'), ('LFO 2', 'PHASE - - -'), ('LFO DEST', 'PITCH FILTER SHAPE AMP'), ('MOD', 'SLOT SRC DEST AMT'),
                           ('PROX (BT)', 'SRC PROX: the phone\'s distance (AIR: a hand, no phone) · MENU › SYSTEM › BLUETOOTH, OCT+: OCT− FAR, OCT+ NEAR; K1 MIN, K2 MAX, K3 SPD (V10.61)'),
-                          ('FOLLOW', 'SRC FOLLOW: the audio input\'s envelope (INPUT, V10.54), any track, any DEST'),
+                          ('FOLLOW', 'SRC FOLLOW: the audio input\'s envelope (EXT, V10.54), any track, any DEST'),
                           ('MSEQ', 'STEP LEVEL LEN SLEW'), ('MSEQ 2', 'DIV - - -')]),
         ('FX', HEAT[5], [('FX', 'DIST CHORUS DLY REV'), ('DIST', 'DIST TYPE TONE -'), ('AUTO PAN', 'DEPTH RATE SYNC WAVE'), ('SLICER', 'MODE PAT RATE DEPTH'),
                          ('SL BUS', 'T1 T2 T3 T4'), ('SL BUS 2', 'T5 T6 FX -'), ('SL PITCH', 'STEP PITCH LEN QUANT'),
@@ -265,11 +266,11 @@ def controls():
                          ('REVERB', 'TYPE SIZE DAMP PRE/AIR'), ('REVERB 2', 'MOD RATE FILT WIDE'),
                          ('CHORUS', 'RATE DEPTH STEREO -'), ('PUNCH', 'LEN RES REC CLEAR'), ('MASTER', 'CLIP PUNCH DUCK REL'), ('TAPE', 'TAPE WOW - -'),
                          ('EQ', ['LOW', 'LO MID', 'HI MID', 'HIGH'])]),
-        ('EDIT', HEAT[3], [('EDIT 1', 'E1 E2 E3 E4'), ('EDIT 2', 'E5 E6 E7 E8'), ('INPUT', 'SOURCE GAIN GATE PLAY'), ('SHAPE', 'WIDTH RING BITS RATE'),
+        ('EDIT', HEAT[3], [('EDIT 1', 'E1 E2 E3 E4'), ('EDIT 2', 'E5 E6 E7 E8'), ('EXT', 'SOURCE GAIN GATE PLAY'), ('SHAPE', 'WIDTH RING BITS RATE'), ('SWARM', 'SIDE RATE MOVE TONE'), ('SWARM 2', 'SIDE NOISE MOD NOW'),
                            ('MORPH', 'MORPH DRIFT - -'), ('ROTOR', 'DEPTH DUST - -'),
-                           ('WORDS', 'LANG LYRIC POS (OCT+ TYPE)'), ('RETRIG', 'RTRG - - -'), ('OPERATOR', 'OP RATIO FINE LEVEL'),
+                           ('WORDS', 'LANG LYRIC CONS (OCT+ TYPE)'), ('RETRIG', 'RTRG - - -'), ('OPERATOR', 'OP RATIO FINE LEVEL'),
                            ('OP ENV', 'OP STAGE RATE LEVEL'), ('OPERATOR 2', 'OP MODE DETUNE VEL'), ('FILTER', 'TYPE CUT RES DRIVE'),
-                           ('VOICE', 'VOICE GLIDE MODE PRIO'), ('VOICE 2', 'ALLOC DETUNE - -'), ('FOCUS', 'PARAM VALUE SRC AMT'), ('KIT 3', 'BP FEEDBK HANDS -'), ('KIT 4', 'ACOUST - - -'),
+                           ('VOICE', 'VOICE GLIDE MODE PRIO'), ('VOICE 2', 'ALLOC DETUNE - -'), ('FOCUS', 'PARAM VALUE SRC AMT'), ('KIT 3', 'BP FEEDBK HANDS -'), ('KIT 4', '- KEYMAP - -'),
                            ('X-MOD', 'RATE DEPTH SHAPE RAND'), ('LEVELS', 'KICK SNARE CLAP HATCL'),
                            ('LEVELS 2', 'HATOP TOM RIM BELL'), ('SOUND', 'SOUND SIDE PITCH PMOD'),
                            ('SOUND 2', 'SOUND DECAY NOISE COLOR'), ('SOUND 3', 'SOUND MODE PM.TYPE DRIVE'),
@@ -323,11 +324,10 @@ def sound():
         ('PHASE', HEAT[2], 'WAVE WAVE2 DCW ENV', 'DETUNE LINE SUB FB',
          'Phase distortion (CZ); <b>FB</b> feeds the output back into the phase: hard edge to growl. <b>Its picture</b> '
          '(0.9.6): a snail, its shell\'s chambers at the bent phase, its sole the wave.'),
-        ('LOFI', HEAT[0], 'CHIP WAVE DUTY CRUSH', '- VIB BEND MASK',
-         'Chip: PLS TRI SAW NOIS WRAM. <b>BYTE</b>: ALGO VAR · MOTN GRIT BEND LOOP. <b>FLOAT</b> (floatbeat): '
-         'ALGO VAR · MOTN FBK BEND LOOP; CHIP sets FULL / 4BIT / 1BIT. <b>Its picture</b> (0.9.6): a caterpillar whose skin '
-         'is the output, a segment per bit of the byte. <b>par9</b>: 48 formulas each in BYTE and FLOAT (ALGO 0–191); MOTN past '
-         'half is <b>SYNC</b>: the formula\'s slow bits follow the bar, so a note only transposes it, never changes its speed.'),
+        ('MATH', HEAT[0], 'CHIP WAVE ALGO VAR', 'MOTN GRIT BEND LOOP',
+         '(V10.6e: LOFI\'s formulas alone; its chip waves load as ANALOG) <b>BYTE</b>: ALGO VAR · MOTN GRIT BEND LOOP. <b>FLOAT</b> (floatbeat): '
+         'ALGO VAR · MOTN FBK BEND LOOP; CHIP sets FULL / 4BIT / 1BIT. Every sound starts still (MOTION 0), RTRG on: in tune. '
+         '48 formulas each in BYTE and FLOAT (ALGO 0–191); MOTN past half is <b>SYNC</b>: the formula\'s slow bits follow the bar.'),
         ('STRING', HEAT[3], 'EXCITE DECAY BRIGHT POS', 'STRETCH BODY SIZE BOW',
          'Karplus-Strong string (snd5): EXCITE NOISE PLUCK PICK HAMMR STICK; POS where it is struck, STRETCH a stiff, '
          'metallic string, BODY / SIZE its box, <b>BOW</b> a bow\'s noise into the loop. RELEASE is its damper: the string '
@@ -350,10 +350,10 @@ def sound():
          '8 sounds BD SD CP CH OH TM RS CB, sides A / B: <b>MORPH</b> morphs the kit. The kit first: <b>KIT 3</b> BP FEEDBK, <b>X-MOD</b> RATE DEPTH SHAPE '
          'RAND. Then a sound (KNOB 1 the sound): SIDE PITCH PMOD · DECAY NOISE COLOR · MODE PM.TYPE DRIVE · <b>LAYER</b> (no note) FEEDBK '
          '<b>SEND</b> (CHO / DLY / REV). Last LEVELS and <b>STEREO</b> IMAGE (a knob through the kit\'s stereo placings). '
-         '<b>KIT 4 ACOUST</b>: a synthesized acoustic voicing of the kit, 0–100 %. '
+         '<b>KIT 4 KEY MAP</b> (V10.6r): EXTENDED (default) +1 FILLS, −1 KICK / TOM or one sound chromatic, −2 FX KIT, −3 FLAM; or CLASSIC. Cowbell: classic CMOS (V10.6q). '
          'KIT, SOUND 1–4 and HOME › BEING draw the kit as little beings that squash and shout on each hit (0.9.4).'),
-        ('INPUT', HEAT[0], 'SOURCE GAIN GATE PLAY', 'WIDTH RING BITS RATE',
-         '(V10.54) Not a synth: the USB audio input on a track of its own (an interface on USB HOST behind a powered hub, or '
+        ('EXT', HEAT[0], 'SOURCE GAIN GATE PLAY', 'WIDTH RING BITS RATE',
+         '(V10.54; EXT since V10.6d) SOURCE <b>SWARM</b>: a melody from the Bluetooth around (PROX first, then AIR; FAR / NEAR morph, CHAOS). Else not a synth: the USB audio input on a track of its own (an interface on USB HOST behind a powered hub, or '
          'the computer with USB IN+OUT). SOURCE IN 1 · IN 2 · 1+2 · STEREO (two tracks can take IN 1 and IN 2); PLAY <b>THRU</b> '
          '(always) or <b>KEYS</b> (only while a note plays, at its envelope: the steps gate it); RING a sine at the note (KEYS); '
          'BITS, RATE crush it. FILTER, DIST, LEVEL, PAN, sends as any track; the page shows both inputs\' meters. '
@@ -365,18 +365,18 @@ def sound():
          'GROUP: syllables + gaps; TEMP °C speeds a cricket up (Dolbear). A note is a call. <b>Its picture</b> (0.9.4): '
          'bird ↔ insect ↔ mammal by MODE, leaned by SIZE.'),
     ]
-    ORDER = ['DRUM-X', 'VOICE', 'ANIMAL', 'LOFI', 'ANALOG', 'FM6', 'PHASE', 'WHEEL', 'NOISE', 'STRING', 'ADD', 'INPUT']   # (0.9.9-snd5; V10.54 INPUT last)
+    ORDER = ['DRUM-X', 'ANALOG', 'PHASE', 'FM6', 'VOICE', 'ANIMAL', 'MATH', 'WHEEL', 'NOISE', 'STRING', 'ADD', 'EXT']   # (V10.6e: the band first; EXT last)
     eng.sort(key=lambda r: ORDER.index(r[0]))                     # (src/engines.c ENGINE_ORDER: PRESETS, KNOB 2 ENG)
     t = '<table><tr><th>ENGINE</th><th>EDIT 1</th><th>EDIT 2</th><th>WHAT TO KNOW</th></tr>'
     for n, c, e1, e2, d in eng:
         t += (f'<tr><td class="n" style="--c:{c}">{e(n)}</td><td style="width:22%">{knobs(*e1.split())}</td>'
               f'<td style="width:22%">{knobs(*e2.split())}</td><td>{d}</td></tr>')
     t += '</table>'
-    b.append(card('TWELVE ENGINES: ELEVEN SYNTHS AND INPUT', HEAT[7], t))
+    b.append(card('TWELVE ENGINES: ELEVEN SYNTHS AND EXT', HEAT[7], t))
     b.append('<div class="grid g3" style="margin-top:22px">')
     b.append(card('FILTER · EVERY ENGINE', HEAT[3], knobs('TYPE', 'CUT', 'RES', 'DRV') +
                   '<p style="margin-top:8px"><b>LP · HP · BP · COMB · COMB- · MS20 · LP24</b> (LP24: four poles, V10.22). COMB rings tuned to the note (COMB-: hollow, odd harmonics): CUT moves it '
-                  '±32 st, RES how much it rings. ANALOG and LOFI: per voice; the others: on the track, following '
+                  '±32 st, RES how much it rings. ANALOG and MATH: per voice; the others: on the track, following '
                   'LFO / ENV DEST FLT (DRV = the track\'s DIST).</p>'))
     b.append(card('VOICE · PLAYING', HEAT[2], knobs('VCE', 'GLD', 'GLMOD', 'PRIO') +
                   '<p style="margin-top:8px">POLY · MONO · LEG · UNI; glide and its mode; LAST / LOW / HIGH priority. '
@@ -416,7 +416,7 @@ def sound():
     b.append('<div class="grid g3" style="margin-top:22px">')
     b.append(card('SEQUENCER', HEAT[4],
                   '<p>64 steps a track, up to 4 notes a step, piano roll and drum grid. One chain (V10.6): STEP (the roll / grid, K1 all 64 steps) · LENGTH · TRACK · EUCLID · MODES · MUTATE · PLAYHEADS · STRETCH · COMP · COMP 2 · AUTOMATION · AUTO LIST; SELECT walks, SEQ jumps to the next group, PRESETS loads a pattern. <b>Hold a step + turn a knob</b>: '
-                  'a parameter lock. STEP K4 <b>VEL</b> (V10.8): 1–127, then ACC, SLD, A+S. Step recording: hold a chord + KNOB 1 its length; + ARP: arpeggiated (K1 rate, K2 order, K3 oct). COMP / COMP 2: two components a step (CHANCE, RATCH, ARP NOTES / SEQ / SCALE, TRIG, RAND, OCT, TONAL, BEND, ECHO, PULSE, JUMP, REV, FILL, KILL, WALK, CLIMB, TOUCH: a kit\'s SHORT / GHOST / FLAM); a TRIG or FILL wins; WALK / CLIMB: a degree / an octave further every N loops (K4), UP DOWN UP-DN RND over a range (K3), stackable; ARP: ORDER × range, RATE in note values (x1 1/32 1/32T 1/64 1/64T 1/128); RATCH / ECHO: DIV; EVERY (KNOB 4): the loops the step\'s components play on (ALWAYS 1:2 2:2 1:3 .. 4:4 1:8 FIRST !FIRST SKIP). TRACK: PITCH, CHANCE thins the whole track, HUMAN one amount (velocity, timing, gate, decay / release), REC Q. STRETCH / REPEAT act as the knob turns; ROTATE reads the sequence from another step; NUDGE in red (OCT+) moves the cursor step off the grid in 64ths (REC Q 0 % records where you played, to the 64th). <b>EUCLID</b> (V10.6; V10.16 VARY in four turns A A\' A\'\' B, and <b>MUTATE</b>: EVERY 1–16 bars, AMOUNT, ORBIT / DRIFT / PULSE, GROOVE / RHYTHM / FEEL / ALL, OCT+ now, OCT− the anchor): HITS, STEPS 2–64, ROTATE write the track\'s pattern live; K4 LANE (DRUM-X: each sound its own; V10.7 <b>ALL</b>, the default: K1 DENSITY 1–8 writes a whole kit, a lane picked writes only that lane) or VARY; MODES adds ACCENT GHOST RATCHET VARY (DRUM-X) or MOTION HARMONY OCTAVE SLIDE; notes in the track\'s SCL, else the key the other tracks fit (FROM Tn), else NEW KEY; OCT+ a new variation, OCT− the one before. REC + knobs while playing: '
+                  'a parameter lock. STEP K4 <b>VEL</b> (V10.8): 1–127, then ACC, SLD, A+S. Step recording: hold a chord + KNOB 1 its length; + ARP: arpeggiated (K1 rate, K2 order, K3 oct). COMP / COMP 2: two components a step, each ACTION · LENGTH · CONDITION · VALUE: ARP, SEQ, OCT+, OCT−, RATCH, STUT, MUTE, TRANS, RAND, LOCK, <b>RAMP</b> (V10.6v, JUMP\'s place: the step\'s lock glides there over 1–32 steps or 1–16 bars, LIN EXP LOG S STEPS ZIGZAG), SOUND (a kit\'s SHORT / GHOST / FLAM), BEND, SHIFT, CHORD; CONDITION ALWAYS, 25 / 50 / 75 %, 1ST, FILL, PRE, NEI (and their !), N:M, ELSE (C2: MONO). REC keeps lengths, legato (SLIDE) and velocity; GATE 100 % for new tracks (V10.6z4). TRACK: PITCH, CHANCE thins the whole track, HUMAN one amount (velocity, timing, gate, decay / release), REC Q. STRETCH / REPEAT act as the knob turns; ROTATE reads the sequence from another step; NUDGE in red (OCT+) moves the cursor step off the grid in 64ths (REC Q 0 % records where you played, to the 64th). <b>EUCLID</b> (V10.6; V10.16 VARY in four turns A A\' A\'\' B, and <b>MUTATE</b>: EVERY 1–16 bars, AMOUNT, ORBIT / DRIFT / PULSE, GROOVE / RHYTHM / FEEL / ALL, OCT+ now, OCT− the anchor): HITS, STEPS 2–64, ROTATE write the track\'s pattern live; K4 LANE (DRUM-X: each sound its own; V10.7 <b>ALL</b>, the default: K1 DENSITY 1–8 writes a whole kit, a lane picked writes only that lane) or VARY; MODES adds ACCENT GHOST RATCHET VARY (DRUM-X) or MOTION HARMONY OCTAVE SLIDE; notes in the track\'s SCL, else the key the other tracks fit (FROM Tn), else NEW KEY; OCT+ a new variation, OCT− the one before. REC + knobs while playing: '
                   'automation (64 records a section, MOTION page plays / clears them, AUTO LIST edits them). EUCLID starts at 0 and '
                   'transforms the track\'s own sequence, giving it back as it was at rest (V10.28–V10.31). STRETCH › NUDGE: OCT− the '
                   'whole sequence by steps, OCT+ the cursor step in 64ths (V10.25). Longer than 16 steps, the roll follows the playhead (V10.47).</p>'
@@ -426,12 +426,12 @@ def sound():
                   'BLUES WHOLE DIMHW DIMWH. QNT snaps keys or the sequence, <b>ALL TR</b> (SCL KNOB 4) moves '
                   'every sequence along the scale. <b>CHORD</b>: a key plays a chord (TRIAD 7TH ADD9 SUS2 SUS4 in key, '
                   'MAJ MIN 7 MAJ7 MIN7 POWER), VOICING LEAD leads each to the next, STRUM as a harp. <b>SCENE</b> (V10.24): each track a '
-                  'role (KEEP CHORD ARP BASS LEAD) and one key plays them all; OCT+ dices the roles, REC records each.</p><h4>ARP MODES</h4><p class="dim">OFF UP DN UPDN RND ORD REPEAT DNUP '
+                  'role (KEEP CHORD ARP BASS LEAD DRUM; BASS / LEAD a PATTERN, DRUM a STYLE or GEN) and one key plays them all; OCT+ dices the roles, REC records each.</p><h4>ARP MODES</h4><p class="dim">OFF UP DN UPDN RND ORD REPEAT DNUP '
                   'UP+8 CONV DIVG PINKY THUMB WALK CHORD <b style="color:#f4f1ea">TRNS</b> (the keys transpose the '
                   'sequence)</p>'))
     b.append(card('SONGS', HEAT[6],
-                  '<p><b>8 projects × 4 sections (A–D)</b>, a song of up to 16 rows by bars (SAVE › PROJECT › ARRANGE, OCT+ adds a row, OCT− deletes one, PLAY plays; END: STOP, x2–x8, LOOP), SLOOP style. '
-                  '<b>TIMELINE</b> (V10, after ARRANGE): the song as lanes; per row each track can play another section (<b>FROM</b>) and a variation (<b>VAR</b>: MUTE THIN FILL HALF REV SHIFT OCT± VAR 1–4). '
+                  '<p><b>6 projects × 4 sections (A–D)</b> (V10.6p; 8 before), a song of up to 16 rows by bars (SAVE › PROJECT › ARRANGE, OCT+ adds a row, OCT− deletes one, PLAY plays; END: STOP, x2–x8, LOOP), SLOOP style. '
+                  '<b>TIMELINE</b> (V10.6o, SAVE\'s first): the song as blocks, the row picked opened by track: K1 row K2 part K3 bars K4 the track\'s <b>VAR</b> (MUTE THIN FILL HALF REV SHIFT OCT± VAR 1–4), F3–D4 mutes, F4–B4 <b>FROM</b> A–D, PLAY loops the row. <b>PARTS</b>: the four parts, OCT+ loops one. <b>CLIPS</b> (V10.6s): 6 tracks × 4 parts, OCT+ on the next bar, REC writes the rows. A sound changed while the song plays stays (V10.6z8; EDIT › RECALL). '
                   'Each row can hold a <b>scene</b>: mutes, DRUM-X group mutes, macros and MIDI punch-ins. SAVE held '
                   'plays sections live on the next bar, stores them, records the song (SONG REC). Each section keeps its '
                   'sounds, steps, motion, kit and its SLICER.</p>'))

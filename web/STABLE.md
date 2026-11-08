@@ -1,5 +1,6 @@
 # web/STABLE
 
-The commit of `main` the public installer (`webapp/installer/`) builds and offers. The emulator and
-`preview/webapp/installer/` always run `main` as it is now: a new version is checked there first, and only then
-is its commit written here (one line, the full SHA), by a PR. `.github/workflows/emulator.yml` reads it.
+The commit the public installer (`webapp/installer/`) builds and offers: one line, the full SHA. Since V10 it is a
+commit of the firmware line (the branch the firmware is developed on), fetched by `.github/workflows/emulator.yml`
+and built from its own sources; `main` holds the site. A new version is checked first in the beta installer
+(`preview/webapp/installer/`) and the emulator, and only then is its commit written here, by a PR.

@@ -41,7 +41,7 @@ steps: {
   "panel.oct": { t: "OCT− y OCT+", d: "Cambian la octava del teclado (los dos juntos vuelven a 0). En las páginas de acción y en los diálogos son NO / SÍ: [OCT+] confirma, [OCT−] cancela o vuelve." },
 
   "sound.home": { t: "HOME: el ecosistema", d: "Tocá [HOME]. Cada pista es una criatura con carita: su forma sale de sus perillas, se hincha y se calienta con su propio sonido, cierra los ojos en cada golpe. La pista elegida es la más grande." },
-  "sound.track": { t: "Elegí una pista", d: "Girá [ALGORITHM]. Al encender: T1 DRUM-X (batería), T2 VOICE (canta), T3 ANIMAL (un pájaro), T4 LOFI. T5 ANALOG y T6 FM6 aparecen con TRACKS 6." },
+  "sound.track": { t: "Elegí una pista", d: "Girá [ALGORITHM]. Al encender: T1 DRUM-X (batería), T2 VOICE (canta), T3 ANIMAL (un pájaro), T4 MATH. T5 ANALOG y T6 FM6 aparecen con TRACKS 6." },
   "sound.browse": { t: "Cambiá de sonido", d: "Girá [PRESETS]: recorre los sonidos de fábrica de todos los motores y después los tuyos. El sonido cambia sin cortar lo que suena." },
   "sound.play": { t: "Tocá", d: "Tocá las teclas, por ejemplo [E4]. [OCT−] y [OCT+] bajan o suben la octava." },
   "sound.shape": { t: "Moldealo", d: "En HOME, [KNOB 1] a [KNOB 4] son los cuatro controles más útiles del motor (por ejemplo CUT, RES, ATK, REL). Girá [KNOB 2] y mirá cómo cambia la criatura." },
@@ -64,7 +64,7 @@ steps: {
   "gen.parts": { t: "Ajustá las partes", d: "Girá [SELECT] un paso a la derecha: GEN 2. Bajá DRUMS o ARP con las perillas y tocá OCT+: el mismo tema con eso cambiado." },
   "gen.undo": { t: "Deshacer", d: "Mantené [GLO] y tocá [G4]: UNDO, vuelve a lo que había antes del último cambio grande (otra vez: rehacer). También: mantené REC solo y soltalo sin tocar nada más." },
 
-  "edit.engines": { t: "Doce motores", d: "Cualquier pista puede usar cualquier motor: DRUM-X, VOICE, ANIMAL, LOFI, ANALOG, FM6, PHASE, WHEEL, NOISE, STRING, ADD e INPUT (el audio que entra por USB). Todo es síntesis: no hay samples. Tocá [EDIT] para editar el de la pista." },
+  "edit.engines": { t: "Doce motores", d: "Cualquier pista puede usar cualquier motor: DRUM-X, ANALOG, PHASE, FM6, VOICE, ANIMAL, MATH, WHEEL, NOISE, STRING, ADD y EXT (el audio que entra por USB). Todo es síntesis: no hay samples. Tocá [EDIT] para editar el de la pista." },
   "edit.pages": { t: "Las páginas de EDIT", d: "Girá [SELECT]: EDIT 1 y EDIT 2 (los parámetros del motor), después TONE con FILTER, VOICE y las páginas propias de cada motor. Cada motor dibuja su criatura y su osciloscopio." },
   "edit.focus": { t: "FOCUS", d: "Tocá [EDIT] hasta FOCUS: un parámetro grande. KNOB 1 lo elige, KNOB 2 lo ajusta, KNOB 3 le asigna una modulación y KNOB 4 cuánta." },
   "edit.fm6": { t: "FM6", d: "FM de seis operadores con 32 algoritmos y bancos DX7 (se mandan desde el editor web). Sus páginas OPERATOR editan cada operador; KNOB 1 lo elige." },
@@ -113,12 +113,12 @@ steps: {
   "song.arrange": { t: "ARRANGE: encadenar", d: "[SELECT] dos pasos a la derecha: ARRANGE, las filas de la canción. OCT+ agrega una fila, KNOB 2 su sección y KNOB 3 cuántos compases. Una fila para A, otra para B, y PLAY: la canción toca las filas en orden." },
   "song.timeline": { t: "TIMELINE", d: "[SAVE] abre TIMELINE: la canción de izquierda a derecha, una línea por pista. Cada fila puede traer una pista de otra sección (FROM) y variarla solo ahí (VAR: MUTE, FILL, HALF, REV, OCT…)." },
   "song.live": { t: "Secciones en vivo", d: "Mantené [SAVE]: [F3] G3 A3 B3 tocan la sección A–D (en el compás siguiente), C4–F4 guardan en A–D, D5 alterna LOOP / SONG. SAVE + OCT+ guarda en la sección que suena." },
-  "song.projects": { t: "Proyectos y autoguardado", d: "En SAVE › PROJECT › PROJECTS elegís entre 8 proyectos. Los ajustes se guardan solos; la música se guarda en la sección cuando vos lo pedís. Hacé copias de todo con el editor web." },
+  "song.projects": { t: "Proyectos y autoguardado", d: "En SAVE › PROJECT › PROJECTS elegís entre 6 proyectos. Los ajustes se guardan solos; la música se guarda en la sección cuando vos lo pedís. Hacé copias de todo con el editor web." },
 
   "connect.menu": { t: "El MENU", d: "Mantené [HOME]: el MENU. DISPLAY (skins AIR, COLORS, BOTTOM, HUD y colores), CONTROL (HOLD, MIDI OUT, MIDI MAP y LEARN), AUDIO (click, cuenta previa, TRACKS, LOAD) y SYSTEM (USB, BLUETOOTH, calibración, ABOUT)." },
   "connect.tracks": { t: "4 o 6 pistas", d: "Tocá [GLO] hasta SYSTEM: KNOB 1 TRACKS elige 4 (de fábrica, más liviano) o 6 pistas, y LOAD cuánto trabaja el procesador." },
   "connect.usb": { t: "USB: audio y MIDI", d: "MENU › SYSTEM › USB (o GLO › SYSTEM 2): STEREO, STEMS (cada pista en su propio canal hacia tu DAW), IN+OUT (audio en los dos sentidos) o HOST (un teclado MIDI USB enchufado directo). MIDI por USB, TRS y Bluetooth." },
-  "connect.input": { t: "El motor INPUT", d: "INPUT pone en una pista el audio que entra por USB (IN 1, IN 2, 1+2 o estéreo), con sus efectos y su secuencia. La fuente FOLLOW de MOD hace que ese audio module otras cosas." },
+  "connect.input": { t: "El motor EXT", d: "EXT pone en una pista el audio que entra por USB (IN 1, IN 2, 1+2 o estéreo), con sus efectos y su secuencia. La fuente FOLLOW de MOD hace que ese audio module otras cosas." },
   "connect.bt": { t: "Bluetooth MIDI y PROX", d: "MENU › SYSTEM › BLUETOOTH en ON (o GLO › SYSTEM 2): conectá una app MIDI Bluetooth (aparece como JIANT FM-1). PROX es una fuente de modulación según qué tan cerca está el teléfono." },
   "connect.editor": { t: "El editor web", d: "El editor web (Chrome o Edge) muestra tus sonidos y ajustes en la pantalla de la compu mientras el FM-1 sigue tocando, manda bancos DX7 a FM6 y hace backup de todos los proyectos con un clic." },
 
