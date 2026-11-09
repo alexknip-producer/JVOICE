@@ -635,6 +635,49 @@ int main(void)
             }
             bad += gcheck("EBM x 10 seeds: three drum maps at least, five riffs at least (V10.6m)", ebm_m >= 3u && ebm_b >= 5u);
         }
+        {   /* (the owner's references) MINIMAL TECHNO: 126 .. 130 BPM, a throw straight, at 56 % or at 64 %, one chord, the
+             * sub low and never on the kick; EBM's dark techno / industrial throw: 114 .. 120, one chord, the rumble after
+             * the kick (never on it), the mid riff on the lead low, its song's intro without the kick; PHONK's cowbell
+             * throw: 123 .. 140, its sixteenths low (F2 .. C4) */
+            uint32_t mt_ok = 1, sw_seen = 0, eb_n = 0, eb_ok = 1, ph_n = 0, ph_ok = 1, i2, nn;
+            for (seeds = 1; seeds <= 12u; seeds++) {
+                const track_t *b, *d;
+                gen_with(genre_of("MINIMAL TECHNO"), seeds, 50, 0);
+                b = &trk[gs.trk_of[RL_BASS]]; d = &trk[gs.trk_of[RL_DRUM]];
+                sw_seen |= 1u << (song.g[G_SWING] == 0 ? 0 : song.g[G_SWING] == 30 ? 1 : song.g[G_SWING] == 70 ? 2 : 3);
+                if (gs.pn != 1u || song.g[G_BPM] < 126 || song.g[G_BPM] > 130) mt_ok = 0;
+                for (i2 = 0; i2 < (uint32_t)b->p[P_SLEN]; i2++)
+                    if (dstarts(b, i2) && ((d->step[i2].time == ST_NOTE && (d->step[i2].hit & 1u)) || b->step[i2].note[0] > 47u)) mt_ok = 0;
+            }
+            for (seeds = 1; seeds <= 30u; seeds++) {
+                const track_t *b, *d, *l;
+                gen_with(genre_of("EBM"), seeds, 50, 2);
+                if (gs.g->drum != DM_EBM5) continue;
+                eb_n++;
+                b = &trk[gs.trk_of[RL_BASS]]; d = &trk[gs.trk_of[RL_DRUM]]; l = &trk[gs.trk_of[RL_LEAD]];
+                if (song.g[G_BPM] < 114 || song.g[G_BPM] > 120 || gs.pn != 1u || !((song_idx.scene[song_cur][0].mute >> 4) & DXG_KICK)) eb_ok = 0;
+                for (i2 = 0, nn = 0; i2 < (uint32_t)b->p[P_SLEN]; i2++)
+                    if (dstarts(b, i2)) { nn++; if (!(i2 % 4u) || (d->step[i2].time == ST_NOTE && (d->step[i2].acc & 1u))) eb_ok = 0; }   /* (the
+                                                         * four on the floor's; the throw's soft extra kick, gdna, aside) */
+                if (nn < (uint32_t)b->p[P_SLEN] / 2u) eb_ok = 0;
+                for (i2 = 0; i2 < (uint32_t)l->p[P_SLEN]; i2++) if (dstarts(l, i2) && (l->step[i2].note[0] < 36u || l->step[i2].note[0] > 64u)) eb_ok = 0;
+            }
+            for (seeds = 1; seeds <= 24u; seeds++) {
+                const track_t *l;
+                gen_with(genre_of("PHONK"), seeds, 50, 0);
+                if (gs.riff != BA_RF5) continue;
+                ph_n++;
+                l = &trk[gs.trk_of[RL_LEAD]];
+                if (song.g[G_BPM] < 123 || song.g[G_BPM] > 140) ph_ok = 0;
+                for (i2 = 0, nn = 0; i2 < (uint32_t)l->p[P_SLEN]; i2++)
+                    if (dstarts(l, i2)) { nn++; if (l->step[i2].note[0] < 41u || l->step[i2].note[0] > 60u) ph_ok = 0; }
+                if (nn * 16u < (uint32_t)l->p[P_SLEN] * 10u) ph_ok = 0;
+            }
+            printf("gen: the references: MINIMAL TECHNO's swings %x, EBM's dark throws %u, PHONK's cowbell throws %u\n", sw_seen, eb_n, ph_n);
+            bad += gcheck("MINIMAL TECHNO x 12: 126..130 BPM, straight / 56 % / 64 %, one chord, the sub low, never on the kick", mt_ok && sw_seen == 7u);
+            bad += gcheck("EBM's dark throw: 114..120 BPM, one chord, the rumble off the kick, the riff low, the intro kickless", eb_n >= 3u && eb_ok);
+            bad += gcheck("PHONK's cowbell throw: 123..140 BPM, its sixteenths low (F2..C4)", ph_n >= 3u && ph_ok);
+        }
         {   /* (V10.6w, the owner) HIP HOP one genre, its throws trap drill pluggnb boom bap lofi (each its map, its
              * tempo); TECHNO ROCK's techno rock, rock and synth 80s; JAZZ in swung eighths: the ride's ding ding-da, the
              * hat's foot on 2 and 4, the kick feathered, a walking bass in quarters, the chords on Charleston's 1 and
@@ -1271,7 +1314,7 @@ int main(void)
     {
         static const char *const EL[] = {"MINIMAL TECHNO", "HARD TECHNO", "HARD BASS", "HOUSE", "DEEP HOUSE", "TECH HOUSE",
                                          "ELECTRO", "EBM", "BREAKBEAT", "DRUM & BASS", "IDM GLITCH", "PHONK"};
-        uint32_t e, sd, n = 0, bass_bad = 0, mel_bad = 0, front_bad = 0, list_bad = 0;
+        uint32_t e, sd, n = 0, bass_bad = 0, mel_bad = 0, front_bad = 0, list_bad = 0, sub_bad = 0;
         for (e = 0; e < NELEM(EL); e++)
             for (g = 0; g < NGENRE; g++) {
                 if (strcmp(GENRE[g].name, EL[e])) continue;
@@ -1324,13 +1367,19 @@ int main(void)
                             mel_bad++;
                             printf("  %s seed %u: role %u %.1f dB under the drums\n", GENRE[g].name, 4040u + 11u * g + 1000u * sd, p, -10 * log10(er[p] / er[RL_DRUM]));
                         }
-                    for (p = RL_BASS; p <= RL_TEX; p++) if (er[p] > er[RL_DRUM] * 2.0) front_bad++;
+                    for (p = RL_BASS; p <= RL_TEX; p++)
+                        if (er[p] > er[RL_DRUM] * 2.0 && !(p == RL_BASS && !strcmp(GENRE[g].name, "MINIMAL TECHNO"))) front_bad++;   /* (the
+                                                         * owner's minimal reference: its sub 8 .. 14 dB over the drums) */
+                    if (!strcmp(GENRE[g].name, "MINIMAL TECHNO") && er[RL_BASS] < er[RL_DRUM] * 4.0) {
+                        sub_bad++;
+                        printf("  MINIMAL TECHNO seed %u: the sub %.1f dB over the drums\n", 4040u + 11u * g + 1000u * sd, 10 * log10(er[RL_BASS] / er[RL_DRUM] + 1e-12));
+                    }
                 }
             }
-        printf("gen: the mix pass: %u electronic pieces, the bass over 10 dB under the drums %u, a melodic part over 25 dB under %u, a part 3 dB over the drums %u, lists moved %u\n",
-               n, bass_bad, mel_bad, front_bad, list_bad);
-        bad += gcheck("(the GENE mix pass) the electronic genres x 3: the bass and the melodic parts heard, the drums in front, the presets' lists kept",
-                      n >= 30u && bass_bad <= 1u && mel_bad <= 2u && front_bad <= 2u && !list_bad);
+        printf("gen: the mix pass: %u electronic pieces, the bass over 10 dB under the drums %u, a melodic part over 25 dB under %u, a part 3 dB over the drums %u, lists moved %u, MINIMAL's sub under 6 dB over %u\n",
+               n, bass_bad, mel_bad, front_bad, list_bad, sub_bad);
+        bad += gcheck("(the GENE mix pass) the electronic genres x 3: the bass and the melodic parts heard, the drums in front (MINIMAL's sub over them), the presets' lists kept",
+                      n >= 30u && bass_bad <= 1u && mel_bad <= 2u && front_bad <= 2u && !list_bad && !sub_bad);
     }
     /* ---- (0.9.9-gen1) the same seed, the same piece (and a different one from another seed), every genre */
     {

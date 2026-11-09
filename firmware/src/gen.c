@@ -743,11 +743,13 @@ static void gba_vary(uint8_t *bc, uint32_t alen)
     }
 }
 /* (V10.7.2) CUMBIA, REGGAETON, DEMBOW (their maps, their throws'): their rules kept whole by V10.6z10's variations (the
- * bass's archetype as written: cumbia's tonica-quinta, the tresillo, the dembow's; the progression the genre's) */
+ * bass's archetype as written: cumbia's tonica-quinta, the tresillo, the dembow's; the progression the genre's). (the
+ * owner's references) MINIMAL TECHNO's (the sub never on the kick, its one chord) and EBM's fifth throw's (DM_EBM5:
+ * the rumble after the kick, no chord changing) too */
 static __attribute__((noinline)) int glatin(void)
 {
     uint32_t d = gs.g->drum;
-    return d == DM_CUMBIA || d - DM_REGG < 2u || d - DM_CUMB2 < 4u;
+    return d == DM_CUMBIA || d - DM_REGG < 2u || d - DM_CUMB2 < 5u || !gs.gi;
 }
 static void gen_bass(track_t *t, uint32_t len)
 {
@@ -1210,11 +1212,13 @@ enum { LB_M, LB_V, LB_R, LB_C, LB_REST };               /* a bar of the phrase: 
 /* (V10.6p) a riff as written (gen_tables.c BASS_ARCH's BA_RF1 ..): its codes the key's degrees from the tonic (R .. 9:
  * 0 .. 8, A -1, L -3, N 9, S -2), the tonic C4 .. B4 (the 808 cowbell's place), looped whatever the chords (the hook
  * over them, as the records: the 808 moves under it); an accent louder, a slide */
-static void gen_riff(track_t *t, uint32_t len)
+static void gen_riff(track_t *t, uint32_t len, uint32_t ri)
 {
-    const barch_t *a = &BASS_ARCH[gs.riff];
+    const barch_t *a = &BASS_ARCH[ri];
     uint32_t i, alen = 16u * a->bars;
-    int32_t tn = 60 + ((gs.root - 60) % 12 + 12) % 12;
+    int32_t lo = ri == BA_RFE ? 38 : ri == BA_RF5 ? 46 : 60, tn = lo + ((gs.root - lo) % 12 + 12) % 12;   /* (the owner's
+                                                         * references: EBM's mid riff D2 .. F2, phonk's cowbell G#2 .. G3: their tonics D2 ..
+                                                         * C#3, A#2 .. A3) */
     uint8_t bc[32];                                     /* (V10.6z10) the riff a throw's own (gba_vary: its codes are
                                                          * the bass's: R up the octave or to the fifth, a ghost, a step moved) */
     memcpy(bc, &BA_STEP[a->at], alen);
@@ -1226,7 +1230,7 @@ static void gen_riff(track_t *t, uint32_t len)
         c &= 15u;
         if (c < 2u) { if (c) dstep_tie(&t->step[i]); continue; }
         n[0] = gnd(tn, c <= 10u ? (int32_t)c - 2 : (int8_t)"\xff\xfd\x09\xfe\x00"[c - 11u]);
-        gnote(&t->step[i], n, 1, f == 1u ? 114 : 94, f == 2u ? SF_SLIDE : 0u);
+        gnote(&t->step[i], n, 1, f == 1u ? 114 : f == 3u ? 62 : 94, f == 2u ? SF_SLIDE : 0u);   /* (an accent, a ghost) */
     }
 }
 static void gen_lead(track_t *t, uint32_t len)
@@ -1236,7 +1240,7 @@ static void gen_lead(track_t *t, uint32_t len)
     gline_t L;
     gseed(GS_LEAD);
     if (style == LD_NONE) return;
-    if (style == LD_RIFF) { gen_riff(t, len); return; }
+    if (style >= LD_RIFF) { gen_riff(t, len, style == LD_RIFF ? gs.riff : BA_RFE); return; }
     L.k = 0;
     L.tn = 55 + ((gs.root - 55) % 12 + 12) % 12;        /* the lead's tonic (degree 0): G3 .. F#4 */
     {   /* its window, the same in every key: Bb3 .. E5 (a motif, a hook), lower for an ostinato and long notes, higher
@@ -1532,7 +1536,8 @@ static __attribute__((noinline)) void gen_sound(track_t *t, uint32_t role, uint3
 {
     const grecipe_t *r = &RECIPE[ri];
     static const uint8_t EW[2][3] = {{55, 30, 15}, {70, 30, 0}};
-    uint32_t o = gpickw(EW[role == RL_BASS], 3), e, i, n, ft = r->ft & 7u, pre;
+    uint32_t sub = role == RL_BASS && gs.ba >= BA_MT1, o = sub ? 0u : gpickw(EW[role == RL_BASS], 3), e, i, n, ft = r->ft & 7u, pre;   /* (the
+                                                         * owner's references: minimal's and EBM's sub as written) */
     const engine_t *en;
     if (r->o[o][0] == 255u) o = 0;
     if (r->o[o][0] == ENGI_FM6 && gs.fm6 >= 2u) o = o == 2u ? 0u : 2u;   /* (FM6 twice at most: the third option, or the
@@ -1550,7 +1555,7 @@ static __attribute__((noinline)) void gen_sound(track_t *t, uint32_t role, uint3
     en = trk_engp(t);
     n = en->npresets;
     if (!n) return;
-    if (pre != 255u && gch(35) && !(role == RL_BASS && gs.g->lead == LD_EBM) && ri != SR_COWBELL)   /* (V10.6z10) a third of
+    if (pre != 255u && !sub && gch(35) && !(role == RL_BASS && gs.g->lead == LD_EBM) && ri != SR_COWBELL)   /* (V10.6z10) a third of
                                                          * the time another of the engine's presets of the same type (EBM's
                                                          * bass: its two oscillators always, the owner's; phonk's and baile
                                                          * funk's 808 COWBELL always) */
@@ -2125,7 +2130,8 @@ static void gen_parts(void)
                 if (gs.trk_of[r] < NTRK && (gs.act[r] || r == RL_TEX)) { allow |= 1u << r; cap--; }
             }
             for (k = 0; k < NTRK; k++) if (!((allow >> gs.role[k]) & 1u)) m |= 1u << k;
-            gm = f >> 4;
+            gm = f >> 4 | (t == GT_INTROK && g->drum == DM_EBM5 ? DXG_KICK : 0u);   /* (the owner's EBM reference: its
+                                                         * intro without the kick) */
             s = t == GT_BREAK ? 3u : t == GT_BUILD ? 2u : 0u;
             if (t == GT_DROP && gch(50)) bars *= 2u;    /* (a drop of 16 or 32) */
         }
@@ -2511,8 +2517,9 @@ BTAPP_FN static void gen_pick(void)
     const ggenre_t *g = gs.g;
     uint32_t k, pr, steps;
     const uint8_t *u = g->drum == DM_TRAP ? GSUB_HH : g->drum == DM_TROCK ? GSUB_TR : g->drum == DM_CUMBIA ? GSUB_CU :
-                       g->drum == DM_REGG ? GSUB_RG : g->drum == DM_DEMBOW ? GSUB_DB : 0;   /* (V10.7.2: the latin
-                                                         * genres' throws too) */
+                       g->drum == DM_REGG ? GSUB_RG : g->drum == DM_DEMBOW ? GSUB_DB : g->lead == LD_EBM ? GSUB_EB :
+                       !gs.gi ? GSUB_MT : 0;            /* (V10.7.2: the latin genres' throws too; the owner's
+                                                         * references: EBM's, MINIMAL TECHNO's, never EXPLORE's) */
     if (u && !gs.mutant) {                              /* (V10.6w) HIP HOP's, TECHNO ROCK's throws: one style of theirs,
                                                          * its fields over the row (gen_tables.c GSUB; g is gmut, every
                                                          * caller's) */
@@ -2693,6 +2700,9 @@ static __attribute__((noinline)) void gen_make(void)
          * DRUM & BASS throw on the Amen two times in five (jungle's break, its own map beside the two-step's; V10.7.2:
          * part of the throw's core) */
         if (!gx.on && g->drum == DM_DNB && gch(40)) gmut.drum = DM_AMEN;
+        /* (the owner's phonk reference) half the half-time throws the cowbell's repeated sixteenths, low, its pitch
+         * moved every half bar, at 123 .. 140 (the Brazilian throw, DM_PHONK2, as it was) */
+        if (g->lead == LD_RIFF && g->drum == DM_PHONK && gch(50)) { gs.riff = BA_RF5; gmut.bpm_lo = 123; gmut.bpm_hi = 140; }
         if (!gsr.thrown || gp.genre - 1u >= NGENRE || gs.mutant) break;
         q = gq;
         gseed(GS_DRUMS);
