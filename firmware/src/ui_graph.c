@@ -1433,7 +1433,7 @@ static __attribute__((noinline)) uint32_t graph_signature(void)
     if (strip_kind() == SK_TITLE)                    /* MENU > LARGE: the page's title (its engine, its number); (V10.8) an
                                                       * EDIT page: the engine's creature, alive */
         return h ^ 0x5A17u ^ (pg->fam == FAM_EDIT ? anim_fr / 2u * 2654435761u : 0u);
-    if ((pg->graph == GR_NONE && !fx_on()) || pg->graph == GR_ARP ||
+    if ((pg->graph == GR_NONE && !fx_on()) || SPLIT_PAGE(pg) || pg->graph == GR_ARP ||
         (pg->graph == GR_MOTION && !seq_roll_view(pg))) h ^= anim_fr / 2u;   /* (0.9.9-seq2b: AUTOMATION the roll, still) */   /* (0.8.5:
                                                          * FX's lens pictures change with their values, */
     if (fx_on() && (song.playing || bg_energy() > 2))   /* .. and with the sound while it sounds: FX live) */
