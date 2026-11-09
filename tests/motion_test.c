@@ -149,39 +149,14 @@ static int fun7_89(void)
     m.event[0] = (motion_event_t){3, P_REV, 90};
     m.event[1] = (motion_event_t){5, 81, 40};                      /* its P_E0 (81) */
     m.event[2] = (motion_event_t){6, 61, 20};                      /* FM OP1 ATK: 61 then and now */
-    pack_fun7_89(&old, &before, &m);
-    ok = proj_import(&after, &old, sizeof old);
-    for (k = 0; ok && k < PROJ_LT; k++) {
-        {
-            int16_t e[8];                                          /* (DRUM's E5, ACC then, FM now: 0; LOFI's and ANALOG's */
-            for (i = 0; i < 8u; i++) e[i] = before.t[k].p[P_E0 + i];   /* E values as 0.4's: core.h sound_v04) */
-            sound_v04(before.t[k].engine, e);
-            if (before.t[k].engine == 3u && e[1] >= 5)            /* (0.5.4's MOTION as written, GRIT 0: project.c; V10.6d: */
-                e[4] = 64, e[5] = 0;                               /* MATH's WAVE is BYTE or FLOAT) */
-            for (i = 0; i < 8u; i++)
-                ok &= after.t[k].p[P_E0 + i] == (i == 5u && trk[k].engine == ENGI_DRUM ? 0 : e[i]);
-        }
-        for (i = 0; i < 81u; i++) ok &= after.t[k].p[i] == before.t[k].p[i];
-        ok &= after.t[k].p[P_SOFS] == 0 && after.t[k].p[P_POFS] == 0;
-        for (i = P_LN0; i <= P_LN7; i++) ok &= after.t[k].p[i] == 127;
-    }
-    bad += check("89 parameters: E0..E7 at P_E0.., the SHIFT offsets 0, lanes 100 %, the rest in place", ok &&
-        after.t[0].p[P_FM1_ATK] == 33 && !memcmp(after.t[0].step, before.t[0].step, sizeof before.t[0].step));
-    bad += check("  its motion: E0 (81) -> P_E0, REV and FM OP1 ATK (61) kept",
-        after.motion.count == 3u && after.motion.event[0].param == P_REV && after.motion.event[1].param == P_E0 &&
-        after.motion.event[1].value == 40 && after.motion.event[2].param == P_FM1_ATK);
-    bad += check("  written again (P_COUNT parameters): the same project", proj_pack(&old, &after) && old.raw[66] == P_COUNT &&
-        proj_import(&before, &old, sizeof old) && !memcmp(&before, &after, sizeof before));
-    pack_fun7_89(&old, &before, &m);                                /* SONG: a slot of the old firmware */
-    memcpy(&proj_slot[2], &old, sizeof old);
+    pack_fun7_89(&old, &before, &m);                                /* (V10.7.13+: JIANT 0.1 .. 0.5's formats not read) */
+    bad += check("89 parameters (a FUNB of JIANT 0.5): refused, known as old (V10.7.13+)", !proj_import(&after, &old, sizeof old) &&
+        proj_old(&old, sizeof old));
+    memcpy(&proj_slot[2], &old, sizeof old);                        /* SONG: such a slot is no section (nothing staged) */
     chain_config.count = 1; chain_config.row[0] = (chain_row_t){2, 1};
-    ok = chain_prepare() == 0;
-    bad += check("  SONG: an 89-parameter slot's motion plays at today's ids (E0 at P_E0)", ok &&
-        sec_stage.motion.count == 3u && sec_stage.motion.event[1].param == P_E0);
-    seq_stop(); chain_config.count = 0; chain.armed = 0;
-    m.event[1].param = 82;                                          /* (any id P_E0 .. P_E7 of then moves up) */
-    pack_fun7_89(&old, &before, &m);
-    bad += check("  E1 (82) -> P_E1", proj_import(&after, &old, sizeof old) && after.motion.event[1].param == P_E1);
+    bad += check("  SONG: a row of such a slot: not played (its section empty)", chain_prepare() != 0);
+    seq_stop(); chain_config.count = 0; chain.armed = 0; memset(proj_slot[2].raw, 0, 4);
+    (void)after; (void)i; (void)k; (void)ok;
     return bad;
 }
 static int loads_and_song(void)

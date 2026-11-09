@@ -611,11 +611,8 @@ static int per_lane(void)
         dt = &trk[3];
         trk[0].step[3] = (step_t){{36}, 1, ST_NOTE, 0, 100, 1u << DV_SNARE};
         project_capture(&before);
-        proj_pack_vb(&a, &before);
-        ok = proj_import(&after, &a, sizeof a) && after.t[0].step[3].hit == 1u << DV_SNARE && !step_lm_any(&after.t[0].step[3]);
-        for (nb = 0; nb < NSTEP; nb++)
-            ok &= !step_lm_any(&after.t[0].step[nb]) && !step_lm_any(&after.t[3].step[nb]);
-        bad += check("  an older project (FUNB) loads with no lane modes, its hits as they were", ok);
+        proj_pack_vb(&a, &before);                      /* (V10.7.13+: FUNB, JIANT 0.5's, no longer read) */
+        bad += check("  an older project (FUNB): refused (V10.7.13+)", !proj_import(&after, &a, sizeof a) && proj_old(&a, sizeof a));
     }
     return bad;
 }

@@ -44,6 +44,13 @@ Everything since V10.6c, the last public version, in one list; each item links t
   all eight, and a restore says which songs stayed only in the file.
 - **Very old projects retired** (V10.6s): projects saved by JIANT before 1.0.3 (FUN1 to FUN6) are refused and left
   untouched, and a DIGITAL sound loads as FM6's init. Open them in an earlier version (V10.6c) and save them again there if you still need them.
+- **Older projects retired** (after V10.7.13, room for GENE's FORM MY LOOP): projects and backups saved in the
+  formats FUN7 to FUNB (Felucca 1.0 / 1.1 and JIANT up to 0.5) are no longer read; at power-on such a project shows
+  **OLD PROJECT: NOT READ** and its slot is empty (the flash keeps it until you save over it). The web editor cannot
+  convert them: open them in V10.7.13 or earlier and save them again there (that saves today's format). Also gone: the
+  old user presets' conversions (SAMPLE PERC, TRIO, LOFI's chips, 0.3 / 0.4 values: such a preset loads as stored, a
+  retired engine's playing as ANALOG), a retired engine's track in a project now gets ANALOG's first preset (not its
+  nearest sound), and ADD's own creature (ADD draws the being, as the other engines did before 0.9.6).
 - **Newer FM-1 units** (V10.6z): the FM-1s sold from late 2026 (logo on the front) have another flash chip. Older
   JIANT versions ran on them from RAM only (no saving, no GENE, no updates from the device); this version saves
   normally. If yours did not keep your songs, update.

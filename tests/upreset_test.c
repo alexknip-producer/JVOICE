@@ -236,9 +236,8 @@ int main(void)
         st_save(OBJ_UPRESET0 + 1, &up_bank[1], sizeof up_bank[1]);
         memset(up_bank, 0, sizeof up_bank);
         up_bank_check(1, st_load(OBJ_UPRESET0 + 1, &up_bank[1], sizeof up_bank[1]));
-        ok = up_used(16) && up_value(up_rec(16), P_E5) == 0 && up_rec(16)->packed[UP_FM_AT] == UP_V04_MARK &&
-             up_used(17) && up_value(up_rec(17), P_E5) == 100;
-        bad += check("DRUM record before FM: its ACC (E5) loads as FM 0; one stored since keeps its FM", ok);
+        ok = up_used(16) && up_value(up_rec(16), P_E5) == 100 && up_used(17) && up_value(up_rec(17), P_E5) == 100;
+        bad += check("V10.7.13+: a DRUM record of before FM loads as stored (no conversion of 0.3's ACC), one since too", ok);
     }
 
     /* (JIANT 0.4) a LOFI record of 0.3 (no 0.4 mark): its TONE (E7) its CUT (E4), BEND MASK 0; an ANALOG one's KTR
@@ -259,13 +258,11 @@ int main(void)
         st_save(OBJ_UPRESET0 + 1, &up_bank[1], sizeof up_bank[1]);
         memset(up_bank, 0, sizeof up_bank);
         up_bank_check(1, st_load(OBJ_UPRESET0 + 1, &up_bank[1], sizeof up_bank[1]));
-        ok = up_value(up_rec(16), P_E4) == 90 && up_value(up_rec(16), P_E6) == 0 && up_value(up_rec(16), P_E7) == 0 &&
-             up_value(up_rec(17), P_E7) == 0 && up_value(up_rec(18), P_E4) == 30 && up_value(up_rec(18), P_E7) == 90 &&
-             up_rec(16)->packed[UP_FM_AT] == UP_V04_MARK;
-        bad += check("0.3 records: LOFI TONE -> CUT, BEND MASK 0; ANALOG KTR -> INT 0; marked ones kept", ok);
-        bad += check("V10.6d: a LOFI chip record (TRI) -> ANALOG TRI, one oscillator, CUT its FILTER's (V10.6h); BYTE ones stay MATH",
-                     up_rec(19)->engine == 0u && up_value(up_rec(19), P_E0) == 2 && up_value(up_rec(19), P_E2) == 0 &&
-                     up_value(up_rec(19), P_E4) == (ch.np == P_COUNT ? clamp(up_value(&ch, P_FCUT), 0, 127) : 110) && up_rec(16)->engine == 3u && up_value(up_rec(16), P_E1) == 5);
+        ok = up_value(up_rec(16), P_E4) == 30 && up_value(up_rec(16), P_E6) == 2 && up_value(up_rec(16), P_E7) == 90 &&
+             up_value(up_rec(17), P_E7) == 64 && up_value(up_rec(18), P_E4) == 30 && up_value(up_rec(18), P_E7) == 90;
+        bad += check("V10.7.13+: 0.3's LOFI and ANALOG records load as stored (no 0.4 conversion)", ok);
+        bad += check("V10.7.13+: a LOFI chip record of before V10.6d stays LOFI, its values as stored",
+                     up_rec(19)->engine == 3u && up_value(up_rec(19), P_E1) == 1 && up_rec(16)->engine == 3u && up_value(up_rec(16), P_E1) == 5);
     }
 
     /* (V10.7.6) VEL (P_TVEL, once MUTATE's P_MCFG): a record without UP_VEL_MARK (every one before V10.7.6) loads
@@ -311,14 +308,12 @@ int main(void)
         st_save(OBJ_UPRESET0 + 1, &up_bank[1], sizeof up_bank[1]);
         memset(up_bank, 0, sizeof up_bank);
         up_bank_check(1, st_load(OBJ_UPRESET0 + 1, &up_bank[1], sizeof up_bank[1]));
-        ok = up_used(19) && up_rec(19)->engine == ENGI_DRUM && up_used(20) && up_rec(20)->engine == ENGI_SAMPLE &&
-             !memcmp(up_rec(20)->p, m.p, sizeof m.p) && up_used(21) && up_rec(21)->engine == ENGI_DRUM &&
-             !memcmp(up_rec(19)->note, d.note, sizeof d.note) && !memcmp(up_rec(19)->flags, d.flags, sizeof d.flags);
-        for (k = 0; k < 8u; k++)
-            ok &= up_value(up_rec(19), P_E0 + k) == KIT[k] && up_value(up_rec(21), o.np - 8u + k) == KIT[k];
-        for (k = 0; k < P_E0; k++)
+        ok = up_used(19) && up_rec(19)->engine == ENGI_SAMPLE && up_used(20) && up_rec(20)->engine == ENGI_SAMPLE &&
+             !memcmp(up_rec(20)->p, m.p, sizeof m.p) && up_used(21) && up_rec(21)->engine == ENGI_SAMPLE &&
+             eng_gone(ENGI_SAMPLE);                  /* (retired: engines.c eng_live plays it as ANALOG) */
+        for (k = 0; k < P_COUNT; k++)
             ok &= up_value(up_rec(19), k) == up_value(&d, k);
-        bad += check("bank load: SAMPLE PERC -> DRUM kit, FLUTE kept", ok);
+        bad += check("V10.7.13+: bank load: SAMPLE records (PERC too) as stored, played as ANALOG (retired)", ok);
         before = *up_rec(19);
         up_migrate(up_rec(19));
         bad += check("  migrated again: as it is", !memcmp(up_rec(19), &before, sizeof before));
@@ -328,10 +323,8 @@ int main(void)
             a[at - 1u] = u & 127u;
             a[at] = (u >> 7) & 127u;
         }
-        ok = up_parse(a, n, &got, &slot) == 0 && got.engine == ENGI_DRUM;
-        for (k = 0; k < 8u; k++)
-            ok &= up_value(&got, P_E0 + k) == KIT[k];
-        bad += check("UP_PUT of SAMPLE PERC -> DRUM kit", ok);
+        ok = up_parse(a, n, &got, &slot) == 0 && got.engine == ENGI_SAMPLE;
+        bad += check("V10.7.13+: UP_PUT of SAMPLE PERC: taken as sent (retired: ANALOG plays it)", ok);
     }
 
     /* map by count: a record from a build with 2 parameters fewer */

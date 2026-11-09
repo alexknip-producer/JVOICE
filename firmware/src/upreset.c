@@ -86,42 +86,12 @@ static void up_set_value(up_rec_t *r, uint32_t k, int16_t v)
 /* Legacy PHYS drums map through decoded parameters, not their disk representation. */
 static void up_migrate(up_rec_t *r)
 {
-    int16_t e[8]; uint32_t k;
-    if (!up_valid(r)) return;
-    for (k = 0; k < 8u; k++) e[k] = up_value(r, r->np - 8u + k);
-    if (drum_from_perc(r->engine, e)) {                 /* (SAMPLE PERC: see the top) */
-        r->engine = ENGI_DRUM;
-        for (k = 0; k < 8u; k++) up_set_value(r, r->np - 8u + k, e[k]);
-    }
-    if (analog_from_trio(r->engine, e)) {               /* (JIANT 0.4) TRIO: ANALOG's nearest */
-        r->engine = 0;
-        for (k = 0; k < 8u; k++) up_set_value(r, r->np - 8u + k, e[k]);
-    }
-    {
-        uint32_t mk = r->ver >= 4u && r->np <= UP_FM_AT ? r->packed[UP_FM_AT] : 0u;
-        if (r->engine == ENGI_DRUM && mk != UP_FM_MARK && mk != UP_V04_MARK)
-            up_set_value(r, r->np - 3u, 0);             /* (JIANT 0.3) ACC there: FM off */
-        if (mk != UP_V04_MARK && r->ver >= 4u && r->np <= UP_FM_AT) {   /* (0.4) LOFI, ANALOG: today's values (records */
-            for (k = 0; k < 8u; k++) e[k] = up_value(r, r->np - 8u + k);   /* before 1.0, unmarkable: as they are) */
-            sound_v04(r->engine, e);
-            for (k = 0; k < 8u; k++) up_set_value(r, r->np - 8u + k, e[k]);
-            r->packed[UP_FM_AT] = UP_V04_MARK;
-        }
-    }
+    if (!up_valid(r)) return;                           /* (V10.7.13+, room for FORM MY LOOP: SAMPLE PERC, TRIO, LOFI's chips
+                                                         * and 0.3 / 0.4's values no longer converted: a retired engine
+                                                         * plays ANALOG, eng_live) */
     if (r->ver >= 4u && r->np <= UP_VEL_AT && r->packed[UP_VEL_AT] != UP_VEL_MARK) {   /* (V10.7.6) VEL 100 % */
         if (P_TVEL + 8u < r->np && r->engine != ENGI_DIGITAL) up_set_value(r, P_TVEL, 127);   /* (DIGITAL: its OP4) */
         r->packed[UP_VEL_AT] = UP_VEL_MARK;
-    }
-    for (k = 0; k < 8u; k++) e[k] = up_value(r, r->np - 8u + k);
-    if (r->engine == ENGI_LOFI) {                       /* (V10.6d) LOFI's chips: ANALOG's nearest (MATH's CHIP */
-        if (analog_from_chip(r->engine, e)) {           /* STEP: 4BIT) */
-            r->engine = 0;
-            if (r->np == P_COUNT) {                     /* (V10.6h) its FILTER page's CUT RES as ANALOG's own E4 E5 */
-                e[4] = (int16_t)clamp(up_value(r, P_FCUT), 0, 127);
-                e[5] = (int16_t)clamp(up_value(r, P_FRES), 0, 127);
-            }
-        }
-        for (k = 0; k < 8u; k++) up_set_value(r, r->np - 8u + k, e[k]);
     }
 }
 

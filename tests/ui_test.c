@@ -507,7 +507,7 @@ static int test_sound_loads(void)
     bad += check("saved SAMPLE PERC project (V10.6s): ANALOG's first (SAMPLE retired), its mix and every step kept",
                  t->eng_req == ENGI_PHYS_TO && t->preset == 0u && t->p[P_LEVEL] == 71 && t->p[P_REV] == 33 &&
                  t->p[P_E0] == ENGINES[ENGI_PHYS_TO]->presets[0].e[0] && !memcmp(t->step, before.step, sizeof t->step));
-    {   /* a user preset of SAMPLE PERC (UP_PUT from an older editor, or a bank read): DRUM, its kit */
+    {   /* a user preset of SAMPLE PERC (UP_PUT from an older editor, or a bank read): (V10.7.13+) ANALOG, as any retired engine's */
         up_rec_t r;
         int16_t keep[P_COUNT];
         uint32_t k;
@@ -523,9 +523,9 @@ static int test_sound_loads(void)
         memcpy(keep, t->p, sizeof keep);
         song.sel = (uint8_t)(t - trk);
         up_load(7);
-        bad += check("SAMPLE PERC user preset: loads as a DRUM track (its kit)", t->eng_req == ENGI_DRUM && perc_kit(t) &&
-                     t->p[P_LEVEL] == keep[P_LEVEL]);
-        bad += check("  its GM hits play as drums", gm_hits_play(t));
+        bad += check("SAMPLE PERC user preset (V10.7.13+: no longer converted): loads as ANALOG (SAMPLE retired)",
+                     t->eng_req == ENGI_PHYS_TO && t->p[P_LEVEL] == keep[P_LEVEL]);
+        (void)perc_kit; (void)gm_hits_play;
         memset(up_rec(7), 0, sizeof r);
     }
     set_engine_of(t, 0);
@@ -11633,8 +11633,9 @@ static int test_scope(void)
     for (sk = 0; sk < SKIN_N; sk++)                               /* the EDIT pages of every engine with a creature */
         for (e = 0; e < NENGINES; e++) {
             uint32_t on_tile, on_mid, off_tile, off_mid, gy, chips;
-            if (!eng_ok(e) || e == ENGI_DRUM || e == ENGI_FM6 || eng_gone(e) || str_eq(ENGINES[e]->name, "DIGITAL"))
-                continue;                                         /* (DIGITAL, FELUCCA_FM4=1: its OP pages, no creature) */
+            if (!eng_ok(e) || e == ENGI_DRUM || e == ENGI_FM6 || eng_gone(e) || str_eq(ENGINES[e]->name, "DIGITAL") || e == ENGI_ADD)
+                continue;                                         /* (DIGITAL, FELUCCA_FM4=1: its OP pages, no creature; V10.7.13+:
+                                                         * ADD neither, it draws the being) */
             ui_power_on(); ui_skin = (uint8_t)sk; set_engine_of(TSEL, e); TSEL->engine = TSEL->eng_req;
             go_title("EDIT 1"); ui.force = 1; frame(); frame();
             if (trk_engp(TSEL) == &ENG_FORMANT && TSEL->p[P_VLANG])

@@ -45,6 +45,14 @@ Todo lo que cambió desde la V10.6c, la última versión pública, en una lista;
 - **Proyectos muy viejos retirados** (V10.6s): los proyectos guardados por JIANT antes de la 1.0.3 (FUN1 a FUN6) se
   rechazan sin tocarlos, y un sonido DIGITAL carga como el init de FM6. Si todavía los necesitás, abrilos en una
   versión anterior (V10.6c) y guardalos de nuevo ahí.
+- **Proyectos más viejos retirados** (después de V10.7.13, lugar para FORM MY LOOP de GENE): los proyectos y backups
+  guardados en los formatos FUN7 a FUNB (Felucca 1.0 / 1.1 y JIANT hasta 0.5) ya no se leen; al encender, un proyecto
+  así muestra **OLD PROJECT: NOT READ** y su slot queda vacío (la flash lo conserva hasta que guardes encima). El editor
+  web no los convierte: abrilos en V10.7.13 o anterior y guardalos de nuevo ahí (así quedan en el formato de hoy).
+  También se fueron: las conversiones de presets de usuario viejos (SAMPLE PERC, TRIO, los chips de LOFI, valores de
+  0.3 / 0.4: un preset así carga como estaba guardado, y si es de un motor retirado suena como ANALOG), la pista de un
+  motor retirado en un proyecto ahora recibe el primer preset de ANALOG (no su sonido más parecido), y la criatura propia
+  de ADD (ADD dibuja el ser, como los otros motores antes de 0.9.6).
 - **FM-1 nuevos** (V10.6z): los FM-1 vendidos desde fines de 2026 (con el logo en el frente) traen otro chip de
   flash. Las versiones anteriores de JIANT andaban en esos equipos solo desde la RAM (sin guardar, sin GENE, sin
   actualizarse desde el equipo); esta versión guarda normalmente. Si el tuyo no conservaba tus canciones, actualizá.

@@ -337,10 +337,12 @@ int main(void)
         ((uint32_t *)v8)[1] = 3584u;
         sum = proj_hash(v8, 3580u);
         memcpy(v8 + 3580u, &sum, 4);
-        bad += check("a FUN8 project (1.0.x) restores as FUN9 into slot 2, E0 at P_E0, lane levels 100 %",
-                     put_all(3, v8, sizeof v8, st_crc32(v8, sizeof v8)) == 0 && ((uint32_t *)proj_slot[1].raw)[0] == PROJ_MAGIC &&
-                     proj_import(&proj_scratch, &proj_slot[1], sizeof st) && proj_scratch.t[2].p[P_E0] == 2 &&
-                     proj_scratch.t[2].p[P_LN3] == 127 && proj_scratch.t[1].step[3].note[0] == 64u);
+        {   /* (V10.7.13+: JIANT 0.1 .. 0.5's formats, and 1.0.x's FUN8, not read) refused as FUN6 is, the slot kept */
+            static project_store_t was;
+            memcpy(&was, &proj_slot[1], sizeof was);
+            bad += check("a FUN8 project (1.0.x) is refused (2, V10.7.13+), the slot kept",
+                         put_all(3, v8, sizeof v8, st_crc32(v8, sizeof v8)) == 2u && !memcmp(&was, &proj_slot[1], sizeof was));
+        }
     }
     memset(&v6, 0, sizeof v6);                           /* FUN6: 69 parameters, steps out of range */
     v6.magic = PROJ_MAGIC_V6;

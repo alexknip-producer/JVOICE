@@ -195,11 +195,8 @@ static int projects(void)
         memcpy(old.raw, &magic, 4); memcpy(old.raw + 4, &size, 4);
         memset(old.raw + PROJ_STORE_V7 - 4u - PROJ_NAME_LEN, 0, PROJ_NAME_LEN);
         sum = proj_hash(old.raw, PROJ_STORE_V7 - 4u); memcpy(old.raw + PROJ_STORE_V7 - 4u, &sum, 4);
-        ok = proj_import(&fun7, &old, PROJ_STORE_V7);
-        for (k = 0; ok && k < PROJ_LT; k++)
-            for (i = 0; i < NSTEP; i++)
-                ok &= step_ratchet(&fun7.t[k].step[i]) == 1u;
-        bad += check("  FUN7 of before: every step x1", ok && fun7.t[0].step[1].flags == SF_ACCENT);
+        bad += check("  FUN7 of before: refused (V10.7.13+: JIANT 0.1 .. 0.5's formats not read)",
+                     !proj_import(&fun7, &old, PROJ_STORE_V7) && proj_old(&old, PROJ_STORE_V7));
     }
     {   /* FUN6 (10-byte steps): (V10.6s) retired, refused */
         project_v6_t v6;
