@@ -17,7 +17,7 @@ a generator and effects, all inside the little keyboard. It is a fork of [Felucc
 The emulator runs the same code as the FM-1, with sound, played with the computer keyboard or the mouse. The installer
 always offers the current public version first, and the earlier ones under it.
 
-## This release: V10.7.11
+## This release: V10.7.12
 
 ### Installing
 
@@ -468,6 +468,13 @@ JIANT's modifications are distributed under the same license.
 ## Changelog
 
 Every update is listed here, newest first. (Since 0.6.80 at the end of the page: what the synth does comes first.)
+
+### V10.7.12 — public (2026-11-09)
+
+- REC then PLAY records the loop even when PLAY was set to the song (after a GEN song); NEW PROJECT plays the loop again.
+- The master EQ and TAPE are saved in every section of a project and by the autosave (they could come back flat).
+- macOS 13–15: the FM-1 shows up as a USB audio device (the audio interfaces now come before MIDI).
+- The PRESETS knob says LIST VOX (or the type) when SAVE › PRESETS' LIST filter limits it; set LIST ALL to step through every sound.
 
 ### V10.7.11 — public (2026-11-09)
 
