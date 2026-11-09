@@ -2035,9 +2035,9 @@ function makeMockDevice(opt = {}) {
     st.bank[slot] = snapshot(name);
     clearSteps(); st.p[29] = 16;
   });
-  /* the power-on sounds (engines.c TRK_DEF, V10.6e): DRUM-X ACOUSTIC, ANALOG FAT BASS, PHASE GLASS PAD, FM6 TINE EP,
-     VOICE CHOIR AAH, ANIMAL WHISTLE */
-  [[1, 0, 14], [2, 2, 9], [3, FM6_E, 0], [4, 5, 0], [5, 14, 24], [0, 10, 5]].forEach(([i, e, p]) => { st.sel = i; setEngine(e); applyPreset(p); });
+  /* the power-on sounds (engines.c TRK_DEF, V10.7.11): DRUM-X ACOUSTIC, ANALOG PLUCK, PHASE INIT SAW, FM6 FM BASS,
+     VOICE CHANT, ANIMAL WHISTLE */
+  [[1, 0, 8], [2, 2, 11], [3, FM6_E, 2], [4, 5, 5], [5, 14, 24], [0, 10, 5]].forEach(([i, e, p]) => { st.sel = i; setEngine(e); applyPreset(p); });
   /* the device powers on with its sequencers empty; the mock starts as a little demo to look at: track 1 (DRUM-X)
      with BEAT, track 5 (the voice) with OFFBEAT (as SEQ > PATTERNS would load them), the bass left, the pad right */
   st.sel = 4; loadPattern(1);

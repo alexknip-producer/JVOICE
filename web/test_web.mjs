@@ -1033,8 +1033,8 @@ async function editorTracks() {
   const info = E.parse[C.INFO](await rq(E.req.info()));
   const tr = E.parse[C.TRACK](await rq(E.req.track()));
   ok(info.ntrk === 6 && tr.sel === 0 && tr.ntrk === 6 && tr.tracks.map((t) => t.engine).join() === "10,0,2,12,5,14"
-    && tr.tracks[0].preset === 5 && tr.tracks[1].preset === 14 && tr.tracks[2].preset === 9,
-    "tracks: INFO NTRK, TRACK lists 6 parts (V10.6e: DRUM-X ACOUSTIC, ANALOG FAT BASS, PHASE GLASS PAD, FM6, VOICE, ANIMAL)");
+    && tr.tracks[0].preset === 5 && tr.tracks[1].preset === 8 && tr.tracks[2].preset === 11,
+    "tracks: INFO NTRK, TRACK lists 6 parts (V10.7.11: DRUM-X ACOUSTIC, ANALOG PLUCK, PHASE INIT SAW, FM6, VOICE, ANIMAL)");
   /* the v1 commands follow the selected track */
   const d0 = E.parse[C.DUMP](await rq(E.req.dump()), info);
   const t1 = E.parse[C.TRACK](await rq(E.req.track(1)));
