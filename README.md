@@ -495,6 +495,7 @@ Everything since V10.6c, the last public version (V10.6o … V10.6z9 were betas;
 - **Hardware**: the newer FM-1s' flash (JEDEC 0xB36014) accepted (V10.6z: those units ran from RAM only); the second
   core only on the stock power settings (V10.6z2).
 - GLO › KEY SPLIT, KEY SPLIT 2: the scope no longer freezes (V10.7.7).
+- The PROX/AIR bar and SWARM's FAR … NEAR bar are drawn in the thermal palette (V10.7.7)
 
 ### V10.6c — public (2026-11-04)
 
