@@ -1832,7 +1832,7 @@ NEW PROJECT start on EXPLORE.
 
 | Page | KNOB 1 | KNOB 2 | KNOB 3 | KNOB 4 |
 |---|---|---|---|---|
-| 1/3 | **GENRE**: **EXPLORE** (power-on and NEW PROJECT start on it; V10.8: GEN keeps the one you picked between visits; no genre, every rule broken, below), RANDOM (half its throws are mutants of two genres, named A+B) or one of the genres (below), in that order | **SEED** 0000–9999 | **ENERGY** 0–100 % | **FORM**: LOOP, PARTS, SONG |
+| 1/3 | **GENRE**: **EXPLORE** (power-on and NEW PROJECT start on it; V10.8: GEN keeps the one you picked between visits; no genre, every rule broken, below), RANDOM (half its throws are mutants of two genres, named A+B) or one of the genres (below), in that order | **SEED** 0000–9999 | **ENERGY** 0–100 % | **FORM**: LOOP, PARTS, SONG, MY LOOP |
 | 2/3 | **DRUMS** | **BASS** | **CHORDS** | **ARP** — each OFF, 10–100 %, or **AUTO** (the genre's); OFF stays off (V10.8) |
 | 3/3 | **LEAD** (as above) | **COMPLEX** 0–100 % | **SWING** AUTO or 0–100 % | **HUMAN** 0–100 % |
 
@@ -2035,6 +2035,39 @@ What a piece is made of:
 
 Every piece replaces every track's steps, sounds, kit, mix and automation. Mutes are left as they are. The roles that
 play go on the first tracks (drums on the DRUM track), so with TRACKS 4 you hear the most important ones.
+
+#### FORM MY LOOP: your loop made a song
+
+Set **FORM** to **MY LOOP** and press **OCT+**: GEN turns the loop you are playing into a whole song, by the rules of
+the **GENRE** you picked. Nothing of your loop changes: its tracks, steps, sounds and mix stay as they are, and they are
+section **A**, the song's peak (its drop). GEN:
+
+- **listens to your loop**: its key and scale (major, minor, dorian or mixolydian; each note weighed by its length, its
+  velocity and whether it falls on the beat; the bass, the lowest notes, tell the tonic) and a chord a bar (a half bar
+  in a one-bar loop): the triad of the key heard most there, the bass note as its root, a seventh where it sounds.
+  DRUM-X counts too where it plays a pitch: a lane with little noise and a long ring (an 808, a tuned tom) and the notes
+  of an EXTENDED kit's chromatic run (KICK / TOM or a lane's CHROM). A loop of drums alone has no key: GEN's own key
+  and progression for the genre are used.
+- **adds the parts your loop lacks, only on empty tracks** (no note; never on yours), by **BASS**, **CHORDS** and **ARP**
+  on GENE 2 (AUTO: the genre's; OFF: none): a bass where your loop has none, chords on the chords it heard where it has
+  none, and on the arp's track a **counter-melody made of your melody**: the same notes moved an eighth or a beat, its
+  first half answered, turned upside down round its first note or kept to the beats, an octave away, in your key (no
+  melody in the loop: an arp of the chords). Their sounds and mix are the genre's. No empty track: the song is arranged
+  from your loop alone and the screen says **NO EMPTY TRACK: ARRANGED**.
+- **arranges it** with SONG's rules for the genre (the club's plan, or an arc for ambient, film and the like; **RANDOM**
+  and **EXPLORE** pick one by your tempo and drums: four kicks a bar from 100 BPM HOUSE, over 138 BPM HARD TECHNO, else
+  KRAUT from 110 BPM, DREAM POP below): the intro and the outro with your drums thinned (the off-beat sixteenths out)
+  and few layers, the layers coming in by the genre's priorities, **B** the drop's first bars, **C** the build (your
+  drums over four bars with a roll on your own snare, clap or rim getting faster and louder, the kick out at the end, the
+  master's high-pass opening, the chords' filter rising, a stutter into the drop), **D** the break (no drums, no bass, the
+  chords wetter, the synths an octave up on its last bar), fills at the phrases' ends (ARRANGE's FILL: your kit's own
+  sounds), and every drop row your whole loop as it is. Muted tracks of yours stay muted.
+
+It is a SONG as GEN's are: **PLAY** plays it (TIMELINE and ARRANGE show its rows), **SAVE** keeps it (all its parts and
+its rows, as any GEN song: a draft until you save it). **OCT+** again throws another seed: another song from the same
+loop (the parts it added are made again). **UNDO** (GLO + G4) brings your loop back as it was, in LOOP mode, the song
+gone (from a song you had saved, open it again from SAVE > PROJECT: it is still there). An empty loop: **THE LOOP IS
+EMPTY**, nothing made.
 
 ### Sound dice (EDIT + SELECT)
 

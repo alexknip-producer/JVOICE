@@ -521,9 +521,10 @@ static void undo_ui(void)
 {
     if (chain_busy())
         ui_message("SONG PLAYS: STOP IT TO EDIT");
-    else if (undo_do())
-        ui_message("NOTHING TO UNDO");
     else {
+        uint32_t g = gls.u && gls_sig == gls_hash();    /* (GEN's FROM LOOP: the loop as it was, in LOOP mode) */
+        if (undo_do()) { ui_message("NOTHING TO UNDO"); return; }
+        if (g) { chain_config.count = 0; live.mode = 0; gls.u = 0; }
         if (ui.ly == LAYER_REC) song.rec = 0; /* keep the recovered take safe */
         ui_message("UNDONE (AGAIN: REDO)");
     }

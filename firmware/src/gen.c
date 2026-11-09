@@ -109,6 +109,11 @@ static uint32_t gseed_mix(uint32_t part)
 {
     return part == GS_PICK ? 0u : (gs.gi + 1u) * 0x85EBCA6Bu ^ (part - GS_BASS < 3u ? gs.sec * 0x2545F491u : 0u);
 }
+/* (FROM LOOP, gen_loop.c) on: the song being made from the player's loop; add: the tracks it gave a part (an empty
+ * one's); mute: the player's muted tracks; u: FROM LOOP's song (GLO + G4: the loop alone again); room: no part was
+ * wanted on a track it did not find empty; heard: the loop's key and chords read */
+static struct { uint8_t on, add, mute, u, room, heard; } gls __attribute__((section(".bss.gls")));   /* (out of the
+                                                         * merged statics) */
 static ggenre_t gmut;                                   /* (0.6.95) the genre as this throw plays it (its neighbours' parts) */
 static char gmut_name[20];
 #define GGR (gs.gi < NGENRE ? (uint32_t)GGRAM[gs.gi] : 0u)       /* (0.9.9-gen1) this piece's grammar (EXPLORE: none) */
@@ -897,7 +902,8 @@ static void gen_pads(track_t *t, uint32_t len)
      * a part's bar repeats, 90 % and more): before, a coin each step made every bar another; fig[1] the phrase's last
      * bar (the fourth of four), the figure with one step moved (a push into the next phrase); hold and velocity still
      * by the step */
-    uint32_t fig[2] = {0, 0}, stab1 = gch(50), sparse = 40u + a / 3u, keep = 70u + a * 3u / 10u, p, club = style == CS_STAB && gclub(), mem_n = 0;
+    uint32_t fig[2] = {0, 0}, stab1 = gch(50), sparse = 40u + a / 3u, keep = 70u + a * 3u / 10u, p, club = style == CS_STAB && gclub() && !(gls.on && gls.heard), mem_n = 0;   /* (FROM
+                                                         * LOOP: the loop's own chords, no shape moved) */
     int32_t mem_r = 0;
     int8_t mem_iv[4];
     /* (gen5) the club's stabs off the records: the organ / M1 offbeats (Marshall Jefferson, Kerri Chandler), the piano's
@@ -1909,7 +1915,8 @@ static uint8_t gform_kept;                              /* (gen6c) FORM asked, s
 static uint32_t gform(void)
 {
     uint32_t f = gs.g->form;
-    return gp.form == 0u ? FM_LOOP : gp.form == 2u ? (f == FM_ARC ? FM_ARC : FM_CLUB) : f == FM_LOOP ? FM_PARTS : f;
+    return gp.form == 0u ? FM_LOOP : gp.form >= 2u ? (f == FM_ARC ? FM_ARC : FM_CLUB) : f == FM_LOOP ? FM_PARTS : f;   /* (FROM LOOP:
+                                                         * SONG's, gen_loop.c) */
 }
 /* (V10.6m) an automation record (a new one: the last), a ramp from the one before (motion.c: MOTION_RAMP) */
 static void gmot(track_t *t, uint32_t step, uint32_t id, int32_t v, int ramp)
@@ -1960,10 +1967,18 @@ static uint32_t grow(uint32_t r, uint32_t s, uint32_t bars, uint32_t m, uint32_t
     return r + 1u;
 }
 static __attribute__((noinline)) void gmute(uint32_t k) { if (k < NTRK) trk[k].p[P_MUTE] = 1; }
+/* a track's loop repeated over the four bars (the build's) */
+static __attribute__((noinline)) void gtile(track_t *t)
+{
+    uint32_t i, l0 = dlen(t);
+    for (i = l0; i < NSTEP; i++) t->step[i] = t->step[i % l0];
+    t->p[P_SLEN] = NSTEP;
+}
+static uint32_t gls_snare(const track_t *t);
 static void gen_parts(void)
 {
     const ggenre_t *g = gs.g;
-    uint32_t form = gform(), plan = form == FM_CLUB, fx = plan ? 3u : 1u, half = gp.form != 2u;
+    uint32_t form = gform(), plan = form == FM_CLUB, fx = plan ? 3u : 1u, half = gp.form < 2u;
     uint32_t dr = gs.trk_of[RL_DRUM], bs = gs.trk_of[RL_BASS], pd = gs.trk_of[RL_PAD], ld = gs.trk_of[RL_LEAD], ar = gs.trk_of[RL_ARP];
     uint32_t tx = gs.trk_of[RL_TEX], k, j, rows = 0, i, fam = HXF(gs.hx), lb, np;
     uint32_t base = 1u | (form == FM_ARC ? 4u : 0u), dense = form == FM_PARTS ? 4u : form == FM_ARC ? 8u : 0u;   /* (the sections
@@ -1985,13 +2000,15 @@ static void gen_parts(void)
         int32_t lift = 0;
         k = plan ? (0x2310u >> (4u * j)) & 15u : j;     /* (the plan: B D C, the build last: its loops four bars) */
         /* back to the whole piece, then this section's cut */
-        for (i = 0; i < NTRK; i++) trk[i].p[P_MUTE] = 0;
+        for (i = 0; i < NTRK; i++) trk[i].p[P_MUTE] = (int16_t)((gls.mute >> i) & 1u);   /* (FROM LOOP: the player's
+                                                         * muted tracks stay so) */
         memcpy(gs.pdeg, pdeg, sizeof pdeg); memcpy(gs.pq, pq, sizeof pq); gs.pn = pn;
         if (dr < NTRK) {
             track_t *t = &trk[dr];
             uint32_t a0 = gs.amt[GP_DRUMS], c0 = gs.complex;
             load_begin(t, LOAD_PAT); memcpy(t->step, gen_keep, sizeof gen_keep); motion_clear(t);
-            if (gs.act[RL_DRUM] && (k == fx || ((dense >> k) & 1u))) {   /* the fill section: A's drums and the genre's fill
+            if (!gls.on && gs.act[RL_DRUM] && (k == fx || ((dense >> k) & 1u))) {   /* (FROM LOOP: the player's drums;
+                                                         * the rows' FILL) */   /* the fill section: A's drums and the genre's fill
                                                          * (a breath where it has none); the apex, PARTS' C denser */
                 gs.drum_fill = k == fx ? (g->fills ? g->fills : FL_DROP) : 0u;
                 if (k != fx) {
@@ -2002,21 +2019,20 @@ static void gen_parts(void)
                 gen_drums(t, dlen(t));
                 gs.drum_fill = 0; gs.amt[GP_DRUMS] = a0; gs.complex = c0;
             }
-            if (plan && k == 1u && gs.act[RL_DRUM]) gdrum_hit(t, 0, 4, 120, 1);   /* B: the drop's first loop, a crash on its one */
+            if (plan && k == 1u && gs.act[RL_DRUM] && !gls.on) gdrum_hit(t, 0, 4, 120, 1);   /* B: the drop's first loop, a crash on its one */
             if (plan && k == 2u) {                      /* C BUILD, four bars: A's drums, the snare rolling faster (quarters,
                                                          * eighths, sixteenths, then rolled), louder and louder, the kick
                                                          * out for the last half bar */
-                uint32_t l0 = dlen(t);
-                for (i = l0; i < NSTEP; i++) t->step[i] = t->step[i % l0];
-                t->p[P_SLEN] = NSTEP;
+                gtile(t);
                 if (gs.act[RL_DRUM]) {
-                    gdrum_clear_region(t, 0, NSTEP, 0x06u);
+                    uint32_t sn = gls.on ? gls_snare(t) : 1u;   /* (FROM LOOP: the loop's own snare, clap or rim) */
+                    gdrum_clear_region(t, 0, NSTEP, 0x06u | 1u << sn);
                     gdrum_clear_region(t, 56u, NSTEP, 0x01u);
                     for (i = 0; i < NSTEP; i++) {
                         uint32_t b = i >> 4;
                         if (i & (b ? b == 1u : 3u)) continue;
-                        gdrum_hit(t, i, 1, 46 + (int32_t)i * 81 / 64, b >= 2u && !(i & 3u));
-                        if (b == 3u) glane_rat(&t->step[i], 1, i >= 56u ? 4u : 2u);
+                        gdrum_hit(t, i, sn, 46 + (int32_t)i * 81 / 64, b >= 2u && !(i & 3u));
+                        if (b == 3u) glane_rat(&t->step[i], sn, i >= 56u ? 4u : 2u);
                     }
                 }
             }
@@ -2031,7 +2047,8 @@ static void gen_parts(void)
             static const int8_t XL[7] = {1, 3, 5, 6, -1, -3, -5};   /* (0.8.6) EXPLORE: anywhere, not a whole step */
             lift = gx.on ? XL[gr() % 7u] : 2;
         }
-        if (plan && k == 2u && pd < NTRK) trk[pd].p[P_SLEN] = NSTEP;   /* (the build's chords over its four bars) */
+        if (plan && k == 2u && pd < NTRK) gtile(&trk[pd]);   /* (the build's chords over its four bars; FROM LOOP: the
+                                                         * player's repeated there) */
         gs.sec = (uint8_t)k;                            /* (V10.6z10) the section's own variations (gseed_mix, gen_lead) */
         en = gs.energy;
         if (pn == 1u) {                                 /* (V10.6z10) one chord: the section's register and density its
@@ -2040,7 +2057,7 @@ static void gen_parts(void)
             gs.reg = (int8_t)(k == 2u ? 7 : k == 3u ? -5 : 0);
             gs.energy = k == 2u ? (en + 100u) / 2u : en * 2u / 3u;
         }
-        if (!plan || k != 1u) gen_pitched(rot, lift);   /* (B: A's but the crash) */
+        if (!gls.on && (!plan || k != 1u)) gen_pitched(rot, lift);   /* (B: A's but the crash; FROM LOOP: the loop's own) */
         gs.energy = en; gs.reg = 0;
         if (plan) {
             if (k == 2u) {                              /* C BUILD: the chords' filter opening over it, the delay thrown on
@@ -2134,15 +2151,18 @@ static void gen_parts(void)
                                                          * intro without the kick) */
             s = t == GT_BREAK ? 3u : t == GT_BUILD ? 2u : 0u;
             if (t == GT_DROP && gch(50)) bars *= 2u;    /* (a drop of 16 or 32) */
+            if (gls.on && t == GT_DROP) m &= gls.add;             /* (FROM LOOP: the drop the loop as it is, its own parts all in) */
         }
+        m |= gls.mute;
         fill = dr < NTRK && gs.act[RL_DRUM] && nt != t && !gm && !((m >> dr) & 1u) && (((base | dense) >> s) & 1u);
         if (t == GT_DROP && plan && dr < NTRK && gs.act[RL_DRUM] && bars > lb) { rows = grow(rows, 1, lb, m, gm, 0, 0); bars -= lb; }   /* (the
                                                          * crash's: the club's B) */
         f = fill ? (bars > lb ? bars - lb : 0u) : bars;
-        rows = grow(rows, s, f, m, gm, 0, 0);
+        rows = grow(rows, s, f, m, gm, 0, gls.on && (t == GT_INTROK || t == GT_OUTRO) ? (uint32_t)RV_THIN << (4u * dr) : 0u);   /* (FROM
+                                                         * LOOP: the intro's and the outro's drums thinner) */
+        k = !gls.on && ((base >> s) & 1u) && ((dice_secs >> fx) & 1u);   /* (the fill section's drums, else ARRANGE's FILL) */
         if (fill)
-            rows = grow(rows, s, bars - f, m, gm, ((base >> s) & 1u) && ((dice_secs >> fx) & 1u) ? (fx + 1u) << (3u * dr) : 0u,
-                        ((base >> s) & 1u) && ((dice_secs >> fx) & 1u) ? 0u : (uint32_t)RV_FILL << (4u * dr));
+            rows = grow(rows, s, bars - f, m, gm, k ? (fx + 1u) << (3u * dr) : 0u, k ? 0u : (uint32_t)RV_FILL << (4u * dr));
     }
     chain_config.count = (uint8_t)rows;
     SONG_END(&chain_config) = SONG_FOREVER;
@@ -2639,10 +2659,12 @@ BTAPP_FN static void gen_pick(void)
  * still its song: only which seed OCT+ throws changes */
 static struct { uint16_t h[8], s[4]; uint8_t at, thrown, sat; } gsr __attribute__((section(".bss.dice")));   /* (the genre in
                                                          * h; V10.7.2: s the last four seeds thrown) */
+#include "gen_loop.c"
 static __attribute__((noinline)) void gen_make(void)
 {
     const ggenre_t *g;
     uint32_t k, dr = NTRK, nlive = trk_live < NTRK ? trk_live : NTRK, nmel, drums, next, wet;
+    if (gls.u) { gls_prep(); goto parts; }            /* (FROM LOOP: the loop's song, gen_loop.c) */
     gen_clean();                                        /* (0.9.9-gen1) from NEW PROJECT's state, nothing of before */
     /* the choices from the seed: the genre (RANDOM), the root, the scale, the progression, the bass */
     gseed(GS_PICK);
@@ -2890,8 +2912,10 @@ static __attribute__((noinline)) void gen_make(void)
         fg_set_t *f = &fg_set[gs.trk_of[RL_LEAD]][0];
         f->rate = 5; f->dir = FG_FWD; f->ivl = -2;      /* (x1, with it, a third under) */
     }
+parts:
     gen_parts();
     gs.song = 0;
+    if (gls.on) { gls.on = 0; gls.mute = 0; gls_sig = gls_hash(); }
 }
 /* the piece made from the settings (UNDO brings back what was there); the message */
 static void gen_go(void)
@@ -2905,11 +2929,12 @@ static void gen_go(void)
         song_poll();
     }
     gform_kept = 0;
-    undo_mark();
+    if (gls_begin()) return;
     if (song_draft_begin()) {
         if (play) { if (live.mode) chain_play_ui(); else transport_req = 1; }
         return;
     }
+    gls.u = gp.form == 3u;
     gen_make();
     str_cpy(gp.last, gs.g->name, sizeof gp.last);
     k = str_len(gp.last);
@@ -2917,7 +2942,7 @@ static void gen_go(void)
     b[3] = (char)('0' + gp.seed / 10u % 10u); b[4] = (char)('0' + gp.seed % 10u); b[5] = 0;
     str_cpy(gp.last + k, b, sizeof gp.last - k);
     ui_say("GENE: ", gp.last);
-    str_cpy(ui.msg2, live.mode ? "PLAY: SONG / SAVE: ALL PARTS" : "UNDO: GLO + G4", sizeof ui.msg2);
+    str_cpy(ui.msg2, gls.u && !gls.room ? "NO EMPTY TRACK: ARRANGED" : live.mode ? "PLAY: SONG / SAVE: ALL PARTS" : "UNDO: GLO + G4", sizeof ui.msg2);
     if (play) { if (live.mode) chain_play_ui(); else transport_req = 1; }
     ui.force = 1;
 }
@@ -3098,7 +3123,7 @@ static const char *dice_seq(track_t *t)
 /* ------------------------------------------------------------------------------------------- the GEN screen --- */
 static const char *const GEN_LBL[3][4] BTAPP_RO = {{"GENRE", "SEED", "ENERGY", "FORM"}, {"DRUMS", "BASS", "CHORDS", "ARP"},
                                           {"LEAD", "COMPLEX", "SWING", "HUMAN"}};
-static const char *const GEN_FORM[3] BTAPP_RO = {"LOOP", "PARTS", "SONG"};
+static const char *const GEN_FORM[4] BTAPP_RO = {"LOOP", "PARTS", "SONG", "MY LOOP"};   /* (FROM LOOP: gen_loop.c) */
 static uint8_t gen_fresh;                               /* (0.6.96) the screen's first frame: the body cleared once */
 static void gen_open(void)
 {
@@ -3129,7 +3154,7 @@ static void gen_knob(uint32_t k, int32_t s)
         }
         else if (k == 1u) gp.seed = (uint16_t)((gp.seed + 10000u + (uint32_t)clamp(accel(EN_K2, s, 9999), -9999, 9999)) % 10000u);
         else if (k == 2u) gp.energy = (uint8_t)clamp((int32_t)gp.energy + s * 5, 0, 100);
-        else gp.form = (uint8_t)clamp((int32_t)gp.form + (s > 0 ? 1 : -1), 0, 2);
+        else gp.form = (uint8_t)clamp((int32_t)gp.form + (s > 0 ? 1 : -1), 0, 3);
     } else if (p == 1u) {
         gen_amt_turn(&gp.amt[k], s);
     } else {
@@ -3155,7 +3180,7 @@ BTAPP_FN static void gen_value(uint32_t p, uint32_t k, char *b)
     if (p == 0u) {
         if (k == 0u) { str_cpy(b, gp.genre == GEN_EXPLORE ? "EXPLORE" : gp.genre ? GENRE[(gp.genre - 1u) % NGENRE].name : "RANDOM", 16); return; }
         if (k == 1u) { b[0] = (char)('0' + gp.seed / 1000u % 10u); b[1] = (char)('0' + gp.seed / 100u % 10u); b[2] = (char)('0' + gp.seed / 10u % 10u); b[3] = (char)('0' + gp.seed % 10u); b[4] = 0; return; }
-        if (k == 3u) { str_cpy(b, GEN_FORM[gp.form % 3u], 16); return; }
+        if (k == 3u) { str_cpy(b, GEN_FORM[gp.form & 3u], 16); return; }
         v = gp.energy;
     } else if (p == 1u) v = gp.amt[k];
     else if (k == 0u) v = gp.amt[GP_LEAD];
@@ -3181,7 +3206,7 @@ BTAPP_FN static void gen_cards_bt(void)
         a = p == 1u ? gp.amt[k] : p == 2u && k == 0u ? gp.amt[GP_LEAD] : p == 2u && k == 2u ? gp.swing : 0u;
         r = p == 0u ? (k == 0u ? (int32_t)(gp.genre == GEN_EXPLORE ? 0u : gp.genre + 1u) * 1000 / (int32_t)(GEN_NPOS - 1u) :   /* (0.8.7:
                                                          * KNOB 1's order, EXPLORE at the left) */ k == 1u ? gp.seed / 10 : k == 2u ? gp.energy * 10 :
-                       gp.form * 500) :
+                       (gp.form > 2u ? 2u : gp.form) * 500) :
             (p == 1u || (p == 2u && (k == 0u || k == 2u))) ? (a == GA_AUTO ? 1000 : (int32_t)a * 10) :
             (int32_t)(k == 1u ? gp.complex : gp.human) * 10;
         draw_column(k, GEN_LBL[p][k], v, "", VAL(k), r, ICON_NONE);

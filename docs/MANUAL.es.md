@@ -1913,7 +1913,7 @@ abrías GEN); al encender y con NEW PROJECT arranca en EXPLORE.
 
 | Página | KNOB 1 | KNOB 2 | KNOB 3 | KNOB 4 |
 |---|---|---|---|---|
-| 1/3 | **GENRE**: **EXPLORE** (al encender y con NEW PROJECT arranca ahí; V10.8: GEN conserva el que elegiste entre visitas; ningún género, todas las reglas rotas, ver abajo), RANDOM (la mitad de sus tiradas son mutantes de dos géneros, con nombre A+B) o uno de los géneros (abajo), en ese orden | **SEED** 0000–9999 | **ENERGY** 0–100 % | **FORM**: LOOP, PARTS, SONG |
+| 1/3 | **GENRE**: **EXPLORE** (al encender y con NEW PROJECT arranca ahí; V10.8: GEN conserva el que elegiste entre visitas; ningún género, todas las reglas rotas, ver abajo), RANDOM (la mitad de sus tiradas son mutantes de dos géneros, con nombre A+B) o uno de los géneros (abajo), en ese orden | **SEED** 0000–9999 | **ENERGY** 0–100 % | **FORM**: LOOP, PARTS, SONG, MY LOOP |
 | 2/3 | **DRUMS** | **BASS** | **CHORDS** | **ARP** — cada uno OFF, 10–100 %, o **AUTO** (lo que pide el género); OFF queda apagado (V10.8) |
 | 3/3 | **LEAD** (igual) | **COMPLEX** 0–100 % | **SWING** AUTO o 0–100 % | **HUMAN** 0–100 % |
 
@@ -2135,6 +2135,41 @@ De qué está hecha una pieza:
 Cada pieza reemplaza los pasos, sonidos, kit, mezcla y automatización de todas las pistas. Los mutes quedan como
 estaban. Los roles que suenan van en las primeras pistas (la batería en la pista DRUM), así que con TRACKS 4 escuchás
 los más importantes.
+
+#### FORM MY LOOP: tu loop hecho tema
+
+Poné **FORM** en **MY LOOP** y apretá **OCT+**: GEN convierte el loop que estás tocando en un tema entero, con las
+reglas del **GENRE** que elegiste. De tu loop no cambia nada: sus pistas, pasos, sonidos y mezcla quedan como están, y
+son la sección **A**, el pico del tema (su drop). GEN:
+
+- **escucha tu loop**: su tonalidad y escala (mayor, menor, dórica o mixolidia; cada nota pesa por su duración, su
+  velocity y si cae en el tiempo; el bajo, las notas más graves, dicen cuál es la tónica) y un acorde por compás (medio
+  compás en un loop de un compás): la tríada de la tonalidad que más suena ahí, la nota del bajo como su fundamental,
+  una séptima donde suena. DRUM-X también cuenta cuando toca una altura: un carril con poco ruido y que suena largo (un
+  808, un tom afinado) y las notas de la escala cromática de un kit EXTENDED (KICK / TOM o el CHROM de un carril). Un loop
+  de batería sola no tiene tonalidad: se usan la tonalidad y la progresión propias de GEN para el género.
+- **agrega las partes que le faltan a tu loop, solo en pistas vacías** (sin notas; nunca en las tuyas), según **BASS**,
+  **CHORDS** y **ARP** de GENE 2 (AUTO: las del género; OFF: ninguna): un bajo si tu loop no tiene, acordes sobre los
+  acordes que escuchó si no tiene, y en la pista del arp una **contramelodía hecha con tu melodía**: las mismas notas
+  corridas una corchea o un tiempo, su primera mitad respondida, dada vuelta alrededor de su primera nota o solo en los
+  tiempos, a una octava, en tu tonalidad (si el loop no tiene melodía: un arpegio de los acordes). Sus sonidos y su
+  mezcla son los del género. Sin pistas vacías el tema se arma solo con tu loop y la pantalla dice **NO EMPTY TRACK:
+  ARRANGED**.
+- **lo arma** con las reglas de SONG para el género (el plan de club, o un arco para ambient, cine y parecidos;
+  **RANDOM** y **EXPLORE** eligen según tu tempo y tu batería: cuatro bombos por compás desde 100 BPM HOUSE, pasando
+  138 BPM HARD TECHNO, si no KRAUT desde 110 BPM, DREAM POP abajo de eso): la intro y el outro con tu batería raleada
+  (afuera las semicorcheas a contratiempo) y pocas capas, las capas que entran según las prioridades del género, **B**
+  los primeros compases del drop, **C** el build (tu batería en cuatro compases con un redoble en tu propio snare, clap o
+  rim cada vez más rápido y más fuerte, el bombo afuera al final, el pasaaltos del master abriéndose, el filtro de los
+  acordes subiendo, un stutter hacia el drop), **D** el break (sin batería ni bajo, los acordes más húmedos, los synths
+  una octava arriba en su último compás), rellenos al final de las frases (el FILL de ARRANGE: los sonidos de tu propio
+  kit), y cada fila de drop tu loop entero tal cual. Las pistas tuyas que estaban muteadas siguen muteadas.
+
+Es un SONG como los de GEN: **PLAY** lo toca (TIMELINE y ARRANGE muestran sus filas), **SAVE** lo guarda (todas sus
+partes y sus filas, como cualquier tema de GEN: es un borrador hasta que lo guardás). **OCT+** otra vez tira otra
+semilla: otro tema con el mismo loop (las partes que agregó se hacen de nuevo). **UNDO** (GLO + G4) te devuelve tu loop
+como estaba, en modo LOOP, sin el tema (si venías de un tema guardado, abrilo de nuevo desde SAVE > PROJECT: sigue
+ahí). Con un loop vacío: **THE LOOP IS EMPTY**, no se hace nada.
 
 ### Dados de sonido (EDIT + SELECT)
 
