@@ -17,7 +17,7 @@ a generator and effects, all inside the little keyboard. It is a fork of [Felucc
 The emulator runs the same code as the FM-1, with sound, played with the computer keyboard or the mouse. The installer
 always offers the current public version first, and the earlier ones under it.
 
-## This release: V10.7.13
+## This release: V10.7.14
 
 ### Installing
 
@@ -468,6 +468,11 @@ JIANT's modifications are distributed under the same license.
 ## Changelog
 
 Every update is listed here, newest first. (Since 0.6.80 at the end of the page: what the synth does comes first.)
+
+### V10.7.14 — public (2026-11-09)
+
+- GENE 1 › FORM **MY LOOP**: turns your loop into a whole song. The loop stays as it is (the drop); GEN hears its key and chords (DRUM-X's tonal lanes too), adds a bass, chords and a counter-melody made from your melody on empty tracks only, and arranges intro, build (your own snare roll), break, fills and outro by the genre's rules. OCT+ again for another song, UNDO back to the loop.
+- To make room: projects in the oldest formats (JIANT 0.1–0.5, Felucca 1.0/1.1) are no longer read (open and save them again with V10.7.13 or earlier first); very old user presets load as stored; ADD shows the generic creature.
 
 ### V10.7.13 — public (2026-11-09)
 
