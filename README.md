@@ -471,7 +471,7 @@ Every update is listed here, newest first. (Since 0.6.80 at the end of the page:
 
 ### V10.7.11 — public (2026-11-09)
 
-- New power-on sounds (also INIT SYSTEM and NEW PROJECT): T1 DRUM-X ACOUSTIC, T2 ANALOG PLUCK, T3 PHASE STRING, T4 FM6 FM BASS, T5 VOICE CHANT, T6 ANIMAL WHISTLE, all dry. Saved projects are unchanged.
+- New power-on sounds (also INIT SYSTEM and NEW PROJECT): T1 DRUM-X ACOUSTIC, T2 ANALOG PLUCK, T3 PHASE INIT SAW, T4 FM6 FM BASS, T5 VOICE CHANT, T6 ANIMAL WHISTLE, all dry. Saved projects are unchanged.
 
 ### V10.7.10 — public (2026-11-09)
 

@@ -13322,7 +13322,7 @@ static void ui_power_on_099(void)
 static int test_power_on_099(void)
 {
     static const char *const ENG[NPART] = {"DRUM", "ANALOG", "PHASE", "FM6", "VOICE", "ANIMAL"};   /* (V10.6d: a band in tune) */
-    static const char *const PRE[NPART] = {"ACOUSTIC", "PLUCK", "STRING", "FM BASS", "CHANT", "WHISTLE"};
+    static const char *const PRE[NPART] = {"ACOUSTIC", "PLUCK", "INIT SAW", "FM BASS", "CHANT", "WHISTLE"};
     int bad = 0, ok = 1;
     uint32_t i, k, b, drums = 0, live;
     int16_t p0[NTRK][P_COUNT];
@@ -13344,7 +13344,7 @@ static int test_power_on_099(void)
         dx_kit_load(TRK_PR_DRUM);
         ok &= !memcmp(&kk, &dx_kit, sizeof dx_kit);
     }
-    bad += check("V10.7.11 power-on: T1 DRUM-X ACOUSTIC, T2 ANALOG PLUCK, T3 PHASE STRING, T4 FM6 FM BASS, T5 VOICE CHANT, T6 ANIMAL WHISTLE", ok);
+    bad += check("V10.7.11 power-on: T1 DRUM-X ACOUSTIC, T2 ANALOG PLUCK, T3 PHASE INIT SAW, T4 FM6 FM BASS, T5 VOICE CHANT, T6 ANIMAL WHISTLE", ok);
     ok = drums == 1u && drum_track(&trk[0]) && drum_elsewhere(&trk[1]) == 1u && !drum_elsewhere(&trk[0]);
     for (k = 0; k < 8u; k++)                                   /* (its E values ACOUSTIC's: V10.6d) */
         ok &= trk[0].p[P_E0 + k] == DRUM_PRESETS[TRK_PR_DRUM].e[k];
