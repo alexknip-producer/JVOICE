@@ -298,10 +298,10 @@ static void midi_out_event_at(uint32_t pkt, uint32_t due)   /* from the audio IS
 static void midi_out_event(uint32_t pkt) { midi_out_event_at(pkt, 0); }
 
 /* ------------------------------------------------------- descriptors --- */
-/* Two functions: audio + MIDI (0 audio control, 1 MIDI streaming, 2 audio streaming with FELUCCA_UAC)
+/* Two functions: audio + MIDI (0 audio control, 1 MIDI streaming; with FELUCCA_UAC 1 audio streaming, 2 MIDI: V10.7.12)
  * and, with FELUCCA_CDC, the CDC-ACM console (communication + data). The endpoints never move:
  * EP1 MIDI, EP2 CDC notify, EP3 CDC data, EP4 audio.
- * bcdDevice: 3.00 MIDI, +0.10 the audio input (+0.20 since 1.1: 44.1 and 48 kHz, FELUCCA_UAC_48K), +0.01 CDC
+ * bcdDevice: 3.00 MIDI (4.xx with FELUCCA_UAC since V10.7.12, MIDI last), +0.10 the audio input (+0.20 since 1.1: 44.1 and 48 kHz, FELUCCA_UAC_48K), +0.01 CDC
  * (+0.02 per FELUCCA_USB_LAYOUT step, so a host never reuses what it learnt about another layout).
  * FELUCCA_USB_LAYOUT, how the CDC build presents itself (#67: macOS 13-15 attach Apple's CDC composite
  * driver to a misc / IAD device that has a CDC function, and their kernel audio driver then never
@@ -348,7 +348,7 @@ static void midi_out_event(uint32_t pkt) { midi_out_event_at(pkt, 0); }
 #if FELUCCA_UAC
 #define D_AC_CH(a, ch, cfg)                                                                          \
     9, 4, (a), 0, 0, 1, 1, 0, 0,                                                                     \
-    10, 0x24, 1, 0x00, 0x01, 31, 0, 2, (a) + 1, (a) + 2,   /* AC header 1.00: MIDI + audio streaming */ \
+    10, 0x24, 1, 0x00, 0x01, 31, 0, 2, (a) + 1, (a) + 2,   /* AC header 1.00: audio + MIDI streaming */ \
     12, 0x24, 2, 1, 0x03, 0x06, 0, (ch), (cfg), 0x00, 0, 0, /* input terminal 1: line, ch channels */    \
     9, 0x24, 3, 2, 0x01, 0x01, 0, 1, 0,                    /* output terminal 2: USB streaming, from 1 */
 #define D_AC(a) D_AC_CH(a, 2, 0x03)                            /* 2 ch (L R) */
@@ -382,7 +382,7 @@ _Static_assert(UAC_MAXP8 >= (45u + 1u) * 16u && UAC_MAXP10 >= (45u + 1u) * 20u &
 #define UIN_MAXP (UI_MAXF * 4u)
 #define D_AC_DUP_CH(a, ch, cfg)                                                                      \
     9, 4, (a), 0, 0, 1, 1, 0, 0,                                                                     \
-    11, 0x24, 1, 0x00, 0x01, 53, 0, 3, (a) + 1, (a) + 2, (a) + 3,   /* AC header: MIDI, input, output */ \
+    11, 0x24, 1, 0x00, 0x01, 53, 0, 3, (a) + 1, (a) + 2, (a) + 3,   /* AC header: input, output, MIDI */ \
     12, 0x24, 2, 1, 0x03, 0x06, 0, (ch), (cfg), 0x00, 0, 0, /* input terminal 1: line, L R (or the stems) */ \
     9, 0x24, 3, 2, 0x01, 0x01, 0, 1, 0,                    /* output terminal 2: USB streaming, from 1 */ \
     12, 0x24, 2, 3, 0x01, 0x01, 0, 2, 0x03, 0x00, 0, 0,    /* input terminal 3: USB streaming, L R */   \
@@ -410,15 +410,24 @@ _Static_assert(UAC_MAXP8 >= (45u + 1u) * 16u && UAC_MAXP10 >= (45u + 1u) * 20u &
     5, 0x25, 1, 1, 1,                                                                                \
     9, 5, 0x81, 2, 64, 0, 0, 0, 0,                                                                   \
     5, 0x25, 1, 1, 3,
-#define D_AUDIO(a) D_AC(a) D_MIDI((a) + 1) D_AS((a) + 2)   /* audio + MIDI from interface a */
+/* (V10.7.12) the MIDI streaming interface last (Felucca's felucca-bsp cd76d43, Skiff 2.2, Skiff #59 / PR #60): macOS 13-15's
+ * AppleUSBAudio (AUAConfigurationDictionary::parseConfigurationDescriptor) shows no USB audio device while the MIDI
+ * interface sits between the audio control and the audio streaming ones (MIDI still works); Linux and Windows take any
+ * order. 0 audio control, 1 audio streaming (2 the output's, IN+OUT / STEMS+IN), then MIDI; the AC header lists them so,
+ * MIDI last (it stays listed: Linux's snd-usb-audio makes a MIDI port only for a listed one) */
+#if FELUCCA_UAC
+#define D_AUDIO(a) D_AC(a) D_AS((a) + 1) D_MIDI((a) + 2)   /* audio + MIDI from interface a */
+#else
+#define D_AUDIO(a) D_AC(a) D_MIDI((a) + 1)
+#endif
 #define AUD_NIF (2 + FELUCCA_UAC)
 #define AUD_LEN (92 + (63 + FMT_LEN) * FELUCCA_UAC)
 #if FELUCCA_UAC
-#define D_AUDIO8(a) D_AC8(a) D_MIDI((a) + 1) D_AS8((a) + 2)   /* (0.7.1) the stems: 8 channels */
+#define D_AUDIO8(a) D_AC8(a) D_AS8((a) + 1) D_MIDI((a) + 2)   /* (0.7.1) the stems: 8 channels */
 #define AUD_LEN8 (92 + 63 + FMT_LEN8)
-#define D_AUDIO_DUP(a) D_AC_DUP(a) D_MIDI((a) + 1) D_AS((a) + 2) D_AS_OUT((a) + 3)   /* (0.7.5) in + out */
+#define D_AUDIO_DUP(a) D_AC_DUP(a) D_AS((a) + 1) D_AS_OUT((a) + 2) D_MIDI((a) + 3)   /* (0.7.5) in + out */
 #define AUD_LEN_DUP (92 + 63 + FMT_LEN + 22 + 52)
-#define D_AUDIO_STIN(a) D_AC_DUP_CH(a, 10, 0x00) D_MIDI((a) + 1) D_AS10((a) + 2) D_AS_OUT((a) + 3)   /* (0.8.0) */
+#define D_AUDIO_STIN(a) D_AC_DUP_CH(a, 10, 0x00) D_AS10((a) + 1) D_AS_OUT((a) + 2) D_MIDI((a) + 3)   /* (0.8.0) */
 #define AUD_LEN_STIN (92 + 63 + 11 + 22 + 52)
 #endif
 #define D_CDC(c)                                                                                     \
@@ -436,7 +445,7 @@ _Static_assert(UAC_MAXP8 >= (45u + 1u) * 16u && UAC_MAXP10 >= (45u + 1u) * 20u &
 #define BCD_LO(cdc) (0x10 * (FELUCCA_UAC + FELUCCA_UAC_48K) + ((cdc) ? 0x01 + 2 * FELUCCA_USB_LAYOUT : 0))
 #define D_DEV_LO(bcdusb, cls, sub, proto, lo)                                                        \
     18, 1, (bcdusb) & 0xFF, (bcdusb) >> 8, (cls), (sub), (proto), 64, 0x09, 0x12, FELUCCA_USB_PID & 0xFF, \
-    FELUCCA_USB_PID >> 8, (lo), 0x03, 1, USB_STR_PRODUCT, 0, 1
+    FELUCCA_USB_PID >> 8, (lo), 0x03 + FELUCCA_UAC, 1, USB_STR_PRODUCT, 0, 1
 #define D_DEV(bcdusb, cls, sub, proto, cdc) D_DEV_LO(bcdusb, cls, sub, proto, BCD_LO(cdc))
 
 /* without the console (FELUCCA_CDC=0, or usb_cdc_on = 0): class 0, no IAD, as a plain USB-MIDI / audio device */
@@ -505,7 +514,7 @@ static uint8_t usb_cdc_on = FELUCCA_CDC_DEFAULT != 0;      /* the console is pre
 #define USB_CDC_ON 0
 #define AUD_IF 0u
 #endif
-#define UAC_AS_IF (AUD_IF + 2u)
+#define UAC_AS_IF (AUD_IF + 1u)                           /* (V10.7.12: MIDI last) */
 static const uint8_t STR0[4] = {4, 3, 0x09, 0x04};
 static const uint8_t STR1[] = {22, 3, 'J', 0, 'u', 0, 'a', 0, 'n', 0, ' ', 0, 'J', 0, 'i', 0, 'a', 0, 'n', 0, 't', 0};   /* (0.7.0) the names JIANT's; the editor and the installer match /jiant|felucca/ */
 /* the product (USB_STR_PRODUCT): Windows names the MIDI port after it, macOS the device and its port; no interface
