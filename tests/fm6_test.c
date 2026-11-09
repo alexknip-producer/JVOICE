@@ -18,7 +18,8 @@
  *    (checksums) into the same patches; the patch survives a project (FUN8) round trip with the same sound.
  * 7. cost: host instructions per sample and voice with six voices held (the heaviest: six carriers), and the
  *    device estimate (1.7 % per 100: the PHYS measurements' ratio, as drum_test); fails above FM6_COST_MAX.
- * 8. demos into DEMODIR: every factory preset playing its suggested pattern. */
+ * 8. demos into DEMODIR: every factory preset playing its suggested pattern.
+ * 9. releases (V10.7.6): every factory preset's voice free within 12 s; BELL, BELL CLOUD, GLASS RAIN as held before. */
 #define main hostsim_main
 #include "hostsim.c"
 #undef main
@@ -686,6 +687,60 @@ static void demo(const char *dir, uint32_t pi)
     fclose(w);
 }
 
+/* 9. (V10.7.6) releases: every factory preset's note (C4 at 127, 0.1 s) is free within 12 s of its note-off (regress's
+ *    FREE_CAP_S; BELL, BELL CLOUD and GLASS RAIN's REL 25 / 30 / 20 since V10.6i held voices 40 s, ~10 s of it
+ *    audible), and the three's sound while held is the same at the old REL (REL moves only the carriers' R4) */
+static void preset_at(uint32_t pi, int rel)
+{
+    memset(trk, 0, sizeof trk);
+    memset(fm6_note, 0, sizeof fm6_note);
+    memset(fm6_eff, 0, sizeof fm6_eff);
+    memset(fm6_lfo, 0, sizeof fm6_lfo);
+    memset(fm6_trim, 0, sizeof fm6_trim);
+    rng_state = 0x1234567u;                         /* (BELL CLOUD's RAND, its S&H LFO) */
+    host_tracks_init();
+    host_preset(&trk[0], ENGI_FM6, pi);
+    if (rel >= 0) trk[0].p[P_REL] = (int16_t)rel;
+}
+static double rel_free(void)                       /* s from the note-off until the voices are free (-1: not in 60 s) */
+{
+    static int32_t b[CTL];
+    uint32_t i, f;
+    trk_note_on(&trk[0], 60, 127);
+    for (i = 0; i < FS / 10u; i += CTL) track_render(&trk[0], b, CTL);
+    trk_note_off(&trk[0], 60);
+    for (f = 0; f < 60u * FS; f += CTL) {
+        for (i = 0; i < NVOICE && !trk[0].v[i].active; i++) {}
+        if (i == NVOICE) return (double)f / FS;
+        track_render(&trk[0], b, CTL);
+    }
+    return -1;
+}
+static void releases(void)
+{
+    static const struct { uint8_t pi, old; } CH[3] = {{1, 25}, {12, 30}, {14, 20}};
+    static double y0[FS * 2], y1[FS * 2];
+    uint32_t pi, k, worst = 0, held = 1;
+    double w = 0, d;
+    char what[160];
+    for (pi = 0; pi < NELEM(FM6_PRESETS); pi++) {
+        preset_at(pi, -1);
+        d = rel_free();
+        if (d < 0 || d > w) { w = d < 0 ? 99 : d; worst = pi; }
+    }
+    snprintf(what, sizeof what, "releases: every factory preset's note free within 12 s of its note-off (longest %s, %.1f s)",
+             FM6_PRESETS[worst].name, w);
+    check(what, w <= 12.0);
+    for (k = 0; k < 3u; k++) {
+        preset_at(CH[k].pi, -1);
+        voice_render(57, 110, y0, FS * 2u, FS);
+        preset_at(CH[k].pi, CH[k].old);
+        voice_render(57, 110, y1, FS * 2u, FS);
+        held &= !memcmp(y0, y1, sizeof(double) * (FS - CTL)) && memcmp(y0, y1, sizeof y0);   /* (the same to the note-off) */
+    }
+    check("releases: BELL, BELL CLOUD, GLASS RAIN held as at their V10.6i REL, bit for bit (only the release shorter)", held);
+}
+
 int main(int argc, char **argv)
 {
     uint32_t pi;
@@ -696,6 +751,7 @@ int main(int argc, char **argv)
     macros();
     formats();
     voices();
+    releases();
     if (!getenv("NOCOST"))
         cost();
     if (argc > 1) {

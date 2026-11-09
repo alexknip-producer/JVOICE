@@ -490,7 +490,7 @@ _Static_assert(NELEM(N_FM6_PATCH) == FM6_OWN + FM6_NBANK + 2u, "a SLOT name per 
 static const preset_t FM6_PRESETS[] = {
     {"TINE EP", {0, 0, 0, 0, 0, 0, 0, 0}, {0, 0, 127, 0}, 0, TAG(KEYS), FX(0, 45, 25, 35), PAT(6),
      MODS(P_LRATE, 70, P_LPHASE, -1, MMOD(1, PS_LFO, PD_PAN, 12))},             /* a suitcase's slow auto-pan */
-    {"BELL", {0, 0, 0, 0, 0, 0, 0, 1}, {0, 0, 127, 25}, 0, TAG(BELL), FX(0, 10, 30, 70), PAT(7),
+    {"BELL", {0, 0, 0, 0, 0, 0, 0, 1}, {0, 0, 127, 5}, 0, TAG(BELL), FX(0, 10, 30, 70), PAT(7),
      MODS(MMOD(1, PS_RAND, PD_PAN, 10), MMOD(2, PS_VEL, PD_CUT, 12))},
     {"FM BASS", {0, 0, 0, 0, 0, 0, 0, 2}, {0, 0, 127, 0}, 0, 1 | TAG(BASS), FX(0, 0, 10, 10), PAT(2),
      MODS(MENV2(0, 35, 0, 15), MMOD(1, PS_ENV2, PD_CUT, 16), P_GLIDE, 10)},    /* bright on the attack */
@@ -514,12 +514,12 @@ static const preset_t FM6_PRESETS[] = {
     {"FM GROWL", {0, 3, 10, 0, -10, 2, 0, 2}, {0, 0, 127, 5}, 0, 1 | TAG(BASS), FX(15, 0, 10, 5), PAT(2),
      MODS(MLFO(LW_SAW, -8, 0, 30), MMOD(1, PS_MODW, PD_SHP, 30))},             /* (was SLAP BASS) a wah in 1/8 */
     {"INIT SINE", {0, 0, -64, 0, 0, 0, 0, 2}, {0, 0, 127, 10}, 0, TAG(KEYS), FX(0, 0, 0, 0)},   /* (was SUB BASS) bare */
-    {"BELL CLOUD", {0, 0, -10, 0, 0, 0, 40, 1}, {55, 0, 105, 30}, 0, TAG(PAD), FX(0, 55, 30, 80), PAT(5),
+    {"BELL CLOUD", {0, 0, -10, 0, 0, 0, 40, 1}, {55, 0, 105, 5}, 0, TAG(PAD), FX(0, 55, 30, 80), PAT(5),
      MODS(MLFO(LW_SH, -10, 0, 18), MMOD(1, PS_RAND, PD_PAN, 28), MMOD(2, PS_RAND, PD_REV, 16),
           MMOD(3, PS_KEY, PD_CUT, -20))},        /* (was BELL PAD) sparkles in 1/16, each chord elsewhere, high notes dark */
     {"HARD BASS", {0, 2, 25, 0, 0, 0, 0, 2}, {0, 0, 127, 0}, 0, 1 | TAG(BASS), FX(15, 0, 10, 5), PAT(2),
      MODS(MENV2(0, 30, 0, 10), MMOD(1, PS_ENV2, PD_CUT, 12))},
-    {"GLASS RAIN", {0, 1, 10, 0, 0, 0, 20, 1}, {0, 0, 127, 20}, 0, TAG(BELL), FX(0, 20, 45, 60), PAT(7),
+    {"GLASS RAIN", {0, 1, 10, 0, 0, 0, 20, 1}, {0, 0, 127, 5}, 0, TAG(BELL), FX(0, 20, 45, 60), PAT(7),
      MODS(MENV2(0, 40, 0, 30), MMOD(1, PS_ENV2, PD_PITCH, 32), MMOD(2, PS_RAND, PD_PAN, 40),
           MMOD(3, PS_RAND, PD_DLY, 30), MMOD(4, PS_VEL, PD_CUT, 15))},   /* (was SAW LEAD) drops falling in, each elsewhere */
 };
