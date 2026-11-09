@@ -301,6 +301,8 @@ if [ -f build/gen/felucca_tables.h ]; then
     run "settings: PER1..PER4 migration, palette ids and preference preservation" "$OUT/settings_test"
     $CC -w -Ibuild/gen -Ifirmware/src -o "$OUT/ui_test" tests/ui_test.c -lm
     run "UI: sounds keep steps, undo, recording, MIDI overflow, pending saves, panel recovery, drum grid, song chain, GREY gray, MONO neutral; (gen3) the COMP cards whole, every value" "$OUT/ui_test"
+    $CC -O1 -w -Ibuild/gen -Ifirmware/src -o "$OUT/rec_play_test" tests/rec_play_test.c -lm
+    run "REC PLAY keys STOP PLAY: the take plays back (power-on, NEW PROJECT, after a GEN song in SONG mode, TIMELINE)" "$OUT/rec_play_test"
     FV=$(sed -n 's/^#define FELUCCA_VERSION "\([^"]*\)".*/\1/p' firmware/src/felucca.c)   # (the splash, ABOUT: the real version)
     $CC -O1 -w "-DFELUCCA_VERSION=\"$FV\"" -Ibuild/gen -Ifirmware/src -Itests -o "$OUT/ui_render" tests/ui_render.c -lm
     mkdir -p build/ui_new/ppm build/ui_slot

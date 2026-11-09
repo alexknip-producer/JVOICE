@@ -2504,8 +2504,7 @@ static void gen_clean(void)
     int16_t bpm = song.g[G_BPM];
     system_init_named();
     if (ui_prefs & PREF_BPM_LOCK) song.g[G_BPM] = bpm;
-    memset(&gs, 0, sizeof gs);
-    live.mode = 0;
+    memset(&gs, 0, sizeof gs);                          /* (LOOP: system_init) */
 }
 static int8_t dice_force_style = -1, dice_force_energy = -1;   /* (a film's script, the renders: this genre, this energy) */
 /* (p2, main 0.9.18) the piece's choices after its genre (gen_make's, from the GS_PICK stream: the same calls in the same

@@ -1715,6 +1715,7 @@ static __attribute__((noinline)) void system_init(void)   /* (snd8: out of its c
     for (i = 0; i < 5u; i++) song.g[KEEP[i]] = kept[i];
     kept[0] = dice_secs;
     chain_defaults(&chain_config);
+    live.mode = 0;                                      /* (no rows: PLAY the loop, as at power-on) */
     dice_secs = (uint8_t)kept[0];                       /* (gen6c) whose the sections in flash are: unchanged */
     memset(song_idx.scene[song_cur], 0, sizeof song_idx.scene[song_cur]);
     memset(song_idx.tsrc[song_cur], 0, sizeof song_idx.tsrc[song_cur]);

@@ -75,6 +75,8 @@ jobs:
           mkdir -p build/rec
           cc -O1 -w -Ibuild/gen -Ifirmware/src -Itests tests/rec_workflow_test.c -lm -o build/rec/rec_workflow
           build/rec/rec_workflow | tee build/rec/controls.log
+          cc -O1 -w -Ibuild/gen -Ifirmware/src -Itests tests/rec_play_test.c -lm -o build/rec/rec_play
+          build/rec/rec_play | tee build/rec/rec_play.log
       - name: Timing compared against exact base
         run: |
           cc -O1 -w -Ibuild/gen -I/tmp/rec-base/firmware/src -I/tmp/rec-base/tests /tmp/rec-base/tests/micro_test.c -lm -o build/rec/micro_base
