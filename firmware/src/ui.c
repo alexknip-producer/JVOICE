@@ -1957,6 +1957,9 @@ static void preset_step(int32_t direction)
     if (!total) { ui_message("NO FAVORITES"); return; }
     preset_go(cur >= total ? (direction > 0 ? 0 : total - 1) :
               (cur + (direction > 0 ? 1u : total - 1u)) % total);
+    if (list_get() && (ui.home || cur_page()->graph != GR_BROWSE))   /* (a YouTube user: "it goes to the voice synth and
+                                                         * can't go back": LIST VOX, set on SAVE > PRESETS and kept) */
+        ui_say("LIST ", N_LIST[list_get()]);            /* the LIST said wherever it is not shown */
 }
 
 /* Seven display rows. Favorites use a bounded window, not a repeating carousel.
