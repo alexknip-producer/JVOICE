@@ -17,7 +17,7 @@ a generator and effects, all inside the little keyboard. It is a fork of [Felucc
 The emulator runs the same code as the FM-1, with sound, played with the computer keyboard or the mouse. The installer
 always offers the current public version first, and the earlier ones under it.
 
-## This release: V10.7.8
+## This release: V10.7.9
 
 ### Installing
 
@@ -468,6 +468,11 @@ JIANT's modifications are distributed under the same license.
 ## Changelog
 
 Every update is listed here, newest first. (Since 0.6.80 at the end of the page: what the synth does comes first.)
+
+### V10.7.9 — public (2026-11-09)
+
+- DRUM-X: a güiro (MODE GR: band-passed noise in ticks; SCRAPE the stroke, a strong hit long, a soft one short) on any lane; the factory kit LATIN PERC.
+- GENE CUMBIA: a real güiro and Latin percussion; villera as cumbia RKT. REGGAETON: harder, drier, plucked minor arps. BAILE FUNK: ultra minimal (tom shots and cowbell, short gliding 808).
 
 ### V10.7.8 — public (2026-11-08)
 

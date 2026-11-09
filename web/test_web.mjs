@@ -428,9 +428,9 @@ function mockTables() {
     ok(ph.name === "-" && ph.presets.length === 0,
        "editor: engine 9 reserved (PHYS retired in TONIC), no presets");
     ok(dr.name === "DRUM" && dr.edit.map((d) => d.label).join() === "MORPH,TUNE,TONE,DECAY,NOISE,FM ENV,FOLD,DRIVE" &&
-       dr.presets.length === 10 && dr.presets.slice(0, 9).every((p) => p.pat === 12) && dr.presets[1].name === "909 CLUB" &&
-       dr.presets[9].name === "HIP HOP" && dr.presets[9].pat === 14,
-       "editor: DRUM engine 10 (DRUM-X: MORPH TUNE TONE DECAY NOISE FM ENV FOLD DRIVE), nine kits suggesting BEAT (0.7.2), HIP HOP its BOOM BAP (V10.34)");
+       dr.presets.length === 11 && dr.presets.slice(0, 9).every((p) => p.pat === 12) && dr.presets[1].name === "909 CLUB" &&
+       dr.presets[9].name === "HIP HOP" && dr.presets[9].pat === 14 && dr.presets[10].name === "LATIN PERC" && dr.presets[10].pat === 12,
+       "editor: DRUM engine 10 (DRUM-X: MORPH TUNE TONE DECAY NOISE FM ENV FOLD DRIVE), nine kits suggesting BEAT (0.7.2), HIP HOP its BOOM BAP (V10.34), LATIN PERC (V10.7.8)");
   }
   const dj = DESC;
   if (!existsSync(dj)) { console.log("editor: mock tables == firmware (no build/host/desc.json)        skip"); return; }

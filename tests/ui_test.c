@@ -8433,6 +8433,20 @@ static int test_dx_sound(void)
     turn(EN_K2, -5);
     ok &= dx_kit[2].b[DXP_DECAY] < DX_KIT_DEF[2].b[DXP_DECAY];
     bad += check("  SOUND 3: MODE steps the wave / filter / SNAP; SOUND 2: DECAY the side's decay", ok);
+    {   /* (V10.7.8) MODE past the 24 of before: the filter GR's eight (the guiro's scrape), PMOD's card its SCRAPE; every
+         * one of the 32 back to itself */
+        uint8_t m0 = dx_kit[2].mode;
+        uint32_t ix;
+        go_title("SOUND 3");
+        for (ix = 0; ix < 40u; ix++) turn(EN_K2, 1);    /* (a step a detent) */
+        ok = ((dx_kit[2].mode >> 2) & 3u) == DXF_GR && (dx_kit[2].mode & 3u) == DXW_BELL && dx_kit_ok(dx_kit);
+        for (ix = 0; ix < 32u; ix++) ok &= dx_mode_ix(dx_mode_of(ix)) == ix;
+        go_title("SOUND");
+        frame();                                        /* (SOUND's card drawn with GR's SCRAPE) */
+        dx_kit[2].mode = m0;
+        bad += check("  SOUND 3: MODE on to the filter GR (32 modes, each its own), the kit valid", ok);
+        go_title("SOUND 3");
+    }
     key_down(key_at(1, 3)); frame(); key_up(key_at(1, 3)); frame(); frame();   /* a key on the track: its lane */
     ok = dx_ui_lane == drum_lane(last_note);
     bad += check("  a key struck picks the sound it plays", ok);
@@ -9664,7 +9678,7 @@ static int test_drum_kits(void)
     for (i = 0; i < NTRK; i++)                          /* (0.8.1: this track the only DRUM one: the kit is its to load) */
         if (&trk[i] != TSEL && trk[i].eng_req == ENGI_DRUM) set_engine_of(&trk[i], ENGI_ANALOG);
     set_engine(ENGI_DRUM);
-    ok = k909 == 1u && ENG_DRUM.npresets == 10u && DX_NKIT == 10u && TSEL->preset == 0 &&
+    ok = k909 == 1u && ENG_DRUM.npresets == 11u && DX_NKIT == 11u && TSEL->preset == 0 &&   /* (V10.7.8: LATIN PERC) */
          dx_kit[DV_KICK].a[DXP_PMOD] == DX_KIT_DEF[DV_KICK].a[DXP_PMOD];
     TSEL->preset = (uint8_t)(k909 - 1u);
     turn(EN_PRESET, 1);                                 /* browsing (HOME): 909 CLUB */

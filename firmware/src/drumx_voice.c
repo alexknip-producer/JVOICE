@@ -19,7 +19,7 @@
  * that has rung out (-84 dB) stops computing (live 0) and writes zeros. Only 32-bit products. */
 enum { DV_KICK, DV_SNARE, DV_CLAP, DV_HATC, DV_HATO, DV_TOM, DV_RIM, DV_BELL, DV_NLANE };   /* the kit's lanes */
 enum { DXW_SINE, DXW_FM, DXW_METAL, DXW_BELL };
-enum { DXF_LP, DXF_BP, DXF_HP };
+enum { DXF_LP, DXF_BP, DXF_HP, DXF_GR };                 /* (V10.7.8) GR: the guiro's scrape (dx_run_fx) */
 #define DX_MODE(w, f, snap) ((uint8_t)((w) | (f) << 2 | (snap) << 4))
 enum { DXM_DECAY, DXM_LONG, DXM_NOISE, DXM_SINE };       /* (JIANT 0.4) the pitch modulation: mode bits 5..6 */
 #define DX_DRIVE 0x80u                                   /* .. the oscillator driven: bit 7 */
@@ -38,6 +38,8 @@ typedef struct {                                         /* a hit */
     int32_t b1, b2;                                      /* (0.6.36) TONE's band-pass state */
     uint32_t ph4;                                        /* (0.6.49) LAYER's oscillator phase */
     uint8_t live, trig, choke;
+    uint8_t sv;                                          /* (V10.7.8) the hit's velocity (eng_drum.c; 0 a full one): GR's
+                                                          * stroke, long or short (in the struct's padding) */
     uint16_t hpos, hsum, hseed;
     int16_t mo1;                                         /* (0.9.9-snd1) FEEDBK: the output a sample before mo (the mean
                                                           * of the two fed back; in the struct's padding) */                          /* (0.7.9) CLAP's HANDS: half-rate samples since the hit, the
@@ -204,12 +206,26 @@ static __attribute__((noinline)) int32_t dx_hands_step(dx_voice_t *v, uint32_t n
     *g1 = (int32_t)(mul64(*g1, 4096 + s) >> 12);
     return (int32_t)(mul64(gn, 4096 + s0) >> 12);
 }
+/* (V10.7.8) the filter GR's stroke (dx_run_fx), on a half-rate block y[n] from the hit's sample sp: the guiro's ridges
+ * ticks (a phase step sinc, 2^16 a tick), each falling as a square, the first eight growing (the stroke's swell); none
+ * past the tick holding the stroke's end slen (the hit over by then: 1 back; ~120 ms at most past the stroke) */
+static __attribute__((noinline)) int dx_scrape(dx_voice_t *v, int32_t *y, uint32_t n, uint32_t sp, uint32_t slen, uint32_t sinc)
+{
+    uint32_t kl = (slen * sinc) >> 16, i;
+    for (i = 0; i < n; i++) {
+        uint32_t u = (sp + i) * sinc, d = (65535u - (u & 65535u)) >> 1, t = u >> 16;
+        y[i] = (y[i] * (int32_t)(t > kl ? 0u : ((d * d) >> 19) * (t < 8u ? 8u + t : 16u))) >> 15;
+    }
+    if (v->hpos == sp)                                   /* (the CLAP's HANDS count it too) */
+        v->hpos = (uint16_t)(sp + n);
+    return ((sp + n) * sinc) >> 16 > kl;
+}
 static __attribute__((noinline)) void dx_run_fx(const dx_lane_t *L, dx_voice_t *v, int32_t morph, int32_t tune16,
                                              int32_t dofs, int32_t cofs, int32_t nofs, int32_t warp, int32_t fm, int32_t *y,
                                              uint32_t n, uint32_t feedback)
 {
     int32_t q[DXP_N], p16, depth, ea0, ea1, en1, ep1, og, ng, ga, dga, gn, dgn, kd, inc, dinc, mt, cw, cx;
-    uint32_t i, k, wave = L->mode & 3u, flt = (L->mode >> 2) & 3u, ta, tn, tp, kb, inc1;
+    uint32_t i, k, wave = L->mode & 3u, flt = (L->mode >> 2) & 3u, ta, tn, tp, kb, inc1, sp, gr = flt == DXF_GR, slen = 0, sinc = 0;
     tsvf_t c;
     uint32_t nf = n, ln = L >= dx_kit && L < dx_kit + 8 ? (uint32_t)(L - dx_kit) : 0u;
     int32_t lay = (int32_t)DX_LAY_L(dx_lay[ln]), lfb = (int32_t)DX_TONE_FB(dx_tone) + (int32_t)DX_LAY_FB(dx_lay[ln]) + (int32_t)feedback;
@@ -250,7 +266,7 @@ static __attribute__((noinline)) void dx_run_fx(const dx_lane_t *L, dx_voice_t *
                                                           * body; V10.6z8: the KICK's / 6, 40 ms again, as before V10.6q:
                                                           * the big sweep the owner asked back) */
     p16 = 384 + q[DXP_PITCH] * 12 + tune16;
-    depth = q[DXP_PMOD] * 6;
+    depth = gr ? 0 : q[DXP_PMOD] * 6;                    /* (GR: PMOD the SCRAPE, below) */
     ea0 = v->live ? v->ea : 1 << 30;                     /* (V10.6q) the block's start: a hit struck again while it rings
                                                           * rises from where it was over the block, its phases and
                                                           * filters as they were (a jump to 0 clicked: x35 a step) */
@@ -272,12 +288,28 @@ static __attribute__((noinline)) void dx_run_fx(const dx_lane_t *L, dx_voice_t *
         v->hseed = (uint16_t)(((uint32_t)v->rng * 2654435761u) >> 16);   /* (not drawn from the noise: OFF as it was) */
         v->inc = pitch_inc((uint32_t)clamp(p16 + depth, 0, 2047));
     }
+    sp = v->hpos;                                        /* (V10.7.8) GR: half-rate samples since the hit */
+    if (gr) {                                            /* (V10.7.8, the owner: a guiro) the filter GR, a band-pass whose
+                                                          * hit is a stroke over the guiro's ridges: ticks at 24 .. 64 Hz
+                                                          * (PITCH), held and swelling for the SCRAPE (PMOD's place: 0 .. 173
+                                                          * ms) times the velocity's 4th power (an accent the long stroke,
+                                                          * a soft hit a "chk"), the last tick decaying with DECAY */
+        int32_t sv = v->sv ? v->sv : 127;
+        sv = (sv * sv * sv * sv) >> 14;                  /* (Q14 of 127^4 / 2^14) */
+        slen = (uint32_t)((q[DXP_PMOD] * 31 * sv) >> 14);
+        sinc = (uint32_t)((3048 + 40 * q[DXP_PITCH]) * 3) >> 7;   /* (a tick's phase step, 2^16 a tick) */
+        flt = DXF_BP;
+    }
     k = 11890000u / ((pitch_inc((uint32_t)clamp(p16, 0, 2047)) >> 12) | 1u);   /* (V10.6q) half its period (us): no shorter */
     kb = v->choke ? dv_kb(1500u) : dv_kb(ta > k ? ta : k);   /* (a choked hit: gone in ~5 ms; a blip shorter than its own
                                                           * half wave was all DC) */
     ea1 = mulq16(v->ea, kb);
     en1 = mulq16(v->en, v->choke ? kb : dv_kb(tn));
     ep1 = (int32_t)(((uint32_t)v->ep * dv_kb(tp)) >> 16);
+    if (sp < slen) {                                     /* (GR: the stroke held) */
+        ea1 = v->ea;
+        en1 = v->en;
+    }
     {
         uint32_t pm = (L->mode >> 5) & 3u;
         int32_t off = (depth * ep1) >> 15;              /* DECAY, LONG: the envelope */
@@ -423,6 +455,8 @@ static __attribute__((noinline)) void dx_run_fx(const dx_lane_t *L, dx_voice_t *
         v->ic2 = ic2;
         v->rng = rng;
     }
+    if (gr && dx_scrape(v, y, n, sp, slen, sinc))      /* (V10.7.8) GR: past its last tick, the hit is over */
+        ea1 = en1 = 0;
     if (DX_TONE_BP(dx_tone) && (0xD8u >> ln) & 1u) {     /* (0.6.36) TONE's BP on the metal sounds (the hats, the rim,
                                                           * the cowbell); (V10.6q) around the sound's own COLOR, an
                                                           * octave under it .. over it, half dry (was 1.5 .. 9 kHz for all
@@ -599,8 +633,25 @@ static const dx_kit_t DX_KITS[] = {
         },
         {0, 8, 0, 0, 0, 0, 4, 0}, {0, 206, 204, 0, 0, 0, 196, 0},   /* the layers; the sends (bus << 6 | amount) */
     },
+    {   /* LATIN PERC (V10.7.8, the owner: a guiro, the percussion of cumbia, reggaeton, baile funk): a bombo, a timbal,
+         * the llamador, the GUIRO on the closed hat (the filter GR: an accent its long stroke, a soft hit its "chk"),
+         * maracas, a conga, the clave, the cowbell */
+        {
+            {DX_MODE(DXW_SINE, DXF_LP, 1), {9, 70, 66, 4, 20}, {14, 96, 80, 10, 50}},   /* BOMBO */
+            {DX_MODE(DXW_BELL, DXF_BP, 0), {50, 20, 40, 70, 96}, {56, 12, 50, 90, 80}},   /* TIMBAL */
+            {DX_MODE(DXW_SINE, DXF_HP, 1), {54, 30, 40, 20, 60}, {60, 40, 48, 30, 70}},   /* LLAMADOR */
+            {DX_MODE(DXW_METAL, DXF_GR, 0), {100, 110, 20, 127, 106}, {108, 122, 26, 127, 112}},   /* GUIRO */
+            {DX_MODE(DXW_METAL, DXF_BP, 0), {84, 0, 22, 118, 110}, {92, 0, 30, 124, 116}},   /* MARACAS */
+            {DX_MODE(DXW_SINE, DXF_HP, 1), {44, 30, 50, 12, 40}, {50, 44, 58, 18, 56}},   /* CONGA */
+            {DX_MODE(DXW_BELL, DXF_HP, 1), {76, 6, 10, 8, 30}, {82, 14, 14, 16, 44}},   /* CLAVE */
+            {DX_MODE(DXW_METAL, DXF_BP, 1), {64, 0, 44, 34, 6}, {68, 0, 54, 46, 28}},   /* COWBELL */
+        },
+        {0, 4, 0, 0, 0, 0, 0, 0}, {0, 206, 204, 0, 0, 0, 0, 0},   /* the layers; the sends (bus << 6 | amount) */
+    },
 };
 #define DX_NKIT ((uint32_t)(sizeof DX_KITS / sizeof DX_KITS[0]))
+#define DXK_LATIN 10u                                    /* (V10.7.8) LATIN PERC (gen.c gen_kit: the latin genres' percussion) */
+_Static_assert(DXK_LATIN + 1u == DX_NKIT, "LATIN PERC the last kit");
 /* (V10.6o) the factory kit (DX_KIT_DEF: what a project without one gets) and (0.6.49) its LAYERs (FEEDBK 0: the snare,
  * the hats and the bell, no note to them; the rest clean, CPU): the first kit's, DRUM-X (were copies of it) */
 #define DX_KIT_DEF (DX_KITS[0].lane)
@@ -610,8 +661,6 @@ static int dx_kit_ok(const dx_lane_t *k)
 {
     uint32_t l, i;
     for (l = 0; l < 8u; l++) {
-        if (((k[l].mode >> 2) & 3u) > DXF_HP)          /* (JIANT 0.4: bits 5..7 the pitch modulation, DRIVE) */
-            return 0;
         for (i = 0; i < DXP_N; i++)
             if (k[l].a[i] > 127u || k[l].b[i] > 127u)
                 return 0;

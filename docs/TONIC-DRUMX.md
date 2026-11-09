@@ -17,8 +17,10 @@ Un sonido (un lane del kit) ocupa 11 bytes (`dx_lane_t`): un byte de modo y cinc
 | NOISE | mezcla: 0 solo oscilador, 127 solo ruido |
 | COLOR | índice de FM del oscilador (en SINE, su drive) y corte del filtro del ruido (30 Hz – 16 kHz) |
 
-El modo elige la onda (SINE, FM 1:1, METAL 1:1,47, BELL 1:2,76), el filtro del ruido (LP, BP, HP) y la
-envolvente del ruido (la del oscilador, o SNAP: 1/4 de su caída).
+El modo elige la onda (SINE, FM 1:1, METAL 1:1,47, BELL 1:2,76), el filtro del ruido (LP, BP, HP; V10.7.8 GR, el
+güiro: un BP cuyo golpe es una pasada de ticks a 24–64 Hz según PITCH, sostenida el SCRAPE (el lugar de PMOD, 0–173
+ms) por la cuarta potencia de la velocidad: acento la pasada larga, golpe suave el "chk") y la envolvente del ruido (la
+del oscilador, o SNAP: 1/4 de su caída).
 
 El MORPH (0 = A, 127 = B) interpola valor por valor y se lee en cada bloque, así que se puede mover mientras
 el golpe suena. Todo es punto fijo con productos de 32 bits.
