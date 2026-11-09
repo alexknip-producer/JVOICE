@@ -74,6 +74,8 @@ static int vd_drive(uint32_t col, uint32_t rowbit);
 #define FM1_INPUT_DRIVE(col, rowbit) vd_drive(col, rowbit)
 static void vel_note_on(uint32_t k);     /* (V10.6z6) a key's press: its velocity, or its wait (src/vel.c) */
 #define FM1_INPUT_NOTE_ON(k) vel_note_on(k)
+static void vel_tick(void);              /* (V10.7.10) a press's wait bounded in scan ticks (src/vel.c) */
+#define FM1_INPUT_TICK() vel_tick()
 #include "fm1_input.h"
 #include "fm1_timer.h"
 #include "fm1_audio.h"

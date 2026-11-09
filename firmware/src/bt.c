@@ -8,8 +8,10 @@
  *   ON                 started at once if the music is stopped (else "STOP FIRST", the row stays OFF), or at power-on
  *                      when ON was saved; the sound is quiet for the start (~0.3 s: the interrupts off while the radio
  *                      calibrates itself). Its value then reads ADV (advertising) or CONN (a central connected), with
- *                      the connections since power-on after it; NO SEG: the Bluetooth segment at 0xEA000 is not this
- *                      build's (the update loader writes it with the app: install the package again); the radio's
+ *                      the connections since power-on after it; MISSING (V10.7.10; was NO SEG): the Bluetooth segment at
+ *                      0xEA000 is not this build's (the update loader writes it with the app: install the package
+ *                      again; other flashing tools write the app alone), said as "BLUETOOTH PART MISSING", then
+ *                      "REINSTALL: JIANT INSTALLER" (ui.c seg_missing; GEN, the songs' saving, USB HOST alike); the radio's
  *                      start-up returned unfinished: "BLUETOOTH FAILED TO START", OFF (no retry until the next power-on)
  *   OFF again          advertising stops and a link is closed; the radio stays set up (no second calibration)
  * The stack and the radio drivers live in the segment (firmware/bt/bt_seg.c, app.ld BTSEG), called through bt_hw.c only
@@ -87,6 +89,8 @@ static void bt_start(void)
     if (!rc && bt_get() == 2u)
         bt_hw_enable(2);                                /* (V10.35) AIR: the scanner instead of the advertising */
     bt_up = (uint8_t)(rc == 2 ? BT_NOSEG : rc ? BT_FAIL : BT_RUN);
+    if (rc == 2)
+        seg_missing();                                  /* (V10.7.10: what to do, not NO SEG alone) */
     if (rc == 1) {                                      /* (the start-up returned unfinished: OFF, not again at power-on) */
         bt_set(0);
         ui_message("BLUETOOTH FAILED TO START");
@@ -100,6 +104,8 @@ static void bt_put(uint32_t v)
         return;
     }
     bt_set(v);
+    if (v && bt_up == BT_NOSEG)
+        seg_missing();                                  /* (V10.7.10: turned on again, the segment still missing) */
     if (v)
         bt_start();
     else if (bt_up == BT_RUN) {
@@ -114,7 +120,8 @@ static const char *bt_vname(uint32_t v)
     if (!v)
         return "OFF";
     if (bt_up != BT_RUN)
-        return bt_up == BT_NOSEG ? "NO SEG" : bt_up == BT_FAIL ? "FAILED" : "ON";
+        return bt_up == BT_NOSEG ? "MISSING" : bt_up == BT_FAIL ? "FAILED" : "ON";   /* (V10.7.10: was NO SEG; REINSTALL
+                                                         * is wider than a card's value, 54 px of 49) */
     str_cpy(bt_val, v == 2u ? "AIR" : st & 1u ? "CONN" : "ADV", sizeof bt_val);
     if (v == 2u)
         return bt_val;

@@ -827,7 +827,7 @@ included, stay selectable.
 ### V10.12 (beta: the first radio test)
 - **MENU › SYSTEM › BLUETOOTH** (OFF by default): ON, with the music stopped, calibrates the radio by itself and
   advertises **JIANT FM-1** as a Bluetooth MIDI device. The row shows ADV (advertising) or CONN (connected) and the
-  connections since power-on; NO SEG if the Bluetooth code did not install, FAILED if the start failed. No MIDI goes
+  connections since power-on; MISSING (was NO SEG) if the Bluetooth part did not install (reinstall with the web installer), FAILED if the start failed. No MIDI goes
   through it yet: this beta tests the radio. If a start hangs, the next boot turns BLUETOOTH OFF by itself.
 - The Bluetooth stack (Optimist's, open source) lives in its own flash area at 0xEA000, written by the installer with
   the rest of the package and checked before use.

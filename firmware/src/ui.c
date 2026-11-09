@@ -743,6 +743,14 @@ static void ui_say(const char *a, const char *b)
 }
 
 static void ui_message(const char *s) { ui_say(s, ""); }
+/* (V10.7.10, users read "NO SEG" as nothing) the Bluetooth segment (flash 0xEA000: Bluetooth, GEN, the songs' saving,
+ * USB HOST, ..., bt_hw.c) missing or another build's: what to do, in two messages (the header's width) */
+#define SEG_MISS "BLUETOOTH PART MISSING"
+static void seg_missing(void)
+{
+    ui_say(SEG_MISS, "");
+    str_cpy(ui.msg2, "REINSTALL: JIANT INSTALLER", sizeof ui.msg2);
+}
 #include "midi_learn.c"                       /* (p1, main 0.9.12) MIDI LEARN's UI (the map: midi_control.c) */
 
 /* (0.9.9-seq2h) SEQ's clipboard (ui_input.c cp_copy / cp_paste): up to a bar of steps, whole (notes, time, flags, the

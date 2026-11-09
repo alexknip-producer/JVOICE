@@ -202,6 +202,7 @@ static void gen_open(void);
 static void gen_page_put(uint32_t p);
 static int chain_busy(void);
 static void ui_message(const char *s);
+static void seg_missing(void);
 static uint32_t fx_mod_of(uint32_t i);
 /* entry e of section sec shown (one that is not here: the nearest after it, else before); outside: from another
  * section (SAVE: USER and SECTIONS come with their SAVE armed, SAVE . OCT+ . OCT+ as before) */
@@ -223,6 +224,8 @@ static void nav_go(uint32_t sec, uint32_t e, int outside)
             if (!gen_on()) {
                 confirm_open(CF_DICE_ALL, song.sel);
                 gen_open();
+                if (!bt_hw_seg())                       /* (V10.7.10: GEN's code is in the Bluetooth segment) */
+                    seg_missing();
             }
             gen_page_put(e - 4u);
         } else {

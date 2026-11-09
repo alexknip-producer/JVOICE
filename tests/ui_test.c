@@ -2905,7 +2905,8 @@ static int test_menu_tabs(void)
     bad += check("0.9.2 MENU: four tabs (the row's lit), MENU . TAB . ROW and n/36 (0.9.7: SCOPE; 0.9.9-stab: CPU CLOCK; p1: CPU CORES, MIDI MAP, LEARN; V10.12: BLUETOOTH; V10.6z4: OCT BEND; V10.6z6: the keys' four); ALGORITHM the tab, any knob the value", ok && MI_COUNT == 36u);
 
     /* (V10.12) MENU > SYSTEM > BLUETOOTH: OFF by default (no mark: older settings), refused while playing, ON kept in
-     * TRIO's retired favourites row with its mark; here (no radio, no segment) ON reads NO SEG; OFF again; the boot
+     * TRIO's retired favourites row with its mark; here (no radio, no segment) ON reads MISSING (V10.7.10: was NO SEG)
+     * and says BLUETOOTH PART MISSING, then REINSTALL: JIANT INSTALLER; OFF again; the boot
      * guard: a reset during the start turns it OFF */
     ui_power_on();
     memset(&favorites.factory[6][24], 0, 8);
@@ -2918,7 +2919,18 @@ static int test_menu_tabs(void)
     song.playing = 0;
     menu_put(MI_BT, 1u);
     ok &= menu_get(MI_BT) == 1u && favorites.factory[6][24] == BT_MARK && (favorites.factory[6][25] & 1u) &&
-          str_eq(menu_vname(MI_BT, 1), "NO SEG") && bt_crumb == 0u;
+          str_eq(menu_vname(MI_BT, 1), "MISSING") && bt_crumb == 0u;
+    {   /* (V10.7.10) what to do, said: two messages each within the header's centre (HEAD_MSG_W); MISSING within a card's
+         * value (COL_W - 8 in AF_S, as draw_column falls back to it) and a MENU chip (62 px); said again when turned on
+         * again */
+        uint32_t said = msg_is(SEG_MISS) && str_eq(ui.msg2, "REINSTALL: JIANT INSTALLER");
+        ok &= said && text_w(&AF_X, SEG_MISS) <= HEAD_MSG_W && text_w(&AF_X, ui.msg2) <= HEAD_MSG_W &&
+              text_w(&AF_S, "MISSING") <= COL_W - 8 && text_w(&AF_X, "MISSING") <= 62;
+        menu_put(MI_BT, 0u);
+        ui.msg_t = 0;
+        menu_put(MI_BT, 1u);
+        ok &= msg_is(SEG_MISS) && str_eq(ui.msg2, "REINSTALL: JIANT INSTALLER");
+    }
     menu_put(MI_BT, 2u);                            /* (V10.35) AIR: its own bit, ON kept with it */
     ok &= menu_get(MI_BT) == 2u && (favorites.factory[6][25] & 3u) == 3u;
     menu_put(MI_BT, 1u);
@@ -2938,8 +2950,8 @@ static int test_menu_tabs(void)
     ok &= menu_get(MI_BT) == 0u;
     memset(&favorites.factory[6][24], 0, 8);
     bt_up = 0;
-    bad += check("V10.12 MENU > SYSTEM > BLUETOOTH: OFF by default, STOP FIRST while playing, ON saved with its mark (NO SEG "
-                 "without the segment), V10.35 AIR its own bit, OFF; the boot guard after a reset in the start or a crash while it ran", ok);
+    bad += check("V10.12 MENU > SYSTEM > BLUETOOTH: OFF by default, STOP FIRST while playing, ON saved with its mark (MISSING "
+                 "without the segment, V10.7.10: BLUETOOTH PART MISSING / REINSTALL: JIANT INSTALLER said, each fitting), V10.35 AIR its own bit, OFF; the boot guard after a reset in the start or a crash while it ran", ok);
 
     /* (V10.36) LFO WAVE DRIFT: a smooth wander (no step bigger than a sine's at that rate), it moves over cycles and
      * stays in range; a pad with BREATHE (ANALOG DARK PAD) loads the LFO DRIFT on its filter, 16 bars; S&H unchanged */
@@ -3059,7 +3071,7 @@ static int test_menu_tabs(void)
         ui.menu = 1;
         ui.menu_sel = MI_BT;
         press(B_OCTUP);
-        ok &= ui.menu == 1u;                               /* (OFF: OCT+ turns it on: NO SEG here, no page) */
+        ok &= ui.menu == 1u;                               /* (OFF: OCT+ turns it on: MISSING here, no page) */
         bt_set(1);
         bt_up = BT_RUN;
         ui.menu = 1;

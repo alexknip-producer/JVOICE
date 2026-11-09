@@ -513,7 +513,7 @@ static const dx_kit_t DX_KITS[] = {
             {DX_MODE(DXW_BELL, DXF_HP, 1), {63, 10, 14, 16, 46}, {70, 24, 20, 30, 60}},   /* RIM */
             {DX_MODE(DXW_METAL, DXF_BP, 1), {64, 0, 44, 34, 6}, {68, 0, 54, 46, 28}},   /* BELL */
         },
-        {0, 6, 0, 0, 0, 0, 0, 0}, {0, 0, 0, 0, 0, 0, 0, 0},   /* the layers; the sends (bus << 6 | amount) */
+        {0, 6, 0, 0, 0, 0, 0, 0}, {0, 0, 0, 0, 0, 0, 0, 0},   /* the layers; the sends (bus << 6 | amount: V10.7.10 none, every kit dry) */
     },
     {   /* 909 CLUB */
         {
@@ -526,7 +526,7 @@ static const dx_kit_t DX_KITS[] = {
             {DX_MODE(DXW_BELL, DXF_HP, 1), {65, 10, 12, 16, 50}, {72, 24, 18, 30, 64}},   /* RIM */
             {DX_MODE(DXW_METAL, DXF_BP, 1), {64, 0, 44, 34, 6}, {68, 0, 54, 46, 28}},   /* BELL */
         },
-        {0, 6, 0, 0, 0, 0, 0, 0}, {0, 210, 214, 0, 0, 0, 0, 0},   /* the layers; the sends (bus << 6 | amount) */
+        {0, 6, 0, 0, 0, 0, 0, 0}, {0, 0, 0, 0, 0, 0, 0, 0},   /* the layers; the sends (bus << 6 | amount: V10.7.10 none, every kit dry) */
     },
     {   /* 808 BOOM */
         {
@@ -539,7 +539,7 @@ static const dx_kit_t DX_KITS[] = {
             {DX_MODE(DXW_BELL, DXF_HP, 1), {65, 10, 14, 16, 38}, {72, 24, 20, 30, 52}},   /* RIM */
             {DX_MODE(DXW_METAL, DXF_BP, 1), {62, 0, 56, 34, 0}, {66, 0, 66, 46, 16}},   /* BELL */
         },
-        {0, 4, 0, 0, 0, 0, 0, 0}, {0, 204, 208, 0, 0, 0, 0, 0},   /* the layers; the sends (bus << 6 | amount) */
+        {0, 4, 0, 0, 0, 0, 0, 0}, {0, 0, 0, 0, 0, 0, 0, 0},   /* the layers; the sends (bus << 6 | amount: V10.7.10 none, every kit dry) */
     },
     {   /* LOFI DUST */
         {
@@ -552,7 +552,7 @@ static const dx_kit_t DX_KITS[] = {
             {DX_MODE(DXW_BELL, DXF_HP, 1), {69, 10, 8, 16, 30}, {76, 24, 14, 30, 44}},   /* RIM */
             {DX_MODE(DXW_METAL, DXF_BP, 1), {66, 0, 32, 34, 10}, {70, 0, 42, 46, 36}},   /* BELL */
         },
-        {0, 9, 0, 0, 0, 0, 5, 0}, {0, 202, 202, 0, 0, 0, 0, 0},   /* the layers; the sends (bus << 6 | amount) */
+        {0, 9, 0, 0, 0, 0, 5, 0}, {0, 0, 0, 0, 0, 0, 0, 0},   /* the layers; the sends (bus << 6 | amount: V10.7.10 none, every kit dry) */
     },
     {   /* INDUSTRIAL */
         {
@@ -565,7 +565,7 @@ static const dx_kit_t DX_KITS[] = {
             {DX_MODE(DXW_BELL, DXF_HP, 1) | DXM_NOISE << 5, {63, 22, 20, 28, 70}, {70, 36, 26, 42, 84}},   /* RIM */
             {DX_MODE(DXW_METAL, DXF_BP, 1) | DXM_NOISE << 5, {64, 0, 48, 46, 96}, {68, 0, 58, 58, 120}},   /* BELL */
         },
-        {0, 12, 0, 0, 0, 0, 6, 0}, {0, 218, 212, 0, 0, 144, 152, 0},   /* the layers; the sends (bus << 6 | amount) */
+        {0, 12, 0, 0, 0, 0, 6, 0}, {0, 0, 0, 0, 0, 0, 0, 0},   /* the layers; the sends (bus << 6 | amount: V10.7.10 none, every kit dry) */
     },
     {   /* ACOUSTIC */
         {
@@ -578,7 +578,7 @@ static const dx_kit_t DX_KITS[] = {
             {DX_MODE(DXW_BELL, DXF_HP, 1), {61, 10, 16, 16, 26}, {68, 24, 22, 30, 40}},   /* RIM */
             {DX_MODE(DXW_METAL, DXF_BP, 1), {62, 0, 46, 34, 20}, {66, 0, 56, 46, 44}},   /* BELL */
         },
-        {0, 5, 0, 0, 0, 0, 0, 0}, {0, 214, 210, 198, 200, 206, 202, 200},   /* the layers; the sends (bus << 6 | amount) */
+        {0, 5, 0, 0, 0, 0, 0, 0}, {0, 0, 0, 0, 0, 0, 0, 0},   /* the layers; the sends (bus << 6 | amount: V10.7.10 none, every kit dry) */
     },
     {   /* DUB ROOTS */
         {
@@ -591,7 +591,7 @@ static const dx_kit_t DX_KITS[] = {
             {DX_MODE(DXW_BELL, DXF_HP, 1), {59, 10, 24, 16, 46}, {66, 24, 30, 30, 60}},   /* RIM */
             {DX_MODE(DXW_METAL, DXF_BP, 1), {64, 0, 52, 34, 8}, {68, 0, 62, 46, 40}},   /* BELL */
         },
-        {0, 6, 0, 0, 0, 0, 0, 0}, {0, 226, 222, 0, 138, 148, 168, 146},   /* the layers; the sends (bus << 6 | amount) */
+        {0, 6, 0, 0, 0, 0, 0, 0}, {0, 0, 0, 0, 0, 0, 0, 0},   /* the layers; the sends (bus << 6 | amount: V10.7.10 none, every kit dry) */
     },
     {   /* TECHNO RAW */
         {
@@ -604,7 +604,7 @@ static const dx_kit_t DX_KITS[] = {
             {DX_MODE(DXW_BELL, DXF_HP, 1), {65, 10, 10, 22, 58}, {72, 24, 16, 36, 72}},   /* RIM */
             {DX_MODE(DXW_METAL, DXF_BP, 1), {64, 0, 44, 40, 70}, {68, 0, 54, 52, 96}},   /* BELL */
         },
-        {0, 7, 0, 0, 0, 0, 0, 0}, {0, 204, 202, 0, 0, 140, 146, 0},   /* the layers; the sends (bus << 6 | amount) */
+        {0, 7, 0, 0, 0, 0, 0, 0}, {0, 0, 0, 0, 0, 0, 0, 0},   /* the layers; the sends (bus << 6 | amount: V10.7.10 none, every kit dry) */
     },
     {   /* BREAKS */
         {
@@ -617,7 +617,7 @@ static const dx_kit_t DX_KITS[] = {
             {DX_MODE(DXW_BELL, DXF_HP, 1), {63, 10, 14, 20, 56}, {70, 24, 20, 34, 70}},   /* RIM */
             {DX_MODE(DXW_METAL, DXF_BP, 1), {64, 0, 44, 34, 6}, {68, 0, 54, 46, 28}},   /* BELL */
         },
-        {0, 6, 0, 0, 0, 0, 0, 0}, {0, 206, 204, 0, 0, 0, 0, 0},   /* the layers; the sends (bus << 6 | amount) */
+        {0, 6, 0, 0, 0, 0, 0, 0}, {0, 0, 0, 0, 0, 0, 0, 0},   /* the layers; the sends (bus << 6 | amount: V10.7.10 none, every kit dry) */
     },
     {   /* HIP HOP (V10.34, a user's ask): boom bap: a round kick with a knock, a fat cracking snare, a tight clap,
          * dusty hats (band-passed), a low tom, a woody rim, a shaker in the BELL's place */
@@ -631,7 +631,7 @@ static const dx_kit_t DX_KITS[] = {
             {DX_MODE(DXW_BELL, DXF_HP, 1), {61, 10, 10, 16, 34}, {68, 24, 16, 30, 48}},   /* RIM */
             {DX_MODE(DXW_METAL, DXF_BP, 0), {84, 0, 20, 110, 70}, {92, 0, 28, 124, 80}},   /* SHAKER */
         },
-        {0, 8, 0, 0, 0, 0, 4, 0}, {0, 206, 204, 0, 0, 0, 196, 0},   /* the layers; the sends (bus << 6 | amount) */
+        {0, 8, 0, 0, 0, 0, 4, 0}, {0, 0, 0, 0, 0, 0, 0, 0},   /* the layers; the sends (bus << 6 | amount: V10.7.10 none, every kit dry) */
     },
     {   /* LATIN PERC (V10.7.8, the owner: a guiro, the percussion of cumbia, reggaeton, baile funk): a bombo, a timbal,
          * the llamador, the GUIRO on the closed hat (the filter GR: an accent its long stroke, a soft hit its "chk"),
@@ -646,7 +646,7 @@ static const dx_kit_t DX_KITS[] = {
             {DX_MODE(DXW_BELL, DXF_HP, 1), {76, 6, 10, 8, 30}, {82, 14, 14, 16, 44}},   /* CLAVE */
             {DX_MODE(DXW_METAL, DXF_BP, 1), {64, 0, 44, 34, 6}, {68, 0, 54, 46, 28}},   /* COWBELL */
         },
-        {0, 4, 0, 0, 0, 0, 0, 0}, {0, 206, 204, 0, 0, 0, 0, 0},   /* the layers; the sends (bus << 6 | amount) */
+        {0, 4, 0, 0, 0, 0, 0, 0}, {0, 0, 0, 0, 0, 0, 0, 0},   /* the layers; the sends (bus << 6 | amount: V10.7.10 none, every kit dry) */
     },
 };
 #define DX_NKIT ((uint32_t)(sizeof DX_KITS / sizeof DX_KITS[0]))

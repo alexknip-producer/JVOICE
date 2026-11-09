@@ -1691,6 +1691,21 @@ static void keyboard_block(void)
     kb_prev = cur;
 }
 
+/* (V10.7.10; main loop, vel.c vel_poll) the keys 0..19 whose press never waits for its strike's velocity (vel_kb.h
+ * vs.now): those keyboard_block sends to a DRUM track (DRUM-X: its kit's key map), the selected one or, with KEY SPLIT,
+ * their half's; the DRUM grid's lanes too (NAME, MANO: no note, nothing to wait for) */
+static uint32_t kb_drum_keys(void)
+{
+    uint32_t c;
+    if (song.grid)
+        return ~0u;
+    if (!split_cfg[0])
+        return drum_track(&trk[song.sel % NTRK]) ? ~0u : 0u;
+    c = split_cut(0);
+    c = c < 32u ? ~0u << c : 0u;                    /* (the high half: keys from the cut up) */
+    return (drum_track(&trk[split_track(1)]) ? c : 0u) | (drum_track(&trk[split_track(0)]) ? ~c : 0u);
+}
+
 /* (V10.6v) RAMP (core.h CV_RAMP_*): a track's one gliding parameter (the RAMP launched last): its id + 1 (0 none), the
  * step that launched it, VALUE, LENGTH - 1; how far, Q24 of the way (past RAMP_ONE: the knob's value coming back, in
  * samples); the lock's value it goes to */

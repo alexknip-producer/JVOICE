@@ -392,7 +392,7 @@ static void fm1_main(void)
         if (uh.want && !bt_hw_seg()) {                  /* (V10.41) the host's code is in the Bluetooth segment */
             uh.want = 0;
             usb_host_want = 0;
-            ui_message("USB HOST: INSTALL AGAIN (NO SEG)");
+            seg_missing();                              /* (V10.7.10: was "USB HOST: INSTALL AGAIN (NO SEG)") */
         } else if (uh.want || uh.on)
             uh_task(fm1_ms);                            /* (V10.41) USB > HOST: the keyboard found, kept, lost */
         if (uh.msg) {

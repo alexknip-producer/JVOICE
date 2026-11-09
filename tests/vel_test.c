@@ -19,7 +19,10 @@
  *      the capture's own medians are in order (G4, A#4) in order too;
  *   4. the latency: 400 modelled presses (falls 0.4 .. 10 ms, the digital contact at 600 or 400): the wait between the
  *      debounced press and the note let through (printed: mean, 90th percentile, max): the window closes at the key's
- *      next sample, driven, so at most one sample period (2.2 ms + a tick); every press let through with a velocity;
+ *      next sample, driven; (V10.7.10) with 30 / 70 / 100 % of the conversions timing out (their readings dropped, as
+ *      fm1_an.timeouts counts them on a unit) the wait still never over 2.2 ms (22 scan ticks: vel.c vel_tick), and none
+ *      on a DRUM track's keys; every press let through with a velocity (none read: the key's recent mean); 4b. soft /
+ *      normal / hard apart on a synth track with the bound, conversions timing out or not;
  *   5. the calibration: a key whose strikes sit 50..60 counts off the seeds converges (its NORMAL within 12 of the
  *      strikes' median after 120 strikes, HARD / SOFT around the 15th / 85th percentiles), its soft / normal / hard
  *      then well apart; a graze learns nothing; VEL LEARN OFF nothing; saved (12 bits a key) and read back within the
@@ -56,6 +59,10 @@ static void host_note_on(uint32_t k);
 #define FM1_INPUT_ANALOG(col, rowbit, v, driven) vd_sample(col, rowbit, v, driven)
 #define FM1_INPUT_DRIVE(col, rowbit) vd_drive(col, rowbit)
 #define FM1_INPUT_NOTE_ON(k) host_note_on(k)
+#ifndef VEL_OLD                                    /* (VEL_OLD: the same model on a tree before V10.7.10, for its numbers) */
+static void vel_tick(void);
+#define FM1_INPUT_TICK() vel_tick()
+#endif
 #include "../firmware/hal/fm1_input.h"
 static unsigned str_len(const char *s) { unsigned n = 0; while (s[n]) n++; return n; }
 static void str_cpy(char *d, const char *s, unsigned max)
@@ -74,6 +81,8 @@ static struct { uint8_t factory[16][32]; } favorites;   /* (the settings: vel_kb
 static volatile uint32_t fm1_ms;
 static uint32_t saves;
 static void settings_save(void) { saves++; }
+static uint32_t host_drum;                         /* (V10.7.10) the keys going to a DRUM track (seq.c kb_drum_keys) */
+static uint32_t kb_drum_keys(void) { return host_drum; }
 #include "../firmware/src/vel.c"
 
 static int fails;
@@ -134,11 +143,17 @@ static volatile uint32_t *host_pr(uint32_t p, uint32_t r)
     }
     return &host_reg[p & 15u][(r / 4u) & 63u];
 }
+static uint32_t adc_drop, drop_s = 777u, adc_tos;   /* (V10.7.10) this % of the conversions not done by the next tick */
 static void adc_finish(void)
 {
     uint32_t ch = (adc_con >> 8) & 15u, col = fm1_an.col, rb = fm1_an.rowbit, v;
     if (!(adc_con & 0x10u))
         return;
+    drop_s = drop_s * 1103515245u + 12345u;
+    if (adc_drop && (drop_s >> 8) % 100u < adc_drop) {
+        adc_tos++;
+        return;
+    }                                    /* (timed out: fm1__an_take drops it, fm1_an.timeouts) */
     if (ch == FM1_ADC_MASTER)
         v = pot;
     else if (ch == FM1_ADC_BATT)
@@ -152,9 +167,10 @@ static void adc_finish(void)
     adc_con |= 0x80u;
 }
 /* the presses as the keys' block (seq.c) sees them: let through (fm1_in.notes & ~vk_hold) */
-static uint32_t t_press[27], t_vis[27], vel_vis[27], vis_prev, n_vis, n_press;
+static uint32_t t_press[27], t_vis[27], vel_vis[27], vis_prev, n_vis, n_press, n_read;
 static void host_note_on(uint32_t k)
 {
+    n_read += k < VK_NK && vk[k].vel;              /* (a driven reading of the strike already, at its debounce) */
     t_press[k] = sim_us;
     n_press++;
     vel_note_on(k);
@@ -330,27 +346,79 @@ int main(void)
               med[1][0][mn[1][0] / 2] < med[1][1][mn[1][1] / 2] && med[1][1][mn[1][1] / 2] < med[1][2][mn[1][2] / 2]);
     }
 
-    /* ---- 4. the latency */
+    /* ---- 4. the latency (V10.7.10: with conversions timing out, with none at all; a DRUM track's keys) */
     {
-        uint32_t w[400], nw = 0, timeouts = 0, zero = 0, ok = 1, sum = 0;
-        for (i = 0; i < 400u; i++) {
-            uint32_t key = rnd(20u), fall = 400u + rnd(9600u);
-            dig_th = i & 1u ? 600u : 400u;
-            vel_vis[key] = 0;
-            strike(key, fall, 520 + (int32_t)rnd(300u), 40);
-            if (!t_vis[key] || !vel_vis[key]) { ok = 0; continue; }
-            w[nw] = t_vis[key] - t_press[key];
-            sum += w[nw];
-            zero += !w[nw];
-            timeouts += w[nw] >= 4300u;
-            nw++;
+        static const struct { uint8_t drop, drum; const char *what; } LC[] = {
+            {0, 0, "synth, every conversion done"}, {30, 0, "synth, 30 % timed out"}, {70, 0, "synth, 70 % timed out"},
+            {100, 0, "synth, none done (the converter dead)"}, {0, 1, "DRUM, every conversion done"},
+            {30, 1, "DRUM, 30 % timed out"}};
+        uint32_t c, wmax[6] = {0}, allv = 1;
+        for (c = 0; c < 6u; c++) {
+            uint32_t w[400], nw = 0, timeouts = 0, zero = 0, ok = 1, sum = 0, to0 = adc_tos, r0 = n_read;
+            adc_drop = LC[c].drop;
+            host_drum = LC[c].drum ? ~0u : 0u;
+            vel_poll();
+            for (i = 0; i < 400u; i++) {
+                uint32_t key = rnd(20u), fall = 400u + rnd(9600u);
+                dig_th = i & 1u ? 600u : 400u;
+                vel_vis[key] = 0;
+                strike(key, fall, 520 + (int32_t)rnd(300u), 40);
+                if (!t_vis[key] || !vel_vis[key]) { ok = 0; continue; }
+                w[nw] = t_vis[key] - t_press[key];
+                sum += w[nw];
+                zero += !w[nw];
+                timeouts += w[nw] >= 4300u;
+                nw++;
+            }
+            dig_th = 600;
+            allv &= ok && nw == 400u;
+            if (!nw) { wmax[c] = 99999u; continue; }
+            qsort(w, nw, sizeof w[0], cmp_u);
+            wmax[c] = w[nw - 1u];
+            printf("vel:    %-38s wait after the debounce: mean %.2f ms, 90%% %.1f ms, max %.1f ms; none for %3u of %u; "
+                   "past 4.3 ms %u (conversions timed out %u; read by the debounce %u)\n", LC[c].what, sum / 1000.0 / nw, w[nw * 9u / 10u] / 1000.0,
+                   w[nw - 1u] / 1000.0, zero, nw, timeouts, adc_tos - to0, n_read - r0);
+            if (LC[c].drum && zero != nw)
+                wmax[c] = 99999u;
         }
-        dig_th = 600;
-        qsort(w, nw, sizeof w[0], cmp_u);
-        printf("vel:    the wait after the debounced press: mean %.2f ms, 90%% %.1f ms, max %.1f ms; none for %u of %u; "
-               "past its time %u\n", sum / 1000.0 / nw, w[nw * 9u / 10u] / 1000.0, w[nw - 1u] / 1000.0, zero, nw, timeouts);
-        check("4. 400 presses (falls 0.4..10 ms, the contact at 600 or 400): every one let through, with a velocity", ok && nw == 400u);
-        check("   the wait never over a sample period (2.2 ms + a tick), never past its time", w[nw - 1u] <= 2300u && !timeouts);
+        adc_drop = 0;
+        host_drum = 0;
+        vel_poll();
+        check("4. 400 presses x 6 (falls 0.4..10 ms, the contact at 600 or 400; conversions timing out 0 / 30 / 70 / 100 %): "
+              "every one let through, with a velocity", allv);
+        check("   a synth track's wait never over 2.2 ms (22 scan ticks), whatever the conversions do",
+              wmax[0] <= 2200u && wmax[1] <= 2200u && wmax[2] <= 2200u && wmax[3] <= 2200u);
+        check("   a DRUM track's keys: no wait at all (0 ms for every press, conversions done or not)",
+              wmax[4] == 0u && wmax[5] == 0u);
+        check("   none done: every press still plays (with no reading: the key's recent mean), at most at 2.2 ms",
+              wmax[3] == 2200u);
+    }
+    /* ---- 4b. the velocity's quality with the bound: soft / normal / hard apart on a synth track, conversions timing out */
+    {
+        static const uint32_t FALL[3] = {6000, 3000, 1000};
+        static const int32_t D[3] = {700, 600, 545};
+        uint32_t sumv[3][3] = {{0}}, n3 = 60, lvl, d;
+        settings(2, 0, 2, 1);
+        for (d = 0; d < 3u; d++) {
+            adc_drop = d == 1u ? 30u : 0u;
+            host_drum = d == 2u ? ~0u : 0u;
+            vel_poll();
+            for (i = 0; i < n3 * 3u; i++) {
+                lvl = i % 3u;
+                sumv[lvl][d] += strike(14, FALL[lvl] + rnd(800u), D[lvl] + (int32_t)rnd(20u) - 10, 60);
+            }
+        }
+        adc_drop = 0;
+        host_drum = 0;
+        vel_poll();
+        printf("vel:    G4 synth: mean velocity soft %u normal %u hard %u; 30 %% timed out: %u %u %u; on a DRUM track (no "
+               "wait): %u %u %u\n", sumv[0][0] / n3, sumv[1][0] / n3, sumv[2][0] / n3, sumv[0][1] / n3, sumv[1][1] / n3,
+               sumv[2][1] / n3, sumv[0][2] / n3, sumv[1][2] / n3, sumv[2][2] / n3);
+        check("4b. a synth track, the bound on: soft < normal < hard, at least 15 apart (every conversion done; 30 % timed "
+              "out too)", sumv[0][0] + 15u * n3 < sumv[1][0] && sumv[1][0] + 15u * n3 < sumv[2][0] &&
+              sumv[0][1] + 15u * n3 < sumv[1][1] && sumv[1][1] + 15u * n3 < sumv[2][1]);
+        check("    a DRUM track (no wait: the reading at the press, else the key's mean): still soft < normal < hard",
+              sumv[0][2] < sumv[1][2] && sumv[1][2] < sumv[2][2]);
     }
 
     /* ---- 5. the calibration */

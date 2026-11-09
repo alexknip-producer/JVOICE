@@ -155,17 +155,18 @@ static uint32_t drum_lane(uint32_t note) { return (uint32_t)DRUM_GM[drum_gm_ix(n
  * remains unchanged. 0..12 are chromatic kick, 13..26 chromatic tom; twelve
  * per-hit effect sounds use 27..34 and 82..85. Other upper notes are live
  * performance controls, expanded into ordinary, recordable GM hits by seq.c. */
-#define DXF_REV 8u
-#define DXF_DLY 16u
+/* (V10.7.10, the owner, after a user's "everything seems to have delay": these hits sent their sound full to the
+ * delay (DXF_DLY: 63 of 63, the project's DLY bus) or the reverb (DXF_REV) whatever the track's FX; now timbre
+ * variants only, the kit's own SENDs as any hit. The same twelve in the same order: CLAP and HAT OP the plain hit) */
 #define DXF_LONG 32u
 #define DXF_FB 64u
 #define DXF_FOLD 128u
 #define DXF_NOISE 256u
 static const uint16_t DX_EXT_FX[12] = {
-    DV_KICK|DXF_REV|DXF_LONG, DV_SNARE|DXF_DLY|DXF_LONG, DV_CLAP|DXF_REV,
-    DV_HATC|DXF_FB|DXF_FOLD, DV_HATO|DXF_REV|DXF_LONG, DV_TOM|DXF_DLY|DXF_LONG|DXF_FB,
-    DV_RIM|DXF_DLY|DXF_FB, DV_BELL|DXF_REV|DXF_LONG, DV_KICK|DXF_FB|DXF_LONG,
-    DV_SNARE|DXF_REV|DXF_NOISE, DV_TOM|DXF_LONG|DXF_FB|DXF_FOLD, DV_BELL|DXF_DLY|DXF_FB|DXF_LONG
+    DV_KICK|DXF_LONG, DV_SNARE|DXF_LONG, DV_CLAP,
+    DV_HATC|DXF_FB|DXF_FOLD, DV_HATO|DXF_LONG, DV_TOM|DXF_LONG|DXF_FB,
+    DV_RIM|DXF_FB, DV_BELL|DXF_LONG, DV_KICK|DXF_FB|DXF_LONG,
+    DV_SNARE|DXF_NOISE, DV_TOM|DXF_LONG|DXF_FB|DXF_FOLD, DV_BELL|DXF_FB|DXF_LONG
 };
 /* P_DKEYMODE: 0 CLASSIC, 1 EXTENDED (the default: ui.c set_engine_of), its -1 octave KICK 0..12 / TOM 13..26; 2..9
  * EXTENDED, the -1 octave's 27 keys one lane's chromatic run (lane v - 2: 9 the BELL, the cowbell's melodies), 13 its
@@ -370,12 +371,10 @@ static uint32_t drum_hit_fx(const drum_lane_t *L)
     uint32_t i=L->dm>>2;
     return i && i<=NELEM(DX_EXT_FX) ? DX_EXT_FX[i-1u] : 0u;
 }
-static uint32_t drum_send(const track_t *t, uint32_t l)
+static uint32_t drum_send(const track_t *t, uint32_t l)   /* (V10.7.10: the kit's, an EXTENDED FX hit's too) */
 {
-    drum_lane_t *K=drum_kit_of(t);
-    const drum_lane_t *L=K?&K[l&7u]:0;
-    uint32_t f=L&&L->owner&&(L->x.live||L->x.trig||L->fl) ? drum_hit_fx(L) : 0;
-    return f&DXF_REV ? 255u : f&DXF_DLY ? 191u : dx_snd[l&7u];
+    (void)t;
+    return dx_snd[l&7u];
 }
 /* (JIANT 0.7.8) a core's own (mod.c's mod_c the same way): the two cores render two parts at once (fx.c mix_block), and
  * with one set the other core's part cleared dx_xon and the sides mid-render: the image on and off block by block (a

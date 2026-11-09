@@ -538,7 +538,7 @@ static int song_index_save(void)
  * generations are drafts until an explicit SAVE; no new audio storage. */
 static int song_draft_begin(void)
 {
-    if (!bt_hw_seg()) { ui_message("UPDATE PACKAGE"); return 1; }
+    if (!bt_hw_seg()) { seg_missing(); return 1; }
     if (transport_busy()) { ui_message("STOP TO GENERATE"); return 1; }
 #if FELUCCA_FLASH
     if (!flash_ok) { ui_message("NO FLASH"); return 1; }

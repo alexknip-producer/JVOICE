@@ -68,7 +68,6 @@ static volatile uint8_t vd_ev_w, vd_ev_r, vd_last_n;
 static volatile uint16_t vd_lost;       /* presses and captures nobody read in time */
 static void vel_driven(uint32_t key, const vd_key_t *k, uint32_t v);   /* (vel.c) */
 static void vel_lift(uint32_t key, uint32_t strike);
-static void vel_wait(uint32_t k);
 
 static uint32_t vd_note(uint32_t col, uint32_t rowbit)   /* the note on (column, row bit), VD_NK if none */
 {
@@ -109,7 +108,7 @@ static void vd_sample(uint32_t col, uint32_t rowbit, uint32_t v, uint32_t driven
             vel_driven(key, k, v);              /* (V10.6z6) the strike's window, the pressure (vel.c) */
         }
         vd_cap_add(key, v | VD_DRIVEN);
-        goto wait;
+        return;
     }
     if (k->st == VD_OPEN && v < VD_TOUCH) {
         uint32_t i;
@@ -161,8 +160,6 @@ kept:
     k->pre[k->pi] = (uint16_t)v;
     k->pi = (uint8_t)((k->pi + 1u) % VD_PRE);
     k->dnext = k->st != VD_OPEN;                /* touched or held: the next sample driven */
-wait:
-    vel_wait(key);                              /* (V10.6z6) a press waiting for its strike: not past its time */
 }
 
 /* (the scan's ISR) drive the next sample of the key at (col, rowbit)? */

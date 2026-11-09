@@ -73,6 +73,7 @@ static struct { uint8_t factory[16][32]; } favorites;
 #define ENGI_SAMPLE 4u
 static volatile uint32_t fm1_ms;
 static void settings_save(void) {}
+static uint32_t kb_drum_keys(void) { return 0; }   /* (V10.7.10: seq.c's) */
 #include "../firmware/src/vel.c"
 
 static int fails;
