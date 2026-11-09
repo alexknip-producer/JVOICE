@@ -17,8 +17,8 @@ import sys
 FUNCS = ["analog_render", "digital_render", "digital_render_legacy", "digital_render_custom", "phase_render", "lofi_render", "formant_render",
          "wheel_render", "wheel_block", "analog_ext", "analog_morph", "lofi_byte_render",   # (JIANT 0.4: SYNC RING SAW3, BYTE)
          "drum_render", "noise_render", "fm6_render", "fm6_op_run", "fm6_op_fb",
-         "dx_run", "dx_layer",                              # DRUM-X (drumx_voice.c): a hit, osc + noise; (0.6.49) LAYER
-         "drum_side_add", "drum_mix", "drum_bus",           # (JIANT 0.6.48) DRUM-X IMAGE and SENDs; (0.7.9) the kit's curve
+         "dx_run_fx", "dx_layer",                           # DRUM-X (drumx_voice.c): a hit, osc + noise (V10.6q: dx_run_fx, was dx_run); (0.6.49) LAYER
+         "drum_side_ramp", "drum_mix", "drum_bus",           # (JIANT 0.6.48) DRUM-X IMAGE and SENDs (drum_side_ramp, was drum_side_add); (0.7.9) the kit's curve
          "drum_glue",                                       # (0.9.9-snd1) DRUM-X GLUE, while it is on
          "slicer_bus",                                      # (JIANT 0.6.3) the SLICER, one on a bus
          "fm1_alnk0_irq", "fm1_timer5_irq",               # the audio ISR; TIMER5: the key / LED scan (hal/fm1_input.h)

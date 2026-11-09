@@ -238,6 +238,11 @@ static __attribute__((noinline)) void kx_block(void)
     for (k = 0; k < VK_NK; k++)                     /* (V10.6z6) the held keys' pressure, per track */
         if (kb_on[k] && vk[k].at > vs.atl[kb_trk[k] % NTRK])
             vs.atl[kb_trk[k] % NTRK] = vk[k].at;
+    g = kx_g[0] | kx_g[1];                          /* (V10.7.6) nothing held or recorded, every ramp and pressure at 0 */
+    for (i = 0; i < NTRK; i++)                      /* (as the pass below leaves them then): not run, ~10 % of the tick */
+        g |= vs.atl[i] | ((uint32_t)trk[i].p[P_XPR] ^ 127u) | kx_amt[i][0] | kx_amt[i][1] | vs.at8[i];
+    if (!g)
+        return;
     for (i = 0; i < NTRK; i++) {
         int32_t x, q, v;
         g = 127u - (uint32_t)trk[i].p[P_XPR];
@@ -1809,10 +1814,11 @@ static int shift_cond(const track_t *t, const step_t *s, uint32_t k, uint32_t p)
 static void shift_prepare_pass(const track_t *t, uint32_t len, uint32_t pass)
 {
     uint32_t ti = trk_index(t) % NTRK, bank = pass & 1u, i, k, j;
+    len = (uint32_t)clamp((int32_t)len, 1, NSTEP);
+    if (shift_valid[bank][ti] && shift_pass[bank][ti] == pass && shift_len[bank][ti] == len) return;   /* (V10.7.6: the
+                                                     * map kept first: seq_early asks every block and track) */
     int16_t move[NSTEP] = {0};
     const step_t *st = seq_steps(t);
-    len = (uint32_t)clamp((int32_t)len, 1, NSTEP);
-    if (shift_valid[bank][ti] && shift_pass[bank][ti] == pass && shift_len[bank][ti] == len) return;
     shift_valid[bank][ti] = 1; shift_pass[bank][ti] = (uint16_t)pass; shift_len[bank][ti] = (uint8_t)len;
     for (i = 0; i < len; i++) for (k = 0; k < 2u; k++) {
         uint32_t a = CO_ACT(k ? st[i].comp2 : st[i].comp);
