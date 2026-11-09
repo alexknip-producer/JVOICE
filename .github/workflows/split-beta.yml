@@ -47,7 +47,7 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: github-pages
-          run-id: 42623576208
+          run-id: 42634280812
           github-token: ${{ github.token }}
           path: build/released
       - name: Exact tested firmware
@@ -99,7 +99,7 @@ jobs:
           editions=json.loads(edition_path.read_text())
           for entry in prior:
               editions.setdefault(entry['version'],{k:entry[k] for k in ('edition','status') if k in entry})
-          editions[m['version']]={'edition':'V10.7.7','status':'beta'}
+          editions[m['version']]={'edition':'V10.7.8','status':'beta'}
           edition_path.write_text(json.dumps(editions))
           shutil.copyfile('build/candidate/web/editor.html','web/editor.html')
           make_site.main('build/candidate/build/felucca.fwsc',m['version'],'build/new-preview',str(fw))
