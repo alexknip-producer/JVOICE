@@ -303,6 +303,18 @@ static const barch_t BASS_ARCH[BA_NALL] = {
 };
 #endif
 #include "gen_bass.h"
+/* (flash) BA_STEP packed in the image (LZ4: gen_bass.h BA_STEP_Z, ~490 B less), unpacked into RAM at the generator's
+ * first use: the same bytes the table had */
+#include "boot_lz4.h"
+static uint8_t gz_bass[BA_STEP_N] __attribute__((section(".pool")));
+static uint8_t gz_ok;
+static __attribute__((noinline)) const uint8_t *gz_unpack(void)
+{
+    if (!gz_ok) boot_lz4(BA_STEP_Z, gz_bass, gz_bass + sizeof gz_bass);
+    gz_ok = 1;
+    return gz_bass;
+}
+#define BA_STEP (gz_unpack())
 enum { KM_DOUBLE, KM_ANSWER, KM_SUSTAIN, KM_INTERLOCK };   /* the bass against the kick */
 
 /* ------------------------------------------------------------------------------------------------- harmony --- */

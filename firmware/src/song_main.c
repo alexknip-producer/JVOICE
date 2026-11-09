@@ -92,7 +92,7 @@ static void song_name(char *b)
  * variation: VAR 1..4 draw from a seed of the song, the row and the track, never rng() */
 static void row_vary(step_t *st, uint32_t len, int kit, uint32_t v, uint32_t seed)
 {
-    static step_t tmp[NSTEP] __attribute__((section(".pool")));   /* (the main loop's, scratch) */
+    step_t *tmp = mscr.row_tmp;                         /* (the main loop's scratch: core.h mscr) */
     uint32_t i, h, n = len > NSTEP ? NSTEP : (len ? len : 1u), half = n / 2u ? n / 2u : 1u;
     int32_t last = -1;
     if (v == RV_NONE || v == RV_MUTE)

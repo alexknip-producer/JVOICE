@@ -42,7 +42,7 @@ SIZE_FILES = ["ui.c", "favorites.c", "menu_items.c", "icons.c", "ui_graph.c", "u
               # As above, anything reached from an ISR remains at -Os.
               "song_save.c", "eng_input.c", "usb_host.c", "gen_track.c",
               # (V10.6z6) the velocity diagnostic and the keys' velocity: their main-loop side (the scan's, -Os)
-              "vel_diag.c", "vel.c"]
+              "vel_diag.c", "vel.c", "cpu_safe.c", "bt_hw.c", "sing_ext.c", "seq_fit.c"]
 ISR_ROOTS = ("fm1_alnk0_irq", "fm1_timer5_irq")      # hal/fm1_isr.S: the audio ISR, the key / LED scan (+ USB poll)
 DEF = re.compile(r"^(?:static|void|int|uint\w*|int\w*|const)\b[^;=(]*?\b([A-Za-z_]\w*)\s*\(", re.M)
 IR_DEF = re.compile(r"^(define [^\n]*?@\"?([\w.]+)\"?\([^\n]*\)(?: unnamed_addr| local_unnamed_addr)?)( #\d+[^\n]*\{)$",

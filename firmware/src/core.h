@@ -539,12 +539,15 @@ typedef struct {                 /* acid-style step: up to 4 notes (POLY), time,
  * from an interrupt, and none of those calls reaching another's (one storage, 4.5 KiB of .bss back):
  *   tl_src    ui_tools.c: the steps as they were, taken at the start of a SEQ TOOLS action and read by that action
  *   gen_keep  gen.c gen_parts: the drums of the section before, while DICE makes the sections
+ *   row_tmp   song_main.c row_vary: a row's track's steps as stored, while its variation is written (was its own 1.5 KiB
+ *             of the pool)
  *   ota       ota.c ota_stage: the package's header in step 1, then its blocks (the main loop is inside the update)
  *   snap      ui_graph.c scope_at: the HOME / EDIT scope's 512 samples, copied from the audio's ring for one draw */
 #define MSCR 1
 static union {
     step_t tl_src[NSTEP];
     step_t gen_keep[NSTEP];
+    step_t row_tmp[NSTEP];                              /* (song_main.c row_vary: the steps as they were) */
     union { uint8_t hdr[0x400]; struct { uint8_t b[512], mine[512]; } blk; } ota;   /* (hdr: step 1 only) */
     int16_t snap[512];
 } mscr;
