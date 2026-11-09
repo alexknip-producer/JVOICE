@@ -728,7 +728,7 @@ when the track's engine is not the saved one).
   `PROJECT` and the editor's project files carry the 3648 bytes; a backup `PUT` takes 3648, 3584 or 3388.
 - **Projects (FUNA, JIANT 0.1).** FUN9 with 96 more bytes, `46 55 4E 41` ("FUNA"), size 3744: the section's DRUM-X
   kit (8 sounds × 11 bytes: the mode, then PITCH PMOD DECAY NOISE COLOR of patch A and of patch B, each 0..127;
-  the mode: bits 0..1 the wave, 2..3 the noise filter 0..2, bit 4 SNAP) at 3120..3207, then the group mutes at 3208 (bit 0 KICK, 1 SNARE + CLAP, 2 HATS, 3 TOM RIM BELL; the rest 0) and 7
+  the mode: bits 0..1 the wave, 2..3 the noise filter 0..2 (V10.7.8: 3 GR, the guiro: PMOD its SCRAPE), bit 4 SNAP) at 3120..3207, then the group mutes at 3208 (bit 0 KICK, 1 SNARE + CLAP, 2 HATS, 3 TOM RIM BELL; the rest 0) and 7
   reserved bytes (0), the FM6
   patches at 3216..3727, the name at 3728..3739, the hash last. FUN9 and older load with the factory kit. Backups,
   `PROJECT` and the editor's project files carry the 3744 bytes; a backup `PUT` also takes 3648, 3584 or 3388.

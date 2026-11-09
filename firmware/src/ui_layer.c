@@ -327,7 +327,7 @@ static void mom_poll(void)                              /* every pass */
 static void undo_ui(void);
 /* the armed layer lets go (its button up): FX's macros snap back (FX LATCH: they stay); one that
  * opened, or a combo: KNOB 1..4 quiet for a while (#39: the knob still turning is not the page's) */
-static void layer_let_go(uint32_t quiet)
+static __attribute__((noinline)) void layer_let_go(uint32_t quiet)
 {
     if (ui.ly == LAYER_SAVE && lys.nqc >= 2u)           /* SAVE: two or more sections tapped: a quick chain */
         quick_chain(lys.qc, lys.nqc);
@@ -1186,7 +1186,7 @@ static __attribute__((noinline)) void rec_columns(void)
             empty_column(c);
     }
 }
-static void layer_cards(uint32_t l)
+static __attribute__((noinline)) void layer_cards(uint32_t l)
 {
     char val[12];
     const char *unit;
@@ -1301,7 +1301,7 @@ static void lst_chip(const char *a, const char *v, int on)
         cv_rect(x, y + 2, 2, 9, T_THEME);
     cv_clip_text(x + 6, y + 3 - AF_X_CAP_Y, &AF_X, b, on ? T_TEXT : T_DIM, bg, 104);
 }
-static void layer_state(uint32_t l)
+static __attribute__((noinline)) void layer_state(uint32_t l)
 {
     static const char *const LN[LAYER_N] = {"", "FX", "GLO", "SCL", "EDIT", "SEQ", "REC", "SAVE", "LFO"};
     uint32_t k, e;

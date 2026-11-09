@@ -1113,8 +1113,9 @@ demás motores: una recta, como antes).
 
 DRUM-X es un kit sintetizado de ocho sonidos, **BD SD CP CH OH TM RS CB**, generados en tiempo real.
 
-- (0.7.2) **Nueve kits como presets del motor DRUM**: DRUM-X (el kit de fábrica), 909 CLUB, 808 BOOM, LOFI DUST,
-  INDUSTRIAL, ACOUSTIC, DUB ROOTS, TECHNO RAW, BREAKS, HIP HOP (V10.34: boom bap, sugiere el patrón BOOM BAP). Recorrer uno (PRESETS en HOME, el editor, un PROGRAM CHANGE)
+- (0.7.2) **Once kits como presets del motor DRUM**: DRUM-X (el kit de fábrica), 909 CLUB, 808 BOOM, LOFI DUST,
+  INDUSTRIAL, ACOUSTIC, DUB ROOTS, TECHNO RAW, BREAKS, HIP HOP (V10.34: boom bap, sugiere el patrón BOOM BAP), LATIN
+  PERC (V10.7.8: bombo, timbal, llamador, un **GÜIRO** en el hi-hat cerrado, maracas, conga, clave, cencerro). Recorrer uno (PRESETS en HOME, el editor, un PROGRAM CHANGE)
   carga el kit completo en la sección: los lados A y B de los ocho sonidos, sus LAYER y SEND, y las perillas KIT de la
   pista. Cambiar de motor, INIT SOUND, cargar un proyecto y GEN dejan el kit de la sección como está; DRUM-X devuelve el
   de fábrica. Editá cualquiera en EDIT > SOUND; la sección guarda el resultado.
@@ -1144,10 +1145,15 @@ DRUM-X es un kit sintetizado de ocho sonidos, **BD SD CP CH OH TM RS CB**, gener
     S&H), **RAND** (cada golpe con su propio MORPH y un poco de afinación).
   - **FILTER**: el del kit.
   - **SOUND 1–4**, un sonido cada una: la KNOB 1 es siempre **SOUND** (cuál; tocar una tecla también lo elige).
-    - **SOUND**: SIDE (A / B), PITCH, PMOD (cuánto cae la afinación).
+    - **SOUND**: SIDE (A / B), PITCH, PMOD (cuánto cae la afinación; con el filtro GR, **SCRAPE**: abajo).
     - **SOUND 2**: DECAY, NOISE, COLOR, del lado elegido en SOUND (la KNOB 1 lo muestra: "SD B").
-    - **SOUND 3**: **MODE** (onda SIN / FM / MTL / BEL, filtro de ruido LP / BP / HP, "+" para snap), **PM.TYPE** (cómo
+    - **SOUND 3**: **MODE** (onda SIN / FM / MTL / BEL, filtro de ruido LP / BP / HP / GR, "+" para snap), **PM.TYPE** (cómo
       se mueve la afinación: DECAY, LONG, NOISE, SINE), **DRIVE** (ON / OFF).
+      (V10.7.8) **GR**, el güiro: un pasabanda cuyo golpe es una pasada por las estrías de un güiro, ticks a 24–64 Hz
+      (PITCH da la velocidad). El PMOD de SOUND pasa a ser **SCRAPE**, el largo de la pasada (0–173 ms), y la velocidad
+      del golpe elige larga o corta: un acento (127) toca la pasada entera, "rrrrip", un golpe suave solo su comienzo,
+      "chk" (el largo va con la cuarta potencia de la velocidad). Cualquier sonido puede tenerlo (un tom raspado, un
+      clap raspado); los kits de antes nunca lo tuvieron, así que suenan como sonaban.
     - **SOUND 4**: **LAYER** (OFF, 1–15): un segundo oscilador en un intervalo desafinado, modulado en frecuencia por el
       sonido, más cuanto más alto: de un filo metálico a un golpe sin nota, así el sonido se funde en el ritmo y no
       molesta a la armonía (el kit de fábrica lo tiene en redoblante, hi-hats y cowbell); **FEEDBK** (OFF, 1–15): el de
@@ -1928,6 +1934,17 @@ lofi; la de TECHNO ROCK, techno rock, rock o synth 80s; JAZZ en corcheas swing, 
 tempo, sus escalas y progresiones, su mapa de batería y su kit, sus arquetipos de bajo y su registro, cómo hablan sus
 acordes, su arpegio y su lead, qué receta de sonido toma cada rol, qué tan humano toca y su espacio (tipo de reverb,
 tipo y tiempo del delay, cuánta humedad).
+
+(V10.7.8, pedido del dueño) El güiro de **CUMBIA** es un güiro: el filtro GR de DRUM-X en el hi-hat cerrado (el de
+LATIN PERC, con su llamador, maracas, conga y clave), una pasada larga en la "e" de cada tiempo y una corta en su "y",
+otra corta en la "a" del 2 y del 4 que lleva al tiempo siguiente (la digital lo mantiene en el tiempo), los acentos
+las pasadas largas; la villera es ahora **RKT** (la referencia del dueño, al estilo de MC Caco, ~92 BPM): un bombo corto
+y el clap en cada negra, la pasada del güiro en el tiempo y un "chk" en su "a" adelantado ~28 ms (MICRO: el tirón del
+tresillo), la conga en las "y", el bajo y los teclados bajos debajo de la batería. **REGGAETON** es más duro y tiene más aire: el kit y el 808 saturados (el romántico limpio),
+el 808 más corto, el arpegio punteado un riff menor al frente, el pad y el hook debajo, la conga y la clave de LATIN
+PERC. **BAILE FUNK** es ultra mínimo: el "tum tcha" del tamborzão en 3, 6 y 12 son dos tom shots (grave en el tom,
+agudo en el lane del clap), la respuesta del cencerro, sin redoblante, clap, hi-hats ni acordes, el 808 corto, seco y
+deslizándose hacia arriba al final del compás, los cortes del canto escasos.
 
 **Una base limpia** (0.9.9-gen1): cada pieza arranca del **estado de NEW PROJECT** — los parámetros, el sonido, los
 pasos, los componentes, los p-locks y la automatización de cada pista, MUTATE, los globales del tema (salvo el reloj,

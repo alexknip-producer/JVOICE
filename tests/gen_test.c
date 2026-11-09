@@ -1451,8 +1451,9 @@ int main(void)
                         if (s->time == ST_NOTE && (s->acc & 0x24u)) pa |= 1u << p;
                     }
                     dens[gi] += hits; nbar[gi]++;
-                    if (gi ? kb != 15u : (kb & 5u) != 5u || (!dig && (kb & 10u))) ok_k[gi] = 0;   /* (the kick: cumbia's 1 and 3,
-                                                         * V10.7.5: never 2 and 4; the others' every beat) */
+                    if (gi || gs.g->drum == DM_CUMB2 ? kb != 15u : (kb & 5u) != 5u || (!dig && (kb & 10u))) ok_k[gi] = 0;   /* (the
+                                                         * kick: cumbia's 1 and 3, V10.7.5: never 2 and 4; V10.7.8 villera
+                                                         * as RKT's and the others' every beat) */
                     if (gi == 0u && br + 1u < bars) {           /* (V10.7.5: the guiro's accent, the sonidera's on the
                                                          * "e" (the demos' phase), its throws' on the beat; the llamador's
                                                          * or the conga's on 2's and 4's "and" or "a"; the fill bar's free) */
@@ -1518,13 +1519,95 @@ int main(void)
         for (gi = 0; gi < 3u; gi++)
             printf("gen:   %-9s %u..%u BPM, %u maps; kick %u snare %u bass %u hats %u harmony %u parts %u; %u hits a bar\n", LN[gi], lo_t[gi], hi_t[gi],
                    nmap[gi], ok_k[gi], ok_s[gi], ok_b[gi], ok_h[gi], ok_c[gi], ok_x[gi], nbar[gi] ? dens[gi] / nbar[gi] : 0u);
-        bad += gcheck("V10.7.5 CUMBIA x 12: 76..100, kick 1 3, guiro every beat (its accent), llamador 2 4, the bass syncopated, I IV V, keys on the and",
+        bad += gcheck("V10.7.5 CUMBIA x 12: 76..100, kick 1 3 (V10.7.8 villera RKT every beat), guiro every beat (its accent), llamador 2 4, the bass syncopated, I IV V, keys on the and",
                       ok_t[0] && ok_k[0] && ok_h[0] && ok_b[0] && ok_c[0] && ok_x[0] && nmap[0] == 3u);
         bad += gcheck("V10.7.2 REGGAETON x 12: 88..100, four on the floor, snare 3 6 11 14, the 808 on kick or tresillo, minor",
                       ok_t[1] && ok_k[1] && ok_s[1] && ok_b[1] && ok_c[1] && ok_x[1] && nmap[1] == 2u && lo_t[1] < 92u && hi_t[1] > 96u);
         bad += gcheck("V10.7.2 DEMBOW x 12: 115..132, the riddim, sixteenth hats, denser than reggaeton, 1..2 chords, chants on 3 6 11 14",
                       ok_t[2] && ok_k[2] && ok_s[2] && ok_b[2] && ok_h[2] && ok_c[2] && ok_x[2] && nmap[2] == 2u && hi_t[2] > 124u &&
                       nbar[1] && nbar[2] && dens[2] / nbar[2] > dens[1] / nbar[1] + 4u);
+    }
+    {   /* (V10.7.8, the owner: "BAILE FUNK's claps into tom shots and cowbells, ultra-minimalist, aggressive"; "REGGAETON
+         * more aggression and space, arpeggios"; "CUMBIA's rhythm a guiro, more syncopated", "percs") twelve seeds a
+         * genre: CUMBIA's guiro on the closed hat's lane (DRUM-X's filter GR, a SCRAPE: an accent its long stroke, a soft
+         * hit a "chk"), every bar of the loop a long stroke and a short one, the sonidera's long on the "e" and short on
+         * 2's and 4's "a" too, villera as RKT (the owner's reference: the clap on every quarter, the "a"s pulled early), its llamador, conga and clave LATIN PERC's; REGGAETON's kit and 808 driven (romantico's
+         * clean), its arp playing, its pad under the arp, its conga LATIN PERC's; BAILE FUNK 128 .. 136 (funk 150's
+         * 145 .. 152), no snare, no clap, no hats (the open hat's crash on a fill's one), the "tum tcha" two tom shots
+         * on 3 6 12 (the tom's lane on 3 and 12, the clap's, a high tom, on 6), a cowbell every bar, no chords, the 808
+         * short: rests in at least half of its steps, a glide every bar */
+        uint32_t gi, sd, br, p, ok_g = 1, ok_r = 1, ok_b = 1, rkt = 0, nlong = 0, nshort = 0, heavy = 0, arps = 0, bars_b = 0;
+        static const char *const LN[3] = {"CUMBIA", "REGGAETON", "BAILE FUNK"};
+        gen_reset();
+        for (gi = 0; gi < 3u; gi++)
+            for (sd = 1; sd <= 12u; sd++) {
+                const track_t *d, *b;
+                uint32_t len, bars, bpm, son, rom;
+                gen_with(genre_of(LN[gi]), sd, 50, 0);
+                if (!gs.act[RL_DRUM] || !gs.act[RL_BASS]) { if (gi == 0u) ok_g = 0; else if (gi == 1u) ok_r = 0; else ok_b = 0; continue; }
+                d = &trk[gs.trk_of[RL_DRUM]]; b = &trk[gs.trk_of[RL_BASS]];
+                len = (uint32_t)d->p[P_SLEN]; bars = len / 16u; bpm = (uint32_t)song.g[G_BPM];
+                son = gs.g->drum == DM_CUMBIA; rom = gi == 1u && !(gs.g->spec & GSP_HEAVY);
+                if (gi == 0u) {
+                    if (((dx_kit[DV_HATC].mode >> 2) & 3u) != DXF_GR || dx_kit[DV_HATC].a[DXP_PMOD] < 90u ||
+                        memcmp(&dx_kit[DV_TOM], &DX_KITS[DXK_LATIN].lane[DV_TOM], sizeof dx_kit[0]) ||
+                        memcmp(&dx_kit[DV_CLAP], &DX_KITS[DXK_LATIN].lane[DV_CLAP], sizeof dx_kit[0])) ok_g = 0;
+                    for (br = 0; br + 1u < bars; br++) {
+                        uint32_t l = 0, sh = 0, ch = 0;
+                        for (p = 0; p < 16u; p++) {
+                            const step_t *s = &d->step[br * 16u + p];
+                            if (s->time != ST_NOTE || !(s->hit & 8u)) continue;
+                            ch |= 1u << p;
+                            if (s->acc & 8u) l++; else sh++;
+                        }
+                        nlong += l; nshort += sh;
+                        if (!l || !sh || (son && (ch & 0x8080u) != 0x8080u)) ok_g = 0;
+                        if (gs.g->drum == DM_CUMB2) {           /* (RKT: the clap on every quarter, the "a"s early) */
+                            for (p = 0; p < 16u; p += 4u)
+                                if (!(d->step[br * 16u + p].time == ST_NOTE && (d->step[br * 16u + p].hit & 4u))) ok_g = 0;
+                            for (p = 3; p < 16u; p += 4u)
+                                if (((ch >> p) & 1u) && ST_MICRO(&d->step[br * 16u + p]) >= 0) ok_g = 0;
+                            rkt++;
+                        }
+                    }
+                } else if (gi == 1u) {
+                    heavy += !rom && d->p[P_DIST] >= 40 && b->p[P_DIST] >= 30;
+                    if (gs.act[RL_ARP]) {
+                        const track_t *ar = &trk[gs.trk_of[RL_ARP]];
+                        for (p = 0; p < (uint32_t)ar->p[P_SLEN] && ar->step[p].time != ST_NOTE; p++) {}
+                        arps += p < (uint32_t)ar->p[P_SLEN];
+                        if (gs.act[RL_PAD] && trk[gs.trk_of[RL_PAD]].p[P_LEVEL] >= ar->p[P_LEVEL]) ok_r = 0;
+                    }
+                    if (rom ? 0 : memcmp(&dx_kit[DV_TOM], &DX_KITS[DXK_LATIN].lane[DV_TOM], sizeof dx_kit[0])) ok_r = 0;
+                } else {
+                    if (!(bpm >= 128u && bpm <= 136u) && !(bpm >= 145u && bpm <= 152u)) ok_b = 0;
+                    if (gs.act[RL_PAD] || memcmp(&dx_kit[DV_CLAP], &DX_KITS[DXK_LATIN].lane[DV_CLAP], sizeof dx_kit[0])) ok_b = 0;
+                    for (br = 0; br < bars; br++) {
+                        uint32_t cb = 0, rest = 0, sl = 0, last = br + 1u == bars;
+                        for (p = 0; p < 16u; p++) {
+                            const step_t *s = &d->step[br * 16u + p];
+                            uint32_t h = s->time == ST_NOTE ? s->hit : 0u;
+                            const step_t *q = &b->step[(br * 16u + p) % (uint32_t)b->p[P_SLEN]];
+                            if (h & 0x0Au) ok_b = 0;                       /* (no snare, no closed hat) */
+                            if ((h & 0x10u) && (br || p)) ok_b = 0;        /* (the open hat: a crash on the one) */
+                            if (!last && (((p == 3u || p == 12u) && !(h & 0x20u)) || (p == 6u && !(h & 4u)))) ok_b = 0;
+                            if ((h & 4u) && p != 6u) ok_b = 0;             /* (the high tom: the "tcha" on 6 alone) */
+                            cb += (h >> 7) & 1u;
+                            rest += q->time == ST_REST;
+                            sl += q->time == ST_NOTE && (q->flags & SF_SLIDE);
+                        }
+                        if (!cb || rest < 8u || !sl) ok_b = 0;
+                        bars_b++;
+                    }
+                }
+            }
+        printf("gen:   guiro: %u long strokes, %u short, %u RKT bars; REGGAETON heavy %u of 12, arps %u of 12; BAILE FUNK %u bars\n", nlong, nshort, rkt, heavy, arps, bars_b);
+        bad += gcheck("V10.7.8 CUMBIA x 12: the guiro (DRUM-X GR, its SCRAPE) long and short every bar, the sonidera's syncopated, villera RKT's, LATIN PERC's percussion",
+                      ok_g && nlong && nshort > nlong && rkt);
+        bad += gcheck("V10.7.8 REGGAETON x 12: driven (romantico clean), the arp playing over a pad under it, LATIN PERC's conga",
+                      ok_r && heavy >= 6u && arps >= 10u);
+        bad += gcheck("V10.7.8 BAILE FUNK x 12: tom shots on 3 6 12, cowbells, no snare clap hats chords, the 808 short and gliding",
+                      ok_b && bars_b);
     }
     {   /* (V10.6z10, the owner: "every throw of a genre the same song") a genre's throws differ: OCT+ never throws the
          * core (progression, bass, map, the drums' DNA) of the genre's last eight; a seed is still its song whatever was
@@ -1534,6 +1617,8 @@ int main(void)
         uint8_t seen[64] = {0}, bseen[64] = {0};
         uint32_t pseen[64], np = 0;
         gen_reset();
+        host_ticks = 0; rng_state = 0x1234567u;         /* (V10.7.8: the throws from one state, whatever the tests
+                                                         * before rendered: OCT+'s seeds are drawn from the clock) */
         gen_with(G_HOUSE, 421, 50, 0); h0 = all_sig();
         for (g = 0; g < 24u; g++) {                     /* OCT+ 24 times on DEMBOW (its core the fewest) */
             uint16_t ring[8];

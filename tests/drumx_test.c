@@ -193,6 +193,45 @@ int main(int argc, char **argv)
               "the darkest hat %.2f, the noisiest kick %.3f", hmin, kmax);
     }
 
+    /* (V10.7.8) the filter GR, the guiro's scrape (LATIN PERC's closed hat): an accent's stroke long (ticks for 100 .. 200
+     * ms), a soft hit's a "chk" (under 50 ms), its ticks at the PITCH's rate (24 .. 64 Hz: a dip between them), in its
+     * band (3 .. 10 kHz, its slope's mean frequency), never at full scale, then over (the voice ends); SCRAPE 0: a single tick */
+    {
+        static int32_t y[FS / 2];
+        double dur[3], cen = 0;
+        uint32_t w, b, i, dips = 0, live = 1, pk = 0;
+        dx_kit_load(DXK_LATIN);
+        for (w = 0; w < 3u; w++) {
+            dx_voice_t v;
+            dx_lane_t L = dx_kit[DV_HATC];
+            double e = 0, ep = 0;
+            uint32_t first = 0, last = 0, k;
+            if (w == 2u) L.a[DXP_PMOD] = 0;
+            memset(&v, 0, sizeof v);
+            v.sv = w == 1u ? 80u : 127u;
+            dx_trigger(&v);
+            for (b = 0; b + CTL <= FS / 2u; b += CTL) dx_run_fx(&L, &v, 0, 0, 0, 0, 0, 0, 0, y + b, CTL, 0);
+            if (w == 0u) live = v.live;
+            for (k = 0; k + 220u <= FS / 2u; k += 220u) {   /* 5 ms windows: where it sounds, its dips (ticks) */
+                double r = 0;
+                for (i = 0; i < 220u; i++) { r += (double)y[k + i] * y[k + i]; pk = (uint32_t)abs(y[k + i]) > pk ? (uint32_t)abs(y[k + i]) : pk; }
+                if (r > 220.0 * 300 * 300) { if (!first) first = k + 1u; last = k + 220u; }
+                if (w == 0u && k && r < ep * 0.3 && r < e * 0.3) dips++;
+                e = ep; ep = r;
+            }
+            dur[w] = first ? (double)(last - first + 1u) * 1000.0 / FS : 0;
+            if (w == 0u) {
+                double s0 = 0, s1 = 0;
+                for (i = 1; i < FS / 4u; i++) { s0 += (double)y[i] * y[i]; s1 += (double)(y[i] - y[i - 1]) * (y[i] - y[i - 1]); }
+                cen = s0 > 0 ? FS / 6.2832 * 2.0 * asin(sqrt(s1 / s0) / 2.0) : 0;   /* (the derivative's: a mean frequency) */
+            }
+        }
+        dx_kit_load(0);
+        check("GR (the guiro): an accent a long stroke, a soft hit a chk, ticks in its band, then over", dur[0] >= 100 && dur[0] <= 200 &&
+              dur[1] > 0 && dur[1] < 50 && dur[2] > 0 && dur[2] < 30 && dips >= 4u && cen > 3000 && cen < 10000 && pk < 32000u && !live,
+              "long %.0f ms (%u ticks), chk %.0f ms, SCRAPE 0 %.0f ms, %.0f Hz, peak %u", dur[0], dips, dur[1], dur[2], cen, pk);
+    }
+
     /* 2 */
     {
         double r0, r1, rm;

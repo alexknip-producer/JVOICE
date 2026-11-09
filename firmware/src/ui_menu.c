@@ -502,7 +502,7 @@ static __attribute__((noinline)) void bt_prox_input(uint32_t up, uint32_t dn)   
 /* (V10.6z8, a Discord user: "near / far jump chaotically") a point stored is the median of BPC_MS of the level (a
  * sample every 40 ms: an advertisement's RSSI is noisy, one reading was a lottery), not the reading of the press.
  * menu_input runs it each frame while PROX's page is up (away longer: dropped) */
-static void bt_cal_tick(void)
+static __attribute__((noinline)) void bt_cal_tick(void)
 {
     uint32_t i, j, n, k = bpc.on - 1u;
     uint8_t x;

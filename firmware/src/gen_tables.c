@@ -44,10 +44,13 @@ static const char *const DRUM_MAP[][8] = {
      * reference, the rules after Compas (TexasRADIO, GPL-3.0), written here as JIANT's own) the sonidera's kick on 1 and
      * a lighter 3 (was every beat), the llamador (the clap's lane) on the "and"s accented on 2's and 4's, the tumba on
      * the "a"s accented on 2's and 4's (3, 7!, 11, 15!), the rim on 4, the bell on 2 */
-    [DM_CUMBIA]    = {"X.......8.......", "", "..4...9...4...9.", ".96..96..96..96.", "", "...4...9...4...9", "............7...", "....7..........."},
+    /* (V10.7.8, the owner: "the guiro more syncopated, a guiro, not a short hat") the guiro (DRUM-X's filter GR: an
+     * accent its long stroke, the rest its "chk"s, gen.c gen_kit) long on the "e", short on the "and", and on 2's and
+     * 4's "a" a short one more, into the next beat: "raaa-ca", "raaa-ca-ca" */
+    [DM_CUMBIA]    = {"X.......8.......", "", "..4...9...4...9.", ".96..965.96..965", "", "...4...9...4...9", "............7...", "....7..........."},
     /* (V10.6n) the dembow riddim: the kick on every beat, the snare 3 + 3 + 2 (the "a" of 1, the "and" of 2 ..);
      * Dominican dembow harder, the clap doubling it, sixteenths of guira, a tom's answer */
-    [DM_REGG]      = {"X...X...X...X...", "...X..X....X..X.", "", "7.7.7.7.7.7.7.7.", "", "", "..........4.....", ""},
+    [DM_REGG]      = {"X...X...X...X...", "...X..X....X..X.", "", "7.7.7.7.7.7.7.7.", "", ".............5..", "..........4.....", ""},
     [DM_DEMBOW]    = {"X...X...X...X...", "...X..X....X..X.", "...7..7....7..7.", "8585858585858585", "", "......5.....5.5.", "", ""},
     /* (V10.6n) tribal house / techno (Danny Tenaglia, Ben Sims, Joel Mull): the four on the floor under toms and congas,
      * a shaker, a rim, a cowbell */
@@ -67,8 +70,11 @@ static const char *const DRUM_MAP[][8] = {
      * the kick sparse under a sliding 808) */
     [DM_TRAP]      = {"X......6..X.....", "........X.......", "........9.......", "8585858585858585", "", "", "", ""},
     [DM_DRILL]     = {"X.........8.....", "........X.....6.", "........9.......", "7..7..7.7..7..7.", "", "", "", ""},
-    [DM_BAILE]     = {"X..7..7.....6...", "", "...X..X.....X...", "...X..X.....X...", "", "........8.7.....", "", ""},
-    [DM_BAILE2]    = {"X.............5.", "", "...X..X.....X...", "...X..X.....X...", "", "........7.7.....", "..............5.", ""},
+    /* (V10.7.8, the owner: "the snare and clap hits into TOM SHOTS and COWBELLS; ultra-minimalist, weird, aggressive")
+     * the "tum tcha"s on 3 6 12 two toms now (gen.c gen_kit: the tom's lane a low tom shot, the clap's a high one, driven),
+     * the cowbell's answer, no hats, no claps */
+    [DM_BAILE]     = {"X..7..7.....6...", "", "......X.........", "", "", "...X........X...", "", "..........7...8."},
+    [DM_BAILE2]    = {"X.............5.", "", "......X.........", "", "", "...X........X...", "..............5.", "........7.7....."},
     [DM_ELECTRO]   = {"X.....8...8..7..", "....X.......X...", "....5.......5...", "7474747474747474", "", "", "", "6..6..6...6.6..."},
     [DM_BREAKS]    = {"X.6.......8.....", "....X..3.3..X..3", "", "7.6.7.6.7.6.7.6.", "......5.......5.", "", "", ""},
     /* (V10.6n) the Amen: the kick on 1 and its "and", 3's "and" twice, the snare on 2 and 4 with its ghosts (IDM's
@@ -122,7 +128,10 @@ static const char *const DRUM_MAP[][8] = {
      * the guiro's chiqui-chiqui on the beat (X.xx..Xx: 1 and 3 accented), the conga on every "and" (2's and 4's
      * accented), the bell on 2 and 4; digital (tecnocumbia's): the kick on 1 and 3 and their pickups, the snare on 2
      * and 4, the guiro X.xx..X., the tumba on the "a"s (2's and 4's accented), the llamador a rim on the "and"s */
-    [DM_CUMB2]     = {"X.......X.......", "............8...", "..5...9...5...9.", "9.66..969.66..96", "", "", "", "....7.......7..."},
+    /* (V10.7.8, the owner's cumbia RKT reference, 92 BPM: MC Caco's) villera as RKT: a short kick and the clap on every
+     * quarter, the guiro's stroke on the beat and a "chk" on its "a" (pulled ~28 ms early: gen.c gen_drums, the
+     * triplet's pull), the conga's on the "and"s, the bell on 2 and 4 */
+    [DM_CUMB2]     = {"X...X...X...X...", "", "X...X...X...X...", "9..69..69..69..6", "", "..5...9...5...9.", "", "....7.......7..."},
     [DM_CUMB3]     = {"X.....5.X.....5.", "....8.......8...", "", "9.66..9.9.66..9.", "", "...4...9...4...9", "..4...7...4...7.", ""},
     [DM_REGG2]     = {"X...X...X...X...", "...X..X....X..X.", "...7..7....7..7.", "8.5.8.5.8.5.8.55", "", "", "..........4.....", ""},
     [DM_DEMB2]     = {"X...X...X...X...", "...X..X...7X..X.", "...7..7....7..7.", "6666666666666666", "..7...7...7...7.", "..6..6....6..6..", "", ""},
@@ -178,7 +187,7 @@ enum { BA_OFFBEAT, BA_OFFOCT, BA_BOUNCE, BA_DEEPWALK, BA_ROLL16, BA_OCTBNC, BA_S
        BA_FIFTHS, BA_NEOARP, BA_SEQ16, BA_ACID, BA_NITZER1, BA_NITZER2, BA_NITZER3, BA_DAF,
        BA_ROTHER, BA_VILLA, BA_GALLOP, BA_EBMOFF, BA_EBM2B, BA_CUMBIA, BA_HBASS, BA_REGG, BA_TAMBOR, BA_PH808, BA_WALK,
        BA_WALK2, BA_N,
-       BA_RF1 = BA_N, BA_RF2, BA_RF3, BA_RF4, BA_FL1, BA_MANDEL, BA_CUMB2, BA_CUMB3, BA_RGTRES, BA_WALK3, BA_NALL };   /* (V10.7.2:
+       BA_RF1 = BA_N, BA_RF2, BA_RF3, BA_RF4, BA_FL1, BA_MANDEL, BA_CUMB2, BA_CUMB3, BA_RGTRES, BA_WALK3, BA_FUNK3, BA_NALL };   /* (V10.7.2:
                                                          * the latin basses and V10.6z10's WALK3 (JAZZ's) after the last, the
                                                          * indices as they were) */   /* (V10.6p: the riffs past the basses: EXPLORE's
                                                          * basses never one; gen.c gen_riff) */
@@ -236,9 +245,13 @@ static const barch_t BASS_ARCH[BA_NALL] = {
     [BA_REGG]     = {"R..R..R.R..R..R.", "a.......a.....s.", 1},
     /* (V10.6p) baile funk's 808 on the tamborzao's kick, held; phonk's 808 (V10.6u: the Brazilian map's, its 3 3 2
      * accents), sliding up the octave and back; (V10.6u, past the riffs: EXPLORE's never) the mandelao's boom on the one */
-    [BA_TAMBOR]   = {"R==R==R=....R===", "a..a..a.....a...", 1},
+    /* (V10.7.8, the owner: "more aggressive basses with lots of space") baile funk's 808 short and punchy on the
+     * tamborzao's kick, its last note gliding up the octave; the mandelao's boom on the one and a slide at the bar's
+     * end; a third, the boom and its answer pushed */
+    [BA_TAMBOR]   = {"R..R..R.....R=8.", "a..a..a.....s...", 1},
     [BA_PH808]    = {"R==R==R=R===R=8=", "a..a..a.a...s.s.", 1},
-    [BA_MANDEL]   = {"R===..........R.", "a.............g.", 1},
+    [BA_MANDEL]   = {"R=..........R=8.", "a...........s...", 1},
+    [BA_FUNK3]    = {"R..R....R=8.....", "a..a....s.......", 1},
     /* (V10.7.2, past the riffs: EXPLORE's never; V10.7.5 after Compas) the tecnocumbia's bass (the root on 1, the
      * fifth on 2, the root on 2's "and" and on 3, the fifth on 4, the root on 4's "and"; the second bar's turn the
      * seventh) and villera's (the root on 1, the fifth on 2, the root on 2's "and" held over 3, the fifth on 4; the
@@ -662,9 +675,13 @@ static const ggenre_t GENRE[] = {
      * 3 3 2 sliding, the vocal chops on the snare's steps) and romantico (88 .. 94, the 808 in the
      * tresillo, a guitar picked) */
     {"REGGAETON", 90, 96, 0, {SC_MIN, SC_MIN, SC_MIN, SC_PHRY}, DM_REGG, 100, KIT_808, 0, HC_FLAT, FL_HAT, 0,
-     {BA_REGG, BA_RGTRES, BA_REGG}, 29, KM_DOUBLE, 90, {PR_AEOL, PR_I_VI, PR_EPIC}, 1, CS_HOLD, VM_PAD,
-     {AP_BROKEN, AP_UPDOWN}, LD_HOOK, AMT(95, 95, 45, 35, 50), {KIT_808, SR_808, SR_PAD, SR_PLUCK, SR_PLUCK}, SR_TEXTURE,
-     2, 1, 40, 0, FM_PARTS, 5, HF_POP, 0},
+     {BA_REGG, BA_RGTRES, BA_REGG}, 29, KM_DOUBLE, 70, {PR_AEOL, PR_I_VI, PR_EPIC}, 1, CS_HOLD, VM_PAD,
+     {AP_BROKEN, AP_CYCLE3}, LD_HOOK, AMT(95, 95, 25, 70, 30), {KIT_808, SR_808, SR_PAD, SR_PLUCK, SR_PLUCK}, SR_TEXTURE,
+     2, 1, 30, 0, FM_PARTS, 5, HF_POP, GSP_HEAVY},   /* (V10.7.8, the owner: "more aggression and space, arpeggios,
+                                                         * street": the kit and the 808 driven (GSP_HEAVY), the 808
+                                                         * shorter, the pad under (25, GMIX), the arp a plucked minor riff
+                                                         * up front (70: the dembow's broken 3 + 3 + 2, a cycle), the hook
+                                                         * sparse, drier) */
     /* (V10.6n) Dominican dembow (El Alfa, Bulova): faster and harsher, more percussion, one chord's stabs again and
      * again, chants. (V10.7.2) its rules: 115 .. 132, the riddim's kick on every beat and its snare 3 + 3 + 2 doubled
      * by the clap, sixteenths of guira and their rolls, the toms' answer, the 808 on the kick (no house offbeat bass),
@@ -780,9 +797,11 @@ static const ggenre_t GENRE[] = {
      * held on the kick, distorted; one minor chord or two stabbed; the MC's chant chopped off the beat; a hook: Bach's
      * flute (Bum Bum Tam Tam) or a bell's riff (automotivo's) */
     {"BAILE FUNK", 128, 136, 0, {SC_MIN, SC_MIN, SC_PHRY, SC_HARM}, DM_BAILE, 100, KIT_909, 0, HC_FLAT, FL_TOM, 0,
-     {BA_TAMBOR, BA_MANDEL, BA_PH808}, 29, KM_DOUBLE, 90, {PR_ONE, PR_I_VII, PR_I_IV}, 2, CS_STAB, VM_PLAIN,
-     {AP_CHOP, AP_CHOP}, LD_RIFF, AMT(100, 100, 25, 55, 85), {KIT_909, SR_808, SR_STAB, SR_CHANT, SR_COWBELL}, SR_TEXTURE,
-     1, 2, 20, 2, FM_PARTS, 5, HF_LOOP, GSP_HEAVY},
+     {BA_TAMBOR, BA_MANDEL, BA_FUNK3}, 29, KM_DOUBLE, 55, {PR_ONE, PR_I_VII, PR_I_IV}, 2, CS_STAB, VM_PLAIN,
+     {AP_CHOP, AP_CHOP}, LD_RIFF, AMT(100, 100, 0, 30, 70), {KIT_909, SR_808, SR_STAB, SR_CHANT, SR_COWBELL}, SR_TEXTURE,
+     1, 2, 15, 2, FM_PARTS, 5, HF_LOOP, GSP_HEAVY},   /* (V10.7.8, the owner: "ultra-minimalist, weird, aggressive": no
+                                                         * chords, the chops sparse, the 808 short (GATE 55) and up front
+                                                         * (GMIX), drier) */
     /* (V10.6w, the owner: "jazz has to sound like jazz") a swing quartet in swung eighths (DM_JAZZ: a step an eighth,
      * the tempo shown the half of the felt: 80 a ballad .. 300 bebop, by the throw's energy; V10.6x, the owner: "jazz has every BPM"): the ride's "ding, ding-da ding", the hi-hat's foot on 2 and 4,
      * the kick feathered, the snare's soft comping; the walking bass in quarters on the chord's tones and its approach
@@ -850,7 +869,8 @@ static const uint8_t GMIX[][3] = {
     GMX(-3, 1, -1, 0, 7, 0),   /* TECH HOUSE (V10.7.2: the bass +1.5, z10's ~1.6 under) */
     GMX(-3, 4, 1, 0, 7, 5),   /* TRIBAL */
     GMX(0, 1, 2, 2, 0, -2),   /* CUMBIA */
-    GMX(-3, 0, -2, 7, 7, 4),   /* REGGAETON */
+    GMX(-1, 1, -5, 2, 5, 4),   /* REGGAETON (V10.7.8, the owner's reference: the drums up front, the 808 up, the pad, the hook
+                                                         * and the arp under them, the pad under the arp) */
     GMX(-3, 2, -2, 7, 7, 4),   /* DEMBOW (V10.7.2: the marimba's riff and the chants' arp up: phonk's levels) */
     GMX(-3, 0, 1, 7, 7, 5),   /* ELECTRO */
     GMX(-2, 2, -2, 5, 6, 5),   /* BREAKBEAT (V10.7.2: the bass +1.5, z10's ~1.8 under) */
@@ -866,7 +886,7 @@ static const uint8_t GMIX[][3] = {
     GMX(0, -1, 0, 3, 0, 1),   /* TECHNO ROCK */
     GMX(-1, 4, -3, -1, 2, 3),   /* DREAM POP */
     GMX(-4, 1, -2, 7, 7, 4),   /* PHONK (V10.7.2: the drums -1.5, z10's DNA ~2 dB over the parts) */
-    GMX(-3, -1, -3, 7, 7, 4),   /* BAILE FUNK */
+    GMX(-3, 2, -3, 7, 4, 4),   /* BAILE FUNK (V10.7.8: the 808 4.5 dB up, the chops under) */
     GMX(0, 0, 0, 1, 0, -2),   /* JAZZ */
     GMX(-3, -2, -1, 7, 5, 4),   /* HIP HOP */
 };
@@ -929,14 +949,16 @@ static const uint8_t GSUB_HH[] = {
 static const uint8_t GSUB_CU[] = {
     3,   /* CUMBIA */
     0,
-    6, GSO(drum, DM_CUMB2), GSO(bpm_lo, 88), GSO(bpm_hi, 98), GSO(bass[0], BA_CUMB3), GSO(bass[2], BA_CUMB3), GSO(cbars, 2),
+    8, GSO(drum, DM_CUMB2), GSO(bpm_lo, 88), GSO(bpm_hi, 98), GSO(bass[0], BA_CUMB3), GSO(bass[2], BA_CUMB3), GSO(cbars, 2),
+    GSO(amt[GP_BASS], 55), GSO(amt[GP_CHORDS], 30),     /* (V10.7.8: RKT's music low under the drums) */
     8, GSO(drum, DM_CUMB3), GSO(bpm_lo, 90), GSO(bpm_hi, 100), GSO(bass[0], BA_FIFTHS), GSO(bass[2], BA_CUMB2),
     GSO(snd[GP_BASS], SR_SUB), GSO(amt[GP_ARP], 35), GSO(kit, KIT_808),
 };
 static const uint8_t GSUB_RG[] = {
     3,   /* REGGAETON */
     0,
-    5, GSO(bpm_lo, 88), GSO(bpm_hi, 94), GSO(bass[0], BA_RGTRES), GSO(arp[0], AP_UPDOWN), GSO(snd[GP_ARP], SR_MALLET),
+    6, GSO(bpm_lo, 88), GSO(bpm_hi, 94), GSO(bass[0], BA_RGTRES), GSO(arp[0], AP_UPDOWN), GSO(snd[GP_ARP], SR_MALLET),
+    GSO(spec, 0),                                       /* (V10.7.8: romantico's kit and 808 clean) */
     9, GSO(drum, DM_REGG2), GSO(bpm_lo, 92), GSO(bpm_hi, 100), GSO(bass[0], BA_PH808), GSO(bass[2], BA_PH808),
     GSO(arp[0], AP_CHOP), GSO(arp[1], AP_CHOP), GSO(snd[GP_ARP], SR_CHANT), GSO(prog[1], PR_MINOR4),
 };

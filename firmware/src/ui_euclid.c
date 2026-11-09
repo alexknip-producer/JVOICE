@@ -188,7 +188,7 @@ static uint32_t eu_vc(uint32_t v, uint32_t c, uint32_t nc)
 
 /* the key of melodic track k: SCL's, else the one the other tracks' notes fit (src 1 + the track with the most), else
  * the seed's (NEW); e->root and e->mask */
-static void eu_key(uint32_t k, eu_t *e)
+static __attribute__((noinline)) void eu_key(uint32_t k, eu_t *e)
 {
     static const uint8_t TRY[7] = {1, 2, 3, 4, 8, 9, 7}, NEWS[6] = {2, 1, 3, 6, 8, 9};   /* MAJ MIN DOR MIX PHRY LYD HARM */
     const track_t *t = &trk[k];
@@ -232,7 +232,7 @@ static int32_t eu_deg(const uint8_t *pc, uint32_t np, int32_t base, int32_t d)
 
 /* the kit (only 0: ALL, its lanes' least common length) or lane only-1 alone (the others as they are, the pattern
  * as long as both need, up to 64) */
-static void eu_drums(track_t *t, eu_t *e, uint32_t only)
+static __attribute__((noinline)) void eu_drums(track_t *t, eu_t *e, uint32_t only)
 {
     uint8_t on[64];
     uint32_t l, i, j, n, old = (uint32_t)clamp(t->p[P_SLEN], 1, 64), len = only ? old : 1u;
@@ -285,7 +285,7 @@ static int32_t eu_up(const eu_t *e, int32_t nt, uint32_t k)
     while (k) { nt++; if ((e->mask >> ((uint32_t)(nt - e->root + 120) % 12u)) & 1u) k--; }
     return nt;
 }
-static void eu_melody(uint32_t k, track_t *t, eu_t *e)
+static __attribute__((noinline)) void eu_melody(uint32_t k, track_t *t, eu_t *e)
 {
     uint8_t on[64], ln[64], pc[12], sq[64];
     int8_t mem[64] = {0};                                   /* (V10.16) the first turn's degrees, hit by hit: the motif */

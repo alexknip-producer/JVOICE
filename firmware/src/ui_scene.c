@@ -79,7 +79,7 @@ static void sc_dice(void)
     for (i = 0; i < j && i < nm; i++) { scn_role[m[i]] = (uint8_t)r[i]; sc_setup(m[i]); }
     sc_key(1);                                           /* (V10.6n) and a mode, mostly dark */
 }
-static void sc_put(uint32_t k, int32_t v)
+static __attribute__((noinline)) void sc_put(uint32_t k, int32_t v)
 {
     uint32_t i, need = 0;
     if (k == 0u) {

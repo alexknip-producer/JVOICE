@@ -434,7 +434,7 @@ static void glane_rat(step_t *s, uint32_t l, uint32_t n)
  * each copy), the phrase's fourth bar most: a roll (the snare's or a hat's x2 / x4), a stutter (a step again one to three
  * times), a beat moved a step, half a bar reversed, the kick out for a beat (never the bar's one); the steps without the
  * kick or the snare a chance of their own; the phrase's last beat a roll of thirty-seconds (lv: 1 a little .. 3) */
-static void gidm_edit(track_t *t, uint32_t len, uint32_t lv)
+static __attribute__((noinline)) void gidm_edit(track_t *t, uint32_t len, uint32_t lv)
 {
     uint32_t b, i, j, k, nb = len / 16u;
     for (b = 0; b < nb; b++) {
@@ -648,6 +648,8 @@ static void gen_drums(track_t *t, uint32_t len)
         step_t *s = &t->step[i];
         if (s->time != ST_NOTE) continue;
         if (g->sd_micro && gs.human && (s->hit & 2u) && !(s->hit & 1u)) ST_MICRO_SET(s, g->sd_micro * 4);   /* (16ths) */
+        if (g->drum == DM_CUMB2 && (s->hit & 8u) && i % 4u == 3u) ST_MICRO_SET(s, -11);   /* (V10.7.8: RKT's guiro pulled
+                                                         * ~28 ms early at 92, its "a" a triplet's) */
         if (s->acc & ~s->hit) s->acc &= s->hit;
     }
     if (gx.on) gx_drums(t, len);
@@ -683,7 +685,7 @@ static int32_t gbass_tone(const gch_t *c, int32_t root, char ch)
  * the beat more), an octave up a third of the time (down now and then: the 1-octave jumps), an ACCENT on ~30 % of the
  * notes, a SLIDE on ~25 % (never into a rest: the gate held into the next note, which glides and does not retrigger),
  * a TIE now and then where a rest was; every other bar a few of its notes re-rolled (TB-3PO's mutate) */
-static void gen_acid(track_t *t, uint32_t len, int32_t lo)
+static __attribute__((noinline)) void gen_acid(track_t *t, uint32_t len, int32_t lo)
 {
     static const uint8_t W[7] = {34, 8, 14, 9, 14, 7, 14};   /* the mode's degrees over the chord: 1 2 3 4 5 6 7 */
     uint8_t dg[16], oc[16], fl[16];
@@ -1699,6 +1701,16 @@ static __attribute__((noinline)) void gen_kit(track_t *t)
         H->a[DXP_NOISE] = (uint8_t)clamp(H->a[DXP_NOISE] + nz, 0, 127); H->b[DXP_NOISE] = (uint8_t)clamp(H->b[DXP_NOISE] + nz, 0, 127);
         H->a[DXP_COLOR] = (uint8_t)clamp(H->a[DXP_COLOR] + cl, 0, 127); H->b[DXP_COLOR] = (uint8_t)clamp(H->b[DXP_COLOR] + cl, 0, 127);
     }
+    {   /* (V10.7.8, the owner: "a guiro", "percs") the latin kits' percussion, the factory LATIN PERC's: CUMBIA's
+         * llamador, GUIRO (the filter GR, its stroke a throw's own), maracas, conga and clave; REGGAETON's conga and
+         * clave; BAILE FUNK's "tcha" the llamador's high tom shot on the clap's lane (its "tum" the kit's tom, both
+         * driven: GSP_HEAVY) */
+        uint32_t d = gs.g->drum, lo = d == DM_CUMBIA || d - DM_CUMB2 < 2u || d - DM_BAILE < 2u ? DV_CLAP : d == DM_REGG || d == DM_REGG2 ? DV_TOM : DV_BELL;
+        uint32_t hi = d - DM_BAILE < 2u ? DV_HATC : DV_BELL;
+        memcpy(&dx_kit[lo], &DX_KITS[DXK_LATIN].lane[lo], (hi - lo) * sizeof dx_kit[0]);   /* (none: DV_BELL) */
+        memset(&dx_lay[lo], 0, hi - lo);
+        if (hi - lo == 5u) dx_kit[DV_HATC].a[DXP_PMOD] = (uint8_t)grr(96, 116);   /* (CUMBIA: the guiro's SCRAPE) */
+    }
     if (gx.on)                                          /* (0.8.6) EXPLORE: the sounds far from the kit's, each its own */
         for (l = 0; l < 8u; l++) {
             dx_lane_t *L = &dx_kit[l];
@@ -2258,7 +2270,7 @@ static int8_t gx_engine(uint32_t r)
 }
 /* the sound past its recipe: a VOICE singing words (any language, a dice's phrase or scat), a distortion's type, a
  * wide glide, a vibrato, detune */
-static void gx_sound(track_t *t, uint32_t r)
+static __attribute__((noinline)) void gx_sound(track_t *t, uint32_t r)
 {
     if (t->eng_req == EG_VO && r == RL_LEAD && gch(70)) { t->p[P_VLANG] = (int16_t)grr(1, LG_N - 1); t->p[P_VLYR] = (int16_t)grr(1, LYR_N - 1); }   /* (V10.6n:
                                                          * words a lead's only) */
@@ -2301,7 +2313,7 @@ static void gx_sound(track_t *t, uint32_t r)
         t->p[P_LD_PIT] = 0;
 }
 /* the step components on the odd role's track (V10.6n: one track; a bass's never an arpeggio, a jump or a climb) */
-static void gx_comps(void)
+static __attribute__((noinline)) void gx_comps(void)
 {
     static const uint8_t EV[7] = {EV_1_2, EV_2_2, EV_1_3, EV_1_4, EV_3_4, EV_FIRST, EV_NOT1};
     uint32_t k = gs.trk_of[gx.orole % RL_N];
@@ -2621,7 +2633,7 @@ BTAPP_FN static void gen_pick(void)
  * still its song: only which seed OCT+ throws changes */
 static struct { uint16_t h[8], s[4]; uint8_t at, thrown, sat; } gsr __attribute__((section(".bss.dice")));   /* (the genre in
                                                          * h; V10.7.2: s the last four seeds thrown) */
-static void gen_make(void)
+static __attribute__((noinline)) void gen_make(void)
 {
     const ggenre_t *g;
     uint32_t k, dr = NTRK, nlive = trk_live < NTRK ? trk_live : NTRK, nmel, drums, next, wet;

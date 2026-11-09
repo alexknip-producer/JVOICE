@@ -1068,8 +1068,9 @@ pitch over the same time (the other engines: a straight line, as before).
 
 DRUM-X is a synthesized kit of eight sounds, **BD SD CP CH OH TM RS CB**, generated in real time.
 
-- (0.7.2) **Nine kits as the DRUM engine's presets**: DRUM-X (the factory kit), 909 CLUB, 808 BOOM, LOFI DUST,
-  INDUSTRIAL, ACOUSTIC, DUB ROOTS, TECHNO RAW, BREAKS, HIP HOP (V10.34: boom bap, suggests the pattern BOOM BAP). Browsing one (PRESETS on HOME, the editor, a PROGRAM CHANGE)
+- (0.7.2) **Eleven kits as the DRUM engine's presets**: DRUM-X (the factory kit), 909 CLUB, 808 BOOM, LOFI DUST,
+  INDUSTRIAL, ACOUSTIC, DUB ROOTS, TECHNO RAW, BREAKS, HIP HOP (V10.34: boom bap, suggests the pattern BOOM BAP), LATIN
+  PERC (V10.7.8: bombo, timbal, llamador, a **GUIRO** on the closed hat, maracas, conga, clave, cowbell). Browsing one (PRESETS on HOME, the editor, a PROGRAM CHANGE)
   loads the whole kit into the section: the eight sounds' A and B sides, their LAYERs and SENDs, and the track's KIT
   knobs. Switching engines, INIT SOUND, a project load and GEN leave the section's kit as it is; DRUM-X brings the
   factory kit back. Edit any of them in EDIT > SOUND; the section saves the result.
@@ -1097,10 +1098,15 @@ DRUM-X is a synthesized kit of eight sounds, **BD SD CP CH OH TM RS CB**, genera
     S&H), **RAND** (each hit gets its own MORPH and a little tune).
   - **FILTER**: the kit's.
   - **SOUND 1–4**, one sound each: KNOB 1 is always **SOUND** (which one; striking a key also picks it).
-    - **SOUND**: SIDE (A / B), PITCH, PMOD (how far the pitch falls).
+    - **SOUND**: SIDE (A / B), PITCH, PMOD (how far the pitch falls; with the filter GR, **SCRAPE**: below).
     - **SOUND 2**: DECAY, NOISE, COLOR, of the side picked on SOUND (KNOB 1 shows it: "SD B").
-    - **SOUND 3**: **MODE** (wave SIN / FM / MTL / BEL, noise filter LP / BP / HP, "+" for snap), **PM.TYPE** (how the
+    - **SOUND 3**: **MODE** (wave SIN / FM / MTL / BEL, noise filter LP / BP / HP / GR, "+" for snap), **PM.TYPE** (how the
       pitch moves: DECAY, LONG, NOISE, SINE), **DRIVE** (ON / OFF).
+      (V10.7.8) **GR**, the guiro: a band-pass whose hit is a stroke over a guiro's ridges, ticks at 24–64 Hz (PITCH sets
+      the rate). SOUND's PMOD becomes **SCRAPE**, the stroke's length (0–173 ms), and the hit's velocity picks long or
+      short: an accent (127) plays the whole stroke, "rrrrip", a soft hit only its start, "chk" (the length goes with the
+      velocity's fourth power). Any sound can take it (a scraped tom, a scraped clap); the kits of before never had it,
+      so they sound as they did.
     - **SOUND 4**: **LAYER** (OFF, 1–15): a second oscillator at an out-of-tune interval, frequency modulated by the
       sound, more as it goes up: from a metal edge to a clang with no note, so the sound melts into the rhythm and stays
       out of the harmony (the factory kit has it on the snare, the hats and the cowbell); **FEEDBK** (OFF, 1–15): that
@@ -1843,6 +1849,17 @@ or lofi; TECHNO ROCK's techno rock, rock or synth 80s; JAZZ in swung eighths, it
 range, its scales and chord progressions, its drum map and kit, its bass archetypes and register, how its chords, arp
 and lead speak, which sound recipe each role takes, how human it plays and its space (reverb type, delay type and
 time, how wet).
+
+(V10.7.8, the owner's ask) **CUMBIA**'s güiro is a güiro: DRUM-X's filter GR on the closed hat (LATIN PERC's, with its
+llamador, maracas, conga and clave), a long stroke on each beat's "e" and a short one on its "and", another short one
+on 2's and 4's "a" leading into the next beat (digital keeps its on the beat), the accents the long strokes; villera
+is now **RKT** (the owner's reference, MC Caco's, ~92 BPM): a short kick and the clap on every quarter, the güiro's
+stroke on the beat and a "chk" on its "a" pulled ~28 ms early (MICRO: the triplet's pull), the conga on the "and"s, the
+bass and the keys low under the drums. **REGGAETON** is harder and has more room: the kit and the 808 driven (romántico's clean), the 808 shorter,
+the plucked arp a minor riff up front, the pad and the hook under it, LATIN PERC's conga and clave. **BAILE FUNK** is
+ultra-minimal: the tamborzão's "tum tcha" on 3, 6 and 12 two tom shots (low on the tom, high on the clap's lane), the
+cowbell's answer, no snare, clap, hats or chords, the 808 short, punchy and gliding up at the bar's end, the chant's
+chops sparse.
 
 **A clean base** (0.9.9-gen1): every piece starts from **NEW PROJECT's state** — every track's parameters, sound,
 steps, step components, p-locks and automation, MUTATE, the song's globals (but the clock, tune, MIDI and routing),

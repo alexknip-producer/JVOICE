@@ -331,6 +331,7 @@ static __attribute__((noinline)) void drum_note_on(track_t *t, voice_t *v)
     }
     if (lane == DV_KICK)
         duck_hit = 1;
+    L->x.sv = v->vel;                                    /* (V10.7.8: GR's stroke, drumx_voice.c) */
     dx_trigger(&L->x);
     if (lane == DV_HATC)                                 /* a closed hat chokes the open one */
         dx_choke(&K[DV_HATO].x);
@@ -540,6 +541,7 @@ static void drum_render(track_t *t, voice_t *v, int32_t *out, uint32_t n, const 
                                                           * (voice.c takes the level before the render) */
         v->vel = L->fv;
     if (L->fl && !--L->fl) {                             /* .. the hit itself */
+        L->x.sv = v->vel;
         dx_trigger(&L->x);
         L->age = 0;
         if (((uint32_t)v->s[0] & (DV_NLANE - 1u)) == DV_HATC)
@@ -717,6 +719,7 @@ static const preset_t DRUM_PRESETS[] = {                /* (0.7.2) one a factory
      MODS(MLFO(LW_TRI, -1, 0, 0), P_LPHASE, -1, MMOD(1, PS_LFO, PD_E(2), 10))},   /* TONE opens and closes over 4 bars */
     {"BREAKS", {62, 66, 74, 62, 71, 0, 0, 10}, {0, 100, 127, 100}, 0, TAG(DRUM), FX(4, 0, 0, 22), PAT(12)},
     {"HIP HOP", {58, 62, 56, 64, 67, 0, 0, 18}, {0, 100, 127, 100}, 0, TAG(DRUM), FX(6, 0, 0, 20), PAT(14)},   /* (V10.34) */
+    {"LATIN PERC", {60, 64, 64, 64, 64, 0, 0, 0}, {0, 100, 127, 100}, 0, TAG(DRUM), FX(0, 0, 0, 22), PAT(12)},   /* (V10.7.8) */
 };
 _Static_assert(sizeof DRUM_PRESETS / sizeof DRUM_PRESETS[0] == sizeof DX_KITS / sizeof DX_KITS[0], "a DRUM preset a kit");
 /* (0.7.2) a factory kit into the section's: the sounds, their LAYERs, their SENDs (the project saves them) */

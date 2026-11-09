@@ -371,7 +371,7 @@ static int graph_key_lz(const track_t *t, const page_t *pg)
 /* GLO  MIX: the six strips (draw_tracks, track_col6; SENDS: the four sends as bars); GLOBAL keeps its bar of sixteenths;
  *      SYSTEM: the tracks that play as chips, LOAD's three settings (the one set lit), MIDI's route, the CPU load over
  *      the last seconds as a line */
-static void graph_system(void)
+static __attribute__((noinline)) void graph_system(void)
 {
     static const char *const LD[3] = {"ECO", "LITE", "FULL"};
     static uint8_t cpu[56], cpu_at;

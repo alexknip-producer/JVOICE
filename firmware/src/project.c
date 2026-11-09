@@ -2039,7 +2039,7 @@ static void proj_fill_poll(uint32_t sig)
         proj_fill.said = (uint8_t)(pct > 100u ? 2u : pct >= 90u ? (proj_fill.said ? proj_fill.said : 1u) : pct < 85u ? 0u : proj_fill.said);
     }
 }
-static void autosave_poll(void)
+static __attribute__((noinline)) void autosave_poll(void)
 {
     static uint32_t fill_poll;
     if (fm1_ms - fill_poll >= 250u) {                   /* (JIANT 0.6) how full the music is, flash or not */

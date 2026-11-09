@@ -360,7 +360,7 @@ static BTAPP_FN void morph_wave(uint32_t mode, int32_t m)
     }
 }
 
-static void graph_morph(const track_t *t)
+static __attribute__((noinline)) void graph_morph(const track_t *t)
 {
     const int16_t *p = t->p;
     uint32_t e = trk_eng(t), i, a0 = 0, a1 = 0;
@@ -482,7 +482,7 @@ static uint32_t pr_held(void)
 }
 /* once a frame: the view toward the page's notes (centred; once there it stays while they fit); at once on a redraw
  * forced, a gap in the frames, another track or MENU > ANIM OFF */
-static void pr_follow(const track_t *t)
+static __attribute__((noinline)) void pr_follow(const track_t *t)
 {
     uint32_t i, j, len = (uint32_t)t->p[P_SLEN], base = ui.bank * 16u;
     int32_t lo = 127, hi = -1, tgt, d, cur = proll.lo;
