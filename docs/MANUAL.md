@@ -1,6 +1,6 @@
 # JIANT FM — User Manual
 
-**JIANT FM V10.6z9 for the M-VAVE FM-1**
+**JIANT FM V10.7.6 for the M-VAVE FM-1**
 
 > *Versión en español: [MANUAL.es.md](MANUAL.es.md).*
 
@@ -204,11 +204,11 @@ Vestal's, *Velo*, github.com/charlesvestal/fm1-velocity, GPL-3.0). JIANT reads i
 
 - **Velocity**: how hard the key lands, in the first milliseconds after it touches. It is continuous (1..127: every
   strike between soft and hard gives a value between), then MENU > CONTROL > **VELOCITY**'s curve and **VEL MIN**'s
-  floor. A note waits for its strike at most one reading of its key (2.2 ms; 1.7 ms on average), so the latency stays
-  under what you can feel. It reaches everything a key plays: the sound (the engines and the matrix's VEL), chords
-  and strums, the arpeggiator, recording (only 127 records as an accent) and MIDI OUT. The top row (C#5..G5) has no
-  sensor: it plays the mean of your recent velocities (100 until you play the others). VELOCITY **OFF**: every key
-  100, as before.
+  floor. A note waits at most one reading of its key (2.2 ms) for its strike, under what you can feel. It reaches
+  everything a key plays: the sound (the engines and the matrix's VEL), chords and strums, the arpeggiator, recording
+  (only 127 records as an accent) and MIDI OUT. VELOCITY **OFF**: every key 100, as before.
+- **The top row (C#5..G5)** has no sensor (the FM-1 cannot read those seven keys' pressure), so it plays the **average of
+  your recent strikes** (100 until you play the others). It has no aftertouch (a chord with sensed keys keeps theirs).
 - **Calibration**: every key is different, and each learns your own soft, normal and hard strikes as you play (VEL
   LEARN ON, the default: it moves slowly, a stray strike does not throw it). It starts from the factory calibration
   (measured on the owner's FM-1) and is kept in the settings, written half a minute after you stop playing. **VEL
@@ -220,6 +220,15 @@ Vestal's, *Velo*, github.com/charlesvestal/fm1-velocity, GPL-3.0). JIANT reads i
   finger does nothing (a dead zone), the value glides (no zipper), and lifting the key ends it. MENU > CONTROL >
   **AFTERTOUCH** sets how sensitive it is (LOW, MID, HIGH) or turns it OFF. It works with OCT− / OCT+ held too; it
   is recorded as automation with the expression keys and sent as channel aftertouch with MIDI OUT ALL.
+- **A sound's VEL** (EDIT > VOICE 2, KNOB 3; 0..100 %, every engine but DRUM): how much velocity reaches *this* sound.
+  **100 %** (every project, preset and song made before it) plays each note as hard as it was played; less brings every
+  note's velocity toward 100 (50 %: a strike of 60 plays 80, one of 120 plays 110); **0 %** plays every note at 100,
+  as VELOCITY OFF does, but for this track only. It applies to every source: the keys, the sequencer's steps, the arp,
+  the punch-in repeats and MIDI in; the matrix's **VEL** reads the same value. A step's **ACCENT** still plays 127, and HUMAN and a RATCHET's DECAY
+  still vary the notes.
+  Recording keeps the velocity you played, so turning VEL up later brings the dynamics back. The factory **bass**
+  presets load at **0 %** (a bass is better even), GENE's bass at **75 %** (its composed ghost notes still softer); every other
+  preset at 100 %. Kept with the sound (projects, user presets, songs); NRPN 80, and the web editor's VOICE group.
 
 ---
 
@@ -519,7 +528,7 @@ since 0.6.51: every project opens as it was.
 | LEVELS | KICK | SNARE | CLAP | HATCL | DRUM |
 | LEVELS 2 | HATOP | TOM | RIM | BELL | DRUM |
 | VOICE | VOICE | GLIDE | MODE | PRIO | every engine |
-| VOICE 2 (0.8.5) | ALLOC | DETUNE (UNI's spread) | — | — | every engine but DRUM |
+| VOICE 2 (0.8.5) | ALLOC | DETUNE (UNI's spread) | VEL (the sound's velocity amount, 0..100 %) | — | every engine but DRUM |
 | SWARM, SWARM 2 (V10.6z6) | SIDE (FAR / NEAR) | that side's RATE, MOVE, TONE / NOISE, MOD | | (SWARM 2: NOW, the morph and its source) | EXT with SOURCE SWARM |
 | FOCUS (0.8.5) | PARAM (E1–E8) | its value | SRC (the MOD slot on it) | AMT | the synths (not FM6, DRUM) |
 
@@ -564,7 +573,7 @@ them page by page, a **SEQ** tap jumps to the next group.
 | Group (SEQ tap) | Page (SELECT) | KNOB 1 | KNOB 2 | KNOB 3 | KNOB 4 |
 | --- | --- | --- | --- | --- | --- |
 | PATTERN | PATTERN | LEN | DIV | SWING | GATE |
-| PATTERN | STRETCH | STRETCH (/8 … /2, x1, x2 … x8) | REPEAT (OFF, x2 … x8, TO 64) | NUDGE (OCT− the sequence, OCT+ the step's MICRO, V10.25) | ROTATE (−32 … +32) |
+| PATTERN | STRETCH | STRETCH (/8 … /2, x1, x2 … x8) | REPEAT (OFF, x2 … x8, TO 64) | NUDGE (OCT− the sequence, OCT+ the step's MICRO, OCT+ again the step) | ROTATE (−32 … +32) |
 | PATTERN | PLAYHEADS | HEAD | RATE | DIR | INTERVAL |
 | TRACK | TRACK | PITCH | CHANCE | HUMAN | REC Q |
 | EUCLID | EUCLID (V10.6) | HITS (DRUM-X LANE ALL: DENSITY, V10.7) | STEPS (2–64) | ROTATE | LANE (DRUM-X: ALL, BD … CB) · VARY (melodic) |
@@ -1350,10 +1359,13 @@ to the last step).
   - **KNOB 2 REPEAT**: copies steps 1..LEN after themselves, **x2 … x8** times or **TO 64** (as many whole copies as
     fit), automation and locks too; **OFF** at the left: as it was. Four notes become a 64-step bed to record more notes
     over (live REC overdubs).
-  - **KNOB 3 NUDGE** has two modes (V10.25), picked with OCT− / OCT+ on this page:
+  - **KNOB 3 NUDGE** has three modes (V10.25, V10.7.4), picked with OCT− / OCT+ on this page:
     - **OCT− (blue `< >`)**: the whole sequence one step right / left, round inside LEN (as TOOLS A3 / B3).
     - **OCT+ (red, a number)**: the **cursor step's micro timing**, 1/64 of a step a detent (−32 … +31; about 2 ms at
       120 BPM), early or late, as REC Q records it. PRESETS moves the cursor to the step; the card shows its value.
+    - **OCT+ again (red, S and the step's number)** (V10.7.4): **the cursor step itself**, one step right / left a
+      detent (it trades places with its neighbour; a note moves with its TIEs and trades with the neighbouring note
+      whole; at step 1 and at LEN it stays); the cursor goes with it.
   - **KNOB 4 ROTATE** (−32 … +32; it was SHIFT's OFFSET): the sequence read from another step, without moving the
     steps themselves — a live, automatable rotation (also on the SCL layer's KNOB 3).
 - **MICRO** (0.6.92, NOTE's KNOB 4; it was the TIMING page's OFFSET): the focused step's own place off the grid, in
@@ -1812,6 +1824,16 @@ The piece is **deterministic**: the same settings make the same piece every time
 back. **OCT+ with the settings unchanged throws a new seed** (another piece); turn a knob and press OCT+ and you get
 the **same piece with that one thing changed** — every part draws its random numbers from its own stream, so BASS
 turned leaves the drums and the lead as they were. The screen shows **LAST: HOUSE 0421** (the genre and the seed).
+
+**A genre's throws differ** (V10.6z10). Each throw of a genre takes its own **bass** (one of the genre's three
+archetypes, a few of its steps moved), its own **groove** (the genre's extra kicks in a place or two of its idiom, the
+hats and the percussion from the genre's pools where they are not its identity: cumbia's guiro, the dembow's 3 + 3 + 2,
+jazz's ride stay; now and then a euclid on a percussion lane; IDM's breaks one of four), its own **progression** (the
+genre's own a third of the time, else one its harmony's grammar writes), its own **sounds** (another of the engine's
+presets of the same type a third of the time) and a **tempo** around ENERGY's place in the genre's range. In PARTS and
+SONG the **sections develop**: their bass, chords and arp a variation of A's, the lead's motif developed another way,
+a one-chord piece's sections denser or thinner, higher or lower. And **OCT+ never throws the core** (progression, bass,
+map, groove) **of one of the genre's last eight throws**: it tries other seeds first. A seed is still its song.
 
 The genres, as KNOB 1 turns them after EXPLORE and RANDOM (V10.6n: the owner's list, in its order):
 MINIMAL TECHNO, HARD TECHNO, HARD BASS, HOUSE, DEEP HOUSE, TECH HOUSE, TRIBAL, CUMBIA, REGGAETON, DEMBOW, ELECTRO,
@@ -2578,7 +2600,7 @@ the footer **MENU · DISPLAY · SKIN  2/26**. The header says MENU · DISPLAY.
 | CONTROL | MIDI OUT | **KEYS**, CLOCK, ALL, OFF — what goes out over USB MIDI (and Bluetooth; see [14](#14-midi-and-usb)) |
 | CONTROL | MIDI MAP | **FACTORY** (the standard CC map), CUSTOM ADD (the map and your learned CCs), CUSTOM (your learned CCs alone) — see [MIDI LEARN](#midi-learn-0912) |
 | CONTROL | LEARN | **OFF**, SEL TRACK, FIXED TRK, CLEAR ALL — arms MIDI LEARN when the MENU closes; not saved |
-| CONTROL | VELOCITY | OFF, SOFT, **NORMAL** (default), HARD — (V10.6z7) the keys play as hard as you strike them (F3..C5; the top row C#5..G5 has no sensor and plays the mean of your recent notes). The curve: SOFT louder for less, HARD needs more. OFF: every key 100, exactly as before. See [Key velocity and aftertouch](#key-velocity-and-aftertouch-v106z7) |
+| CONTROL | VELOCITY | OFF, SOFT, **NORMAL** (default), HARD — the keys play as hard as you strike them (F3..C5; the top row C#5..G5 has no sensor and follows your recent dynamics). The curve: SOFT louder for less, HARD needs more. OFF: every key 100, exactly as before. See [Key velocity and aftertouch](#key-velocity-and-aftertouch-v106z7) |
 | CONTROL | VEL MIN | 1, 10, **20** (default), 30, 40, 50, 64, 80 — the softest strike's velocity (the range is scaled, no step) |
 | CONTROL | AFTERTOUCH | OFF, LOW, **MID** (default), HIGH — pressing a held key harder: the matrix's **AT** source (new sounds route it to the filter, CUT +20), recorded, and sent as channel aftertouch with MIDI OUT ALL |
 | CONTROL | VEL LEARN | **ON** (default), OFF, RESET — each key learns your soft, normal and hard strikes as you play (kept in the settings); RESET puts the factory calibration back, then learns again |

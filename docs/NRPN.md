@@ -76,7 +76,7 @@ its own way the engines are named. P_E0..P_E7 (CC98 115..122) are the engine's E
 | 77 | VOICING | 0..3 | 0 | CLOSE LEAD OPEN +BASS |
 | 78 | DEPTH | 0..127 | 127 | |
 | 79 | STRUM | 0..127 | 0 | |
-| 80 | LEVEL | 0..127 | 127 | |
+| 80 | VEL | 0..127 | 127 | |
 | 81 | ROTATE | -32..32 | 0 | |
 | 82 | PITCH | -24..24 | 0 | |
 | 83 | IMAGE | 0..127 | 127 | (ANALOG PHASE MATH VOICE WHEEL STRING NOISE FM6 ADD ANIMAL EXT) |
