@@ -4,7 +4,8 @@
  * sec_apply): a YouTube user's "I change the instruments and at the end of the phrase they go back". A preset, an
  * engine, a sound knob and the DRUM-X kit changed mid-song stay over every section after; the sections still bring
  * their steps, pattern and mutes; a song nobody touches holds nothing (no false hold); EDIT > RECALL lets a track go
- * (the sections' sound again), STOP keeps what was changed, a new throw lets everything go.
+ * (the sections' sound again), STOP brings the music before PLAY back with the changed sounds over it (V10.7.6), a
+ * new throw lets everything go.
  *   cc -O1 -g -w -Wno-implicit-function-declaration -fsanitize=address,bounds -Ibuild/gen -Ifirmware/src \
  *      tests/song_hold_test.c -lm -o build/song-check/song-hold */
 #define UI_TEST_NO_MAIN 1
@@ -49,6 +50,8 @@ int main(void)
 {
     int bad = 0, ok, rows, differs;
     uint32_t k, a = NTRK, b = NTRK, d = NTRK, pre_a, eng_b, dec_b, slen_ok, steps_ok;
+    uint32_t pre_eng[NTRK], pre_pre[NTRK];
+    step_t pre_step[NTRK];
     dx_lane_t kit0;
 
     /* 1. a song nobody touches: every section in, nothing held (every genre) */
@@ -71,8 +74,13 @@ int main(void)
     bad += check("V10.6z8 SONG HOLD: an untouched song's STOP brings the music before PLAY back, as before",
                  live.cur == 0 && proj_cur == 0);
 
-    /* 2. the player changes sounds while it plays */
+    /* 2. the player changes sounds while it plays (an unsaved edit before PLAY: step 64 of every track) */
     make_song(1, 31);
+    for (k = 0; k < NTRK; k++) {
+        step_t *st = &trk[k].step[NSTEP - 1u];
+        st->time = ST_NOTE; st->n = 1; st->note[0] = (uint8_t)(50u + k); st->vel = 77;
+        pre_step[k] = *st; pre_eng[k] = trk[k].eng_req; pre_pre[k] = trk[k].preset;
+    }
     press(B_PLAY); events_block(CTL); song_poll(); frame();
     for (k = 0; k < NTRK; k++) {                        /* a pitched track with presets, another for a knob, the DRUM */
         uint32_t e = trk[k].eng_req;
@@ -119,12 +127,28 @@ int main(void)
     }
     bad += check("V10.6z8 SONG HOLD: EDIT > RECALL in a song lets the track go: the next section's sound, the others held", ok);
 
-    /* 4. STOP keeps what was changed (no restore over it); PLAY again: still held */
-    seq_stop(); song_poll(); frame();
-    ok = trk[b].eng_req == eng_b && snd_held;
-    press(B_PLAY); events_block(CTL); song_poll(); frame();
-    ok &= chain.running && next_row() && trk[b].eng_req == eng_b && trk[b].p[P_DEC] == (int16_t)dec_b;
-    bad += check("V10.6z8 SONG HOLD: STOP keeps the changed sounds, PLAY again keeps holding them", ok);
+    /* 4. (V10.7.6) STOP: the music before PLAY back (its unsaved edits too), the held sounds over it; PLAY again:
+     * still held. A knob changed in the last section (not seen by a section change yet) is held too */
+    trk[b].p[P_ATK] = (int16_t)(trk[b].p[P_ATK] > 60 ? 7 : 99);
+    {
+        int16_t atk_b = trk[b].p[P_ATK];
+        seq_stop(); song_poll(); frame();
+        ok = trk[b].eng_req == eng_b && trk[b].p[P_DEC] == (int16_t)dec_b && trk[b].p[P_ATK] == atk_b &&
+             !memcmp(&dx_kit[0], &kit0, sizeof kit0) && (snd_held & (1u << b | 1u << NTRK)) == (1u << b | 1u << NTRK) &&
+             !(snd_held & 1u << a);
+        bad += check("V10.7.6 SONG HOLD: STOP keeps the held sounds (engine, knobs, the last section's change, the kit)", ok);
+        ok = live.cur == 0 && proj_cur == 0;
+        for (k = 0; k < NTRK; k++) {
+            ok &= !memcmp(&trk[k].step[NSTEP - 1u], &pre_step[k], sizeof pre_step[k]);
+            if (!(snd_held >> k & 1u))
+                ok &= trk[k].eng_req == eng_live(pre_eng[k]) && trk[k].preset == pre_pre[k];
+        }
+        bad += check("V10.7.6 SONG HOLD: .. over the music before PLAY (its unsaved edits, the other tracks' sounds)", ok);
+        press(B_PLAY); events_block(CTL); song_poll(); frame();
+        ok = chain.running && next_row() && trk[b].eng_req == eng_b && trk[b].p[P_DEC] == (int16_t)dec_b &&
+             trk[b].p[P_ATK] == atk_b && !memcmp(&dx_kit[0], &kit0, sizeof kit0);
+        bad += check("V10.6z8 SONG HOLD: PLAY again keeps holding them", ok);
+    }
 
     /* 5. a new throw: nothing held, the sections' sounds */
     seq_stop(); song_poll();

@@ -663,15 +663,30 @@ static void song_poll(void)
     if (chain.ended && !song.playing) {
         uint8_t cur = proj_cur;
         char name[PROJ_NAME_LEN + 1u];
+        uint32_t held = 0;
         chain.ended = 0;
         str_cpy(name, proj_name, sizeof name);
-        if (chain.kept && !snd_held && proj_import(&proj_scratch, &song_keep, sizeof song_keep) &&   /* (V10.6z8: sounds
-                                                         * the player changed: the music stays as the song left it) */
-            !project_restore_runtime(&proj_scratch)) {
+        for (k = 0; k <= NTRK; k++)                   /* (V10.6z8) the sounds the player changed (the last section's */
+            held |= snd_own(k) << k;                  /* changes too: motion_end put the sounds' own values back) */
+        if (held) {                                   /* (V10.7.6) the music as the song left it, aside */
+            project_capture(&proj_scratch);
+            proj_wire_gen++;
+        }
+        if (chain.kept && (!held || proj_pack(&proj_wire, &proj_scratch)) &&
+            proj_import(&proj_scratch, &song_keep, sizeof song_keep) && !project_restore_runtime(&proj_scratch)) {
             proj_cur = cur;                           /* (the music before the song: its slot and name) */
             live.cur = (int8_t)((int32_t)(chain.kept >> 1) - 1);
             str_cpy(proj_name, name, PROJ_NAME_LEN + 1u);
             ui_message("SONG END");
+            if (held && proj_import(&proj_scratch, &proj_wire, sizeof proj_wire)) {   /* (V10.7.6) then the held */
+                if (!(held >> NTRK & 1u))             /* sounds over it (engine, preset, sound, FM6 patch: sound_put; */
+                    memcpy(proj_scratch.dx, dx_kit, sizeof proj_scratch.dx);   /* the kit when held): nothing else lost */
+                for (k = 0; k < NTRK; k++)
+                    if (held >> k & 1u)
+                        sound_put(&proj_scratch, k);
+                memcpy(dx_kit, proj_scratch.dx, sizeof dx_kit);
+                snd_held = (uint8_t)held;             /* (PLAY again: still the player's) */
+            }
         }
     }
     if (song_draft) return;
