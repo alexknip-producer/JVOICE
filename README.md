@@ -17,7 +17,7 @@ a generator and effects, all inside the little keyboard. It is a fork of [Felucc
 The emulator runs the same code as the FM-1, with sound, played with the computer keyboard or the mouse. The installer
 always offers the current public version first, and the earlier ones under it.
 
-## This release: V10.7.10
+## This release: V10.7.11
 
 ### Installing
 
@@ -468,6 +468,10 @@ JIANT's modifications are distributed under the same license.
 ## Changelog
 
 Every update is listed here, newest first. (Since 0.6.80 at the end of the page: what the synth does comes first.)
+
+### V10.7.11 — public (2026-11-09)
+
+- New power-on sounds (also INIT SYSTEM and NEW PROJECT): T1 DRUM-X ACOUSTIC, T2 ANALOG PLUCK, T3 PHASE STRING, T4 FM6 FM BASS, T5 VOICE CHANT, T6 ANIMAL WHISTLE, all dry. Saved projects are unchanged.
 
 ### V10.7.10 — public (2026-11-09)
 

@@ -181,13 +181,16 @@ static const struct {
  * power_sound_of: no DIST CHOR DLY REV send, the effects are the player's to add); was DRUM-X SINGER EN CMOS BIRD
  * BYTEBEAT FAT BASS TINE EP */
 #define TRK_PR_DRUM 5u           /* ACOUSTIC (eng_drum.c DRUM_PRESETS) */
-#define TRK_PR_ANALOG 14u        /* FAT BASS (eng_analog.c) */
-#define TRK_PR_PHASE 9u          /* GLASS PAD (eng_phase.c) */
+#define TRK_PR_ANALOG 8u         /* PLUCK (eng_analog.c); (V10.7.11, the owner) was 14 FAT BASS */
+#define TRK_PR_PHASE 2u          /* STRING (eng_phase.c); was 9 GLASS PAD */
+#define TRK_PR_FM6 2u            /* FM BASS (eng_fm6.c); was 0 TINE EP */
+#define TRK_PR_VOICE 5u          /* CHANT (eng_formant.c); was 0 CHOIR AAH */
 #define TRK_PR_ANIMAL 24u        /* WHISTLE (eng_animal.c) */
 static const uint8_t TRK_DEF[NPART][3] = {{ENGI_DRUM, TRK_PR_DRUM, 0}, {ENGI_ANALOG, TRK_PR_ANALOG, 0},
-                                          {ENGI_PHASE, TRK_PR_PHASE, 0}, {ENGI_FM6, 0, 0}, {ENGI_VOICE, 0, 0},
+                                          {ENGI_PHASE, TRK_PR_PHASE, 0}, {ENGI_FM6, TRK_PR_FM6, 0}, {ENGI_VOICE, TRK_PR_VOICE, 0},
                                           {ENGI_ANIMAL, TRK_PR_ANIMAL, 0}};
-/* ACOUSTIC, FAT BASS, GLASS PAD, TINE EP, CHOIR AAH, WHISTLE */
+/* (V10.7.11, the owner's choice) ACOUSTIC, ANALOG PLUCK, PHASE STRING, FM BASS, CHANT, WHISTLE (was FAT BASS,
+ * GLASS PAD, TINE EP, CHOIR AAH) */
 /* the parts at power-on through 0.9.8 (the same columns): what an old project's tracks it had no room for load as
  * (project.c proj_new_tracks, PROJ_DEF_SOUND: format 1's tracks 2..4, a 4-track format's T5 / T6): never change it.
  * ANALOG ACID, FM6 PAD (was DIGITAL PAD), LOFI PULSE LD (3: BYTE first), DRUM KIT; (JIANT 0.6) PHASE's first, WHEEL's first */
