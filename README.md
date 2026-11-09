@@ -17,7 +17,7 @@ a generator and effects, all inside the little keyboard. It is a fork of [Felucc
 The emulator runs the same code as the FM-1, with sound, played with the computer keyboard or the mouse. The installer
 always offers the current public version first, and the earlier ones under it.
 
-## This release: V10.7.12
+## This release: V10.7.13
 
 ### Installing
 
@@ -468,6 +468,10 @@ JIANT's modifications are distributed under the same license.
 ## Changelog
 
 Every update is listed here, newest first. (Since 0.6.80 at the end of the page: what the synth does comes first.)
+
+### V10.7.13 — public (2026-11-09)
+
+- VOICE with words is clearer and more fluid: consonants no longer stall fast notes, vowels are opener and brighter, m n l d b join without dips, p t k stop cleanly, and each syllable moves the formants a little. VOICE without words (LANG OFF) sounds as before.
 
 ### V10.7.12 — public (2026-11-09)
 
