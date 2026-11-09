@@ -13788,6 +13788,60 @@ static int test_eq_tape_load(void)
     return bad;
 }
 
+/* (V10.7.7, a YouTube user) GLO > KEY SPLIT, KEY SPLIT 2 (GR_SPLIT, GR_SPLIT2: their graph the scope) while the sequence
+ * plays: the panel drawn again every other frame, as GR_NONE's scope, each time the music's trace (the scope's pixels
+ * change), what it shows a whole redraw's; silent: the trace still (was: drawn once on entering the page, then frozen) */
+static int test_split_scope(void)
+{
+    static uint16_t prev[240 * 240], shown[240 * 240];
+    static const char *const P[] = {"KEY SPLIT", "KEY SPLIT 2"};
+    int bad = 0, ok = 1, still = 1;
+    uint32_t p, f, q, y0, y1;
+    for (p = 0; p < NELEM(P); p++) {
+        uint32_t chg = 0, px = 0, stale = 0, sil = 0;
+        vxt_case(ENGI_ANALOG, "ACID", 0, 3, &ok, &still);   /* (a sequence on track 1: a note a beat) */
+        ok = still = 1;
+        ui.home = 0; go_title(P[p]); ui.force = 1;
+        transport_req = 1;
+        vxt_run(1000, 1);
+        y0 = graph_y(); y1 = graph_y() + graph_h() > 240u ? 240u : graph_y() + graph_h();
+        memcpy(prev, host_screen, sizeof prev);
+        for (f = 0; f < 80u; f++) {                     /* 80 frames, 1.28 s */
+            uint32_t d = 0;
+            vxt_run(16, 1);
+            for (q = y0 * 240u; q < y1 * 240u; q++) d += host_screen[q] != prev[q];
+            chg += d != 0; px += d;
+            memcpy(prev, host_screen, sizeof prev);
+        }
+        for (f = 0; f < 3u; f++) {                      /* (on a frame it was drawn: the same frame drawn whole) */
+            vxt_run(16, 1);
+            if (memcmp(host_screen + y0 * 240u, prev + y0 * 240u, (y1 - y0) * 240u * 2u)) break;
+        }
+        memcpy(shown, host_screen, sizeof shown);
+        ui.frame--; ui.force = 1; ui_draw();
+        for (q = y0 * 240u; q < y1 * 240u; q++) stale += host_screen[q] != shown[q];
+        seq_stop(); song.playing = 0; trk_all_off(TSEL);
+        vxt_run(2500, 1);
+        for (q = 0; q < NTRK; q++) trk[q].peak = 0;
+        memset(scope_buf, 0, sizeof scope_buf);
+        vxt_run(100, 1);
+        memcpy(prev, host_screen, sizeof prev);
+        for (f = 0; f < 40u; f++) {
+            vxt_run(16, 1);
+            for (q = y0 * 240u; q < y1 * 240u; q++) sil += host_screen[q] != prev[q];
+        }
+        if (chg < 36u || px < 8000u || stale || sil)
+            printf("  %s: playing, the scope changed on %u of 80 frames (%u px), %u px off a whole redraw; silent %u px\n",
+                   P[p], chg, px, stale, sil);
+        ok &= chg >= 36u && px >= 8000u && !stale;
+        still &= !sil;
+    }
+    bad += check("V10.7.7 GLO > KEY SPLIT, KEY SPLIT 2: while it plays the scope moves (every other frame, a whole redraw's)", ok);
+    bad += check("  .. silent, the trace still", still);
+    ui_power_on();
+    return bad;
+}
+
 #include "song_save_ui_cases.h"
 
 int main(void)
@@ -13929,6 +13983,7 @@ int main(void)
 #endif
     bad += test_power_on_099();
     bad += test_engine_order_099();
+    bad += test_split_scope();                      /* (V10.7.7; last: the frames before it as they were, H2's too) */
 
     if (getenv("UI_SCREEN_DIR")) chain_screens(getenv("UI_SCREEN_DIR"));
     printf(bad ? "ui: %d FAILED\n" : "ui: all passed\n", bad);

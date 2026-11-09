@@ -17,7 +17,7 @@ a generator and effects, all inside the little keyboard. It is a fork of [Felucc
 The emulator runs the same code as the FM-1, with sound, played with the computer keyboard or the mouse. The installer
 always offers the current public version first, and the earlier ones under it.
 
-## This release: V10.7.6
+## This release: V10.7.8
 
 ### Installing
 
@@ -469,7 +469,12 @@ JIANT's modifications are distributed under the same license.
 
 Every update is listed here, newest first. (Since 0.6.80 at the end of the page: what the synth does comes first.)
 
-### V10.7.6 — public (2026-11-08)
+### V10.7.8 — public (2026-11-08)
+
+- Old projects and presets (saved before this version) load each sound's VEL at 100 %.
+- STOP after a song brings back the music from before PLAY, keeping the sounds you changed while it played.
+- FM6 BELL, BELL CLOUD, GLASS RAIN: the ring after the key is short again (it went on for about ten seconds).
+- The sequencer uses less CPU when nothing is held.
 
 Everything since V10.6c, the last public version (V10.6o … V10.6z9 were betas; V10.7 adds the GENE mix pass and steadier velocity):
 
@@ -494,6 +499,8 @@ Everything since V10.6c, the last public version (V10.6o … V10.6z9 were betas;
   automatable parameter (V10.6z3); protocol 1.2 (V10.6z7). GLO › SYSTEM 2 points to MENU › SYSTEM › BLUETOOTH (V10.6z8).
 - **Hardware**: the newer FM-1s' flash (JEDEC 0xB36014) accepted (V10.6z: those units ran from RAM only); the second
   core only on the stock power settings (V10.6z2).
+- GLO › KEY SPLIT, KEY SPLIT 2: the scope no longer freezes (V10.7.7).
+- The PROX/AIR bar and SWARM's FAR … NEAR bar are drawn in the thermal palette (V10.7.7)
 
 ### V10.6c — public (2026-11-04)
 

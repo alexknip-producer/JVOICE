@@ -71,6 +71,15 @@ static uint16_t heat_col(int32_t v);
 /* (0.9.5, as the 0.6.36) JIANT (thermal): a card's colour its value as heat (ratio 0..1000, -1 none); bipolar (its range
  * across 0): by the distance from the centre, cold in the middle */
 static int heat_on(int32_t ratio) { return settings.palette == UI_JIANT_INDEX && ratio >= 0; }
+/* (V10.7.7) a level bar filled w of its full length fw: in the thermal palette cold to hot along the length (PROX's and
+ * SWARM's FAR .. NEAR), else plain c */
+static __attribute__((noinline)) void heat_bar(int32_t x, int32_t y, int32_t w, int32_t fw, int32_t h, uint16_t c)
+{
+    int32_t i;
+    if (settings.palette != UI_JIANT_INDEX || fw <= 0) { if (w > 0) cv_rect(x, y, w, h, c); return; }
+    for (i = 0; i < w; i += 2)
+        cv_rect(x + i, y, w - i < 2 ? w - i : 2, h, heat_col(24 + i * 232 / fw));
+}
 static uint16_t card_heat(int32_t ratio, int bip)
 {
     int32_t r = clamp(ratio, 0, 1000);
@@ -1433,7 +1442,7 @@ static __attribute__((noinline)) uint32_t graph_signature(void)
     if (strip_kind() == SK_TITLE)                    /* MENU > LARGE: the page's title (its engine, its number); (V10.8) an
                                                       * EDIT page: the engine's creature, alive */
         return h ^ 0x5A17u ^ (pg->fam == FAM_EDIT ? anim_fr / 2u * 2654435761u : 0u);
-    if ((pg->graph == GR_NONE && !fx_on()) || pg->graph == GR_ARP ||
+    if ((pg->graph == GR_NONE && !fx_on()) || SPLIT_PAGE(pg) || pg->graph == GR_ARP ||
         (pg->graph == GR_MOTION && !seq_roll_view(pg))) h ^= anim_fr / 2u;   /* (0.9.9-seq2b: AUTOMATION the roll, still) */   /* (0.8.5:
                                                          * FX's lens pictures change with their values, */
     if (fx_on() && (song.playing || bg_energy() > 2))   /* .. and with the sound while it sounds: FX live) */

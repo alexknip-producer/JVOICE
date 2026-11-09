@@ -424,8 +424,7 @@ BTAPP_FN static void bt_prox_panel(const aafont_t *fx, const aafont_t *fm, const
     cv_text(10, 6 - AF_X_CAP_Y, fx, BP_S[0], T_THEME);
     cv_text_r(228, 6 - AF_X_CAP_Y, fx, BP_S[1], T_DIM, T_SURF);
     cv_rect(10, 18, 220, 14, T_RAISE);
-    if (p * 220 / 32767)
-        cv_rect(10, 18, p * 220 / 32767, 14, T_ACCENT);
+    heat_bar(10, 18, p * 220 / 32767, 220, 14, T_ACCENT);   /* (V10.7.7: cold to hot, the thermal palette) */
     fmt_int(b, p * 100 / 32767);
     str_cpy(b + str_len(b), BP_S[13], 2);
     cv_text(10, 40 - AF_M_CAP_Y, fm, b, T_TEXT);

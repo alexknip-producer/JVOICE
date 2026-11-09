@@ -1971,7 +1971,8 @@ static void vx_swarm(const int32_t *A)
         if (hit)                                         /* (an advertisement now: its ring) */
             cv_frame(px[v] - z / 2 - 3, py[v] - z / 2 - 3, z + 6, z + 6, vk_heat(hl[v]));
     }
-    cv_rect(x0, y0 + h + 7, sm.mq * w >> 7, 2, T_THEME);   /* (V10.6z6) FAR .. NEAR: the morph, under the floor */
+    heat_bar(x0, y0 + h + 7, sm.mq * w >> 7, w, 2, T_THEME);   /* (V10.6z6) FAR .. NEAR: the morph, under the floor
+                                                         * (V10.7.7: cold to hot) */
     if (!vx_small) {
         str_cpy(b, "SWARM ", sizeof b);
         fmt_int(b + 6, (int32_t)n);
