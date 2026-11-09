@@ -452,6 +452,10 @@ static uint32_t proj_name_get(char *d, const uint8_t *s)   /* its length */
 #define PROJC_PFX_OFF (PROJC_DX_OFF - 48u)
 #define PROJC_GX_OFF (PROJC_PFX_OFF + 37u)
 #define PROJC_PMAP ((P_COUNT + 7u) / 8u)
+/* (V10.7.6) b[65], 0 in every FUNC before: each track's P_TVEL (VEL, core.h) as stored. Without it the slot held
+ * MUTATE's P_MCFG (0.9.9-seq2c .. V10.6; GENE's evolving parts 92) or VEL as V10.7.3 .. V10.7.5 saved it: it loads
+ * 127, VEL 100 % (those three betas' VEL once lost; older firmware ignores the byte) */
+#define PROJ_VEL_MARK 'V'
 static uint8_t proj_full;                               /* the last proj_pack failed for room (not for a value) */
 static int proj_step_empty(const step_t *s)
 {
@@ -618,7 +622,7 @@ static int proj_pack(project_store_t *out, const project_t *q)
     if (proj_packed_size(q) > PROJC_PFX_OFF) { proj_full = 1; return 0; }
     memset(out, 0, sizeof *out); memcpy(b, &magic, 4); memcpy(b + 4, &size, 4);
     memcpy(b + 8, q->g, G_NSTORE * 2u); b[62] = q->sel; b[63] = q->parts; b[64] = q->phys; b[66] = P_COUNT;
-    b[67] = NTRK;
+    b[67] = NTRK; b[65] = PROJ_VEL_MARK;
     for (t = 0; t < NTRK; t++) {
         uint32_t e = q->t[t].engine, map, fm = (uint32_t)proj_fm_kept(q, t);
         b[pos++] = (uint8_t)e; b[pos++] = q->t[t].preset; b[pos++] = (uint8_t)fm;
@@ -879,6 +883,8 @@ static int proj_unpack_c(project_t *q, const uint8_t *b)
             values[i] = (int16_t)b[pos++] - 64;
         }
         params_by_count(q->t[t].p, values, np, def);
+        if (b[65] != PROJ_VEL_MARK && e != ENGI_DIGITAL)   /* (V10.7.6) a FUNC of before VEL: its slot was MUTATE's */
+            q->t[t].p[P_TVEL] = 127;                    /* config (127 - cfg), VEL 100 % (PROJ_VEL_MARK) */
         if (pos + 8u > room) return 0;
         map = pos;
         pos += 8u;

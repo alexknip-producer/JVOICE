@@ -268,6 +268,30 @@ int main(void)
                      up_value(up_rec(19), P_E4) == (ch.np == P_COUNT ? clamp(up_value(&ch, P_FCUT), 0, 127) : 110) && up_rec(16)->engine == 3u && up_value(up_rec(16), P_E1) == 5);
     }
 
+    /* (V10.7.6) VEL (P_TVEL, once MUTATE's P_MCFG): a record without UP_VEL_MARK (every one before V10.7.6) loads
+     * VEL 100 % (127) and is marked; a marked one (UP_PUT, SAVE) keeps its VEL; DIGITAL's slot is its OP4 LEVEL */
+    {
+        up_rec_t o = r, m = r, dg = r;
+        o.engine = m.engine = 2; dg.engine = ENGI_DIGITAL;
+        up_set_value(&o, P_TVEL, 92); up_set_value(&m, P_TVEL, 40); up_set_value(&dg, P_TVEL, 40);
+        o.packed[UP_VEL_AT] = 0; dg.packed[UP_VEL_AT] = 0; m.packed[UP_VEL_AT] = UP_VEL_MARK;
+        n = put_frame(a, 5, 2, "Bass One", -40);
+        bad += check("UP_PUT: marked, its VEL as sent (40)", up_parse(a, n, &got, &slot) == 0 &&
+                     got.packed[UP_VEL_AT] == UP_VEL_MARK && up_value(&got, P_TVEL) == 40);
+        *up_rec(16) = o;
+        *up_rec(17) = m;
+        *up_rec(18) = dg;
+        st_save(OBJ_UPRESET0 + 1, &up_bank[1], sizeof up_bank[1]);
+        memset(up_bank, 0, sizeof up_bank);
+        up_bank_check(1, st_load(OBJ_UPRESET0 + 1, &up_bank[1], sizeof up_bank[1]));
+        bad += check("record before VEL's mark (MUTATE cfg 92): VEL 127, marked", up_value(up_rec(16), P_TVEL) == 127 &&
+                     up_rec(16)->packed[UP_VEL_AT] == UP_VEL_MARK && up_value(up_rec(16), P_E0) == up_value(&o, P_E0));
+        bad += check("record with the mark: its VEL (40)", up_value(up_rec(17), P_TVEL) == 40);
+        bad += check("DIGITAL record without the mark: its OP4 LEVEL kept", up_value(up_rec(18), P_TVEL) == 40);
+        up_migrate(up_rec(16));
+        bad += check("  a second read keeps it", up_value(up_rec(16), P_TVEL) == 127);
+    }
+
     /* SAMPLE SET 4 (PERC, the GM kit, retired after 1.0.2) -> the DRUM engine with its default kit: from flash (an
      * older layout too), by UP_PUT; the rest of the sound and the pattern as stored; another SET stays SAMPLE */
     {

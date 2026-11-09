@@ -44,6 +44,8 @@
 #define UP_FM_AT (UP_PMAX * 2u - 1u)             /* (JIANT 0.3) packed[]'s last byte (past P_COUNT): UP_FM_MARK = DRUM's */
 #define UP_FM_MARK 0x46u                         /* E5 is FM; a DRUM record without it held ACC there: FM off */
 #define UP_V04_MARK 0x47u                        /* (JIANT 0.4) .. and LOFI's / ANALOG's E values today's (core.h sound_v04) */
+#define UP_VEL_AT (UP_FM_AT - 1u)                /* (V10.7.6) packed[]'s byte before (past P_COUNT, 0 in every record before): */
+#define UP_VEL_MARK 'V'                          /* P_TVEL (VEL) as stored; without it MUTATE's config or a V10.7.3..7.5 VEL: 127 */
 typedef struct {
     uint8_t used, ver, engine, np;               /* UP_USED, UP_VER, engine, P_COUNT when stored */
     char name[12];                               /* ASCII 32..126, 0-padded (no 0 when 12 long) */
@@ -58,7 +60,7 @@ typedef struct {
 } up_bank_t;
 _Static_assert(sizeof(up_rec_t) == 192, "user preset record layout");
 _Static_assert(P_COUNT <= UP_PMAX * 2u && P_COUNT < 128, "user preset record: P_COUNT");
-_Static_assert(P_COUNT <= UP_FM_AT, "user preset record: the FM mark past the parameters");
+_Static_assert(P_COUNT <= UP_VEL_AT, "user preset record: the FM and VEL marks past the parameters");
 static up_bank_t up_bank[UP_SLOTS / UP_PER_BANK] __attribute__((section(".lowbuf")));   /* (0.9.0: the pool, was .bss: main
                                                    * loop only, 6 KiB of the RAM region back; 0.9.9-beta4: LOWBUF, the
                                                    * pool's top given to the RAM code) */
@@ -105,6 +107,10 @@ static void up_migrate(up_rec_t *r)
             for (k = 0; k < 8u; k++) up_set_value(r, r->np - 8u + k, e[k]);
             r->packed[UP_FM_AT] = UP_V04_MARK;
         }
+    }
+    if (r->ver >= 4u && r->np <= UP_VEL_AT && r->packed[UP_VEL_AT] != UP_VEL_MARK) {   /* (V10.7.6) VEL 100 % */
+        if (P_TVEL + 8u < r->np && r->engine != ENGI_DIGITAL) up_set_value(r, P_TVEL, 127);   /* (DIGITAL: its OP4) */
+        r->packed[UP_VEL_AT] = UP_VEL_MARK;
     }
     for (k = 0; k < 8u; k++) e[k] = up_value(r, r->np - 8u + k);
     if (r->engine == ENGI_LOFI) {                       /* (V10.6d) LOFI's chips: ANALOG's nearest (MATH's CHIP */
@@ -223,7 +229,7 @@ static __attribute__((noinline)) int up_parse(const uint8_t *a, uint32_t na, up_
     r->ver = UP_VER;
     r->engine = a[1];
     r->np = P_COUNT;
-    r->packed[UP_FM_AT] = UP_V04_MARK;
+    r->packed[UP_FM_AT] = UP_V04_MARK; r->packed[UP_VEL_AT] = UP_VEL_MARK;
     for (i = 0; i < n; i++)
         r->name[i] = (char)a[2 + i];
     for (i = 0; i < P_COUNT; i++, k += 2u)
@@ -383,7 +389,7 @@ static int up_store(uint32_t k, const char *name)
     r.ver = UP_VER;
     r.engine = TSEL->eng_req;
     r.np = P_COUNT;
-    r.packed[UP_FM_AT] = UP_V04_MARK;
+    r.packed[UP_FM_AT] = UP_V04_MARK; r.packed[UP_VEL_AT] = UP_VEL_MARK;
     up_set_name(&r, k, name);
     for (i = 0; i < P_COUNT; i++)
         up_set_value(&r, i, motion_base_value(TSEL, i));
