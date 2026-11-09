@@ -178,7 +178,7 @@ Los nombres de abajo son los que usa el firmware (la pantalla HARDWARE CALIBRATI
 | **SAVE** | La sección SAVE: desde otro lado, la última página mostrada, y USER o SECTIONS llegan con su **SAVE ya elegido** (SAVE, OCT+, OCT+ como antes); adentro **SONG → PROJECT → SOUND**, en ronda (V10.2: primero el tema; al prender TIMELINE). | Capa **SAVE**: tocar/guardar secciones en vivo; C5 NAME. |
 | **ARP** | La sección ARP (ARP · ARP 2, un grupo): desde otro lado, la última página mostrada; adentro, vuelve a ARP. Un acorde mantenido + ARP al grabar por pasos lo sigue arpegiando. | (sin capa) |
 | **SEQ** | La sección SEQ: desde otro lado, la última página mostrada (al encender STEP, el piano roll); adentro el grupo siguiente (V10.6): **STEP → LENGTH → EUCLID → PLAYHEADS → STRETCH → COMP → AUTO → GENERATE**, en ronda. | Capa **SEQ TOOLS** (en todas las páginas SEQ); G5 CLR STEP. |
-| **PLAY** | Arranca / para. | — |
+| **PLAY** | Arranca / para. Mantenido (~0,7 s): **PANIC**. | — |
 | **REC** | Arma / desarma la grabación en la pista seleccionada. | Capa **REC**: CLEAR, CLICK. (V10.7) Mantenido más que HOLD y soltado sin tocar nada más: **UNDO** (otra vez: rehacer). |
 | **OCT− / OCT+** | Octava del teclado (−3 a +3; los dos juntos: vuelve a 0; en una pista DRUM el kit queda en sus teclas: ratchets arriba, SHORT / GHOST / FLAM abajo, ver [5](#5-drum-x)). En páginas de acción y en diálogos: **OCT−** = atrás / NO, **OCT+** = hacerlo / YES. | — |
 
@@ -192,6 +192,7 @@ atajos de esa capa; en la grilla DRUM son pasos y carriles; en la pantalla NAME 
 | Combinación | Resultado |
 | --- | --- |
 | **GLO** mantenido + **PLAY** | Reinicia desde el principio sin parar (clock interno). |
+| **PLAY** mantenido (~0,7 s) | **PANIC: ALL NOTES OFF**. Para el transporte y corta todo el sonido de una: las voces de todas las pistas, los acordes en LATCH, los arpegios, las repeticiones del punch-in y las notas que tiene MIDI IN (una tecla o nota MIDI que soltás después no hace nada; la siguiente suena como siempre). MIDI OUT manda el note-off de cada nota que mandó y All Notes Off (CC123) en los canales 1–6 de las pistas (no con MIDI OUT en OFF). Usalo si te queda una nota colgada, por ejemplo de un controlador que perdió su note-off; el CC120 / CC123 de MIDI IN sigue haciendo lo mismo en su canal. |
 | **GLO** mantenido + **SELECT** | Tempo, desde cualquier página. |
 | **GLO** mantenido + **G4** | **UNDO** del último cambio grande (otra vez: rehacer). |
 | **REC** mantenido solo, soltado | (V10.7) También **UNDO**: mantenido más que HOLD (~0,5 s) sin tocar tecla, perilla, botón ni OCT; otra vez: rehacer. Si usás otra cosa mientras lo mantenés, es la capa REC; un toque sigue armando la grabación. |

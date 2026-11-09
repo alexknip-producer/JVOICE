@@ -2400,6 +2400,7 @@ static int16_t sl_root = -1, sl_scale, sl_quant;      /* (scale_link: the song's
 /* HOME / REC / SAVE: tap on release, hold 0.7 s fires once. t0 = press time | 1,
  * bit 1 = fired (or swallowed: then the release is no tap either) */
 enum { BT_NONE, BT_TAP, BT_HOLD };
+static uint32_t play_t0 __attribute__((section(".pool")));   /* (stuck notes) PLAY's press time: held, PANIC */
 static uint32_t btn_hold(uint32_t *t0, uint32_t label, uint32_t now, int hold_ok)
 {
     uint32_t tap;
@@ -2628,6 +2629,11 @@ static void ui_input_frame(void)
     rec = btn_hold(&ui.rec_t0, B_REC, now, 0);          /* (a tap; held, the REC layer: ui_layer.c) */
     seq = btn_hold(&ui.seq_t0, B_SEQ, now, !ui.menu && !dlg_on());
     save = btn_hold(&ui.save_t0, B_SAVE, now, 0);       /* (a tap; held, the song layer: ui_layer.c) */
+    if (btn_hold(&play_t0, B_PLAY, now, 1) == BT_HOLD) {   /* (stuck notes) PLAY held: PANIC (seq.c panic_do), stopped */
+        panic_all = 1;
+        transport_req = 2;
+        ui_message("PANIC: ALL NOTES OFF");
+    }
     layer_arm(pressed, now);
     if (((pressed >> panel.btn[B_REC]) & 1u) && ui.ly == LAYER_REC)
         ui.rec_t0 |= 2u;                                /* (REC is its layer's button now: its tap is layer_tap's) */

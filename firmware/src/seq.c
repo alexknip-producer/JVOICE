@@ -120,10 +120,27 @@ static __attribute__((noinline)) void mo_flush_of(uint32_t mask)   /* the notes 
                 }
 }
 #define mo_flush() mo_flush_of(0xFFu)
-static void mo_key(const track_t *t, uint32_t pkt)   /* a key's note: not with OFF; with ALL, an arp sends its own */
+static uint32_t mo_key(const track_t *t)   /* a key's note goes out: not with OFF; with ALL, an arp sends its own */
 {
-    if (mo_lvl != MO_OFF && !(mo_lvl == MO_ALL && t->p[P_AMODE]))
-        midi_out_event(pkt);
+    return mo_lvl != MO_OFF && !(mo_lvl == MO_ALL && t->p[P_AMODE]);
+}
+/* (stuck notes) the keys' notes sent on (the keys, SCENE, LATCH): bit n of track i's row, note n went out on
+ * its channel and its note-off not yet. A note let go ends there if it went out, whatever MIDI OUT or the ARP are by
+ * then (they were asked again at the key-up: a note-on out with no note-off); kb_lt bit k: key k's press latched (LATCH
+ * then: a HOLD turned on under a key latched nothing, its key-up left the voice sounding for good) */
+static uint32_t mo_ks[NTRK][4] __attribute__((section(".pool"))), kb_lt __attribute__((section(".pool")));
+static void mo_kon(uint32_t i, uint32_t x, uint32_t vel)   /* key note x of track i out (note-on) */
+{
+    mo_ks[i % NTRK][(x >> 5) & 3u] |= 1u << (x & 31u);
+    midi_out_event(0x09u | (0x90u | trk_midi_ch(i)) << 8 | (x & 127u) << 16 | vel << 24);
+}
+static void mo_koff(uint32_t i, uint32_t x)          /* .. its note-off, if it went out */
+{
+    uint32_t *w = &mo_ks[i % NTRK][(x >> 5) & 3u], b = 1u << (x & 31u);
+    if (*w & b) {
+        *w &= ~b;
+        midi_out_event(0x08u | (0x80u | trk_midi_ch(i)) << 8 | (x & 127u) << 16);
+    }
 }
 static int mo_clock_on(void) { return (mo_lvl == MO_CLOCK || mo_lvl == MO_ALL) && !song.g[G_CLOCK]; }
 /* (V10.6z3, protocol 1.0) MIDI OUT ALL: a knob turned on the panel goes out as an NRPN (docs/NRPN.md): the UI queues
@@ -180,10 +197,12 @@ static __attribute__((noinline)) void mo_knobs(void)
     }
 }
 static void kx_block(void);
+static void panic_block(void);
 static __attribute__((noinline)) void mo_block(uint32_t n)   /* events_block: the setting changed; the clock */
 {
     kx_block();                                     /* (V10.6z4) the expression keys (from here: RAM code calls none
                                                      * of the image's last functions) */
+    panic_block();                                  /* (stuck notes) PANIC, a lost MIDI note-off (cold: out of RAM code) */
     if (mo_kr != mo_kw)
         mo_knobs();
     if (mo_lvl != mo_last) {
@@ -1411,7 +1430,7 @@ static void latch_release(track_t *t)
     uint32_t i;
     for (i = 0; i < t->nheld; i++) {
         trk_note_off(t, t->held[i]);
-        mo_key(t, 0x08u | (0x80u | trk_midi_ch(trk_index(t))) << 8 | (uint32_t)t->held[i] << 16);
+        mo_koff(trk_index(t), t->held[i]);
     }
     t->nheld = 0;
 }
@@ -1435,7 +1454,7 @@ static void latch_drop(track_t *t)
 /* (0.6.81) the next note of key k's chord in (a note another key holds already sounds: not started again) */
 static void key_next(uint32_t k, track_t *t)
 {
-    uint32_t x = kb_snd[k][kb_on[k]], mc = trk_midi_ch(trk_index(t));
+    uint32_t x = kb_snd[k][kb_on[k]];
     if(drum_track(t)&&drum_ext(t)&&kb_oct[k] && kb_oct[k]>=-2) {
         uint32_t key=(x+128u-29u)%128u;
         x=kb_oct[k]==-1?key%27u:kb_oct[k]==-2?drum_fx_note(key):
@@ -1448,13 +1467,15 @@ static void key_next(uint32_t k, track_t *t)
         vs.arpv[trk_index(t)] = kb_velx[k];            /* (V10.6z6: the key's velocity, its arp's too) */
         dxo_on(t, x, kb_oct[k], KB_VEL(k), DXO_KEY + (x>=86u&&x<=127u?x:k));
         in_norec = 0;
-        mo_key(t, 0x09u | (0x90u | mc) << 8 | drum_oct_note(x, kb_oct[k]) << 16 | (uint32_t)KB_VEL(k) << 24);
+        if (mo_key(t))
+            mo_kon(trk_index(t), drum_oct_note(x, kb_oct[k]), KB_VEL(k));
     }
     kb_on[k]++;
 }
 static void key_on(uint32_t k, track_t *t)
 {
     uint32_t n = chord_build(t, kb_note[k], kb_snd[k]), gap = n > 1u ? chord_gap(t) : 0u, i;
+    kb_lt = key_latch(t) ? kb_lt | 1u << k : kb_lt & ~(1u << k);
     if (key_latch(t)) {                             /* LATCH: a new chord lets the last one go */
         uint32_t j;
         if (!t->arp_phys)
@@ -1503,7 +1524,7 @@ static void keys_strum(uint32_t n)
 /* key k is up: the note it started ends, unless another key still holds it */
 static void key_off(uint32_t k, track_t *t)
 {
-    uint32_t n = kb_on[k], i, mc = trk_midi_ch(trk_index(t));
+    uint32_t n = kb_on[k], i, lat;
     if (!n)
         return;
     dxo_off(t, DXO_KEY + k);                         /* the held performance ends (LATCH too) */
@@ -1513,19 +1534,25 @@ static void key_off(uint32_t k, track_t *t)
      * released by the last owner, even if the key map/octave or LATCH changed. */
     uint32_t control=kb_snd[k][0];
     if(control>=86u&&control<=127u&&!midi_local_held(t,control)) dxo_off(t,DXO_KEY+control);
-    if (key_latch(t)) {                             /* LATCH: it keeps sounding (recorded as let go) */
-        if (t->arp_phys)
-            t->arp_phys--;
-        for (i = 0; i < n; i++)
-            rec_release(t, kb_snd[k][i]);
-        return;
-    }
+    lat = key_latch(t) && (kb_lt >> k) & 1u;        /* LATCH: it keeps sounding (recorded as let go); (stuck notes) a key
+                                                     * pressed before HOLD came on, a note past the list's 16: let go */
+    if (lat && t->arp_phys)
+        t->arp_phys--;
     for (i = 0; i < n; i++) {
-        uint32_t x = kb_snd[k][i];
+        uint32_t x = kb_snd[k][i], j;
+        for (j = 0; lat && j < t->nheld && t->held[j] != x; j++)
+            ;
+        if (lat && j < t->nheld) {
+            rec_release(t, x);
+            continue;
+        }
         if (midi_local_held(t, x))
             continue;
-        input_off(t, x);
-        mo_key(t, 0x08u | (0x80u | mc) << 8 | drum_oct_note(x, kb_oct[k]) << 16);
+        if (lat)
+            trk_note_off(t, x);
+        else
+            input_off(t, x);
+        mo_koff(trk_index(t), drum_oct_note(x, kb_oct[k]));
     }
 }
 
@@ -1549,41 +1576,73 @@ static uint32_t scn_notes(const track_t *t, uint32_t r, uint32_t root, uint8_t *
     }
     return chord_build_mode(t, root, o, (t->p[P_CHRD] ? (uint32_t)t->p[P_CHRD] : CD_TRI) | 0x80u | (pk ? 0x40u : 0u));
 }
+/* (stuck notes) a SCENE key held: the key + 1 (0: a free slot) and the notes its press started on each track
+ * (note + 1, 0 none). Its key-up ends those, not the ones the key would play now (OCT, the roles diced, a chord, a
+ * scale, SCENE itself changed while it was held: their notes hung). SC_SL keys at once; one more plays nothing */
+#define SC_SL 8u
+static struct { uint8_t key, n[NTRK][KB_CH]; } scn_sl[SC_SL] __attribute__((section(".pool")));
+static int scn_held(uint32_t i, uint32_t x)        /* another SCENE key holds note x - 1 on track i */
+{
+    uint32_t s, j;
+    for (s = 0; s < SC_SL; s++)
+        for (j = 0; j < KB_CH; j++)
+            if (scn_sl[s].n[i][j] == x)
+                return 1;
+    return 0;
+}
 static void scene_key(uint32_t k, int on)
 {
-    uint32_t i, j, n, mc;
+    uint32_t i, j, n, s;
     uint8_t o[KB_CH + 1];
-    for (i = 0; i < trk_live && i < NTRK; i++) {
+    for (s = 0; s < SC_SL && scn_sl[s].key != (on ? 0u : k + 1u); s++)
+        ;
+    if (s == SC_SL)                                  /* (key-up: nothing started; down: SC_SL keys held already) */
+        return;
+    scn_sl[s].key = (uint8_t)(on ? k + 1u : 0u);
+    for (i = 0; !on && i < NTRK; i++) {              /* key-up: what its press started */
+        track_t *t = &trk[i];
+        for (j = 0; j < KB_CH; j++) {
+            uint32_t x = scn_sl[s].n[i][j];
+            scn_sl[s].n[i][j] = 0;
+            if (!x)
+                continue;
+            if (scn_held(i, x) || midi_local_held(t, x - 1u)) {   /* (still held: by the other key's key-up) */
+                if (t->p[P_AMODE] && t->arp_phys)
+                    t->arp_phys--;                      /* (its key-down counted: arp_add) */
+                continue;
+            }
+            input_off(t, x - 1u);
+            mo_koff(i, x - 1u);
+        }
+    }
+    for (i = 0; on && i < trk_live && i < NTRK; i++) {
         track_t *t = &trk[i];
         if (drum_track(t)) {                            /* (V10.6j) the kit's DRUM: a beat of its own for the key */
-            if (on && scn_role[i] == SC_DRUM)
+            if (scn_role[i] == SC_DRUM)
                 scn_dreq = (uint8_t)(k + 1u);
             continue;
         }
-        if (!scn_role[i] || scn_role[i] == SC_DRUM)      /* (DRUM: a kit's alone) */
+        if (!scn_role[i] || scn_role[i] == SC_DRUM || kb_map(t, k) > 127u)   /* (DRUM: a kit's alone; stuck notes: a key
+                                                         * QUANT WHITE silences: none, it was note 255, its key-up lost) */
             continue;
         if ((scn_role[i] == SC_BASS || scn_role[i] == SC_LEAD) && scn_pat[i] % SC_NPAT == SC_GEN) {
-            if (on)                                     /* (V10.6m) GEN: the key's chord moves the line (the root's
-                                                         * interval from the key's, the nearest way; QUANT SEQ: in scale) */
-                t->trn = (int8_t)(((kb_map(t, k) + 132u - (uint32_t)t->p[P_ROOT]) % 12u + 5u) % 12u - 5);
+            /* (V10.6m) GEN: the key's chord moves the line (the root's interval from the key's, the nearest way; QUANT
+             * SEQ: in scale) */
+            t->trn = (int8_t)(((kb_map(t, k) + 132u - (uint32_t)t->p[P_ROOT]) % 12u + 5u) % 12u - 5);
             continue;
         }
         n = scn_notes(t, scn_role[i], kb_map(t, k), o, 0);
-        mc = trk_midi_ch(i);
-        if (on && n > 1u && rec_on(t) && !t->p[P_AMODE])   /* (a chord: into one step, as key_on) */
+        if (n > 1u && rec_on(t) && !t->p[P_AMODE])      /* (a chord: into one step, as key_on) */
             for (j = 0; j < n; j++)
                 rec_note(t, o[j], KB_VEL(k));
-        in_norec = (uint8_t)(on && n > 1u);
-        for (j = 0; j < n; j++) {
+        in_norec = (uint8_t)(n > 1u);
+        for (j = 0; j < n && j < KB_CH; j++) {
             if (midi_local_held(t, o[j]))
                 continue;
-            if (on) {
-                input_on(t, o[j], KB_VEL(k));
-                mo_key(t, 0x09u | (0x90u | mc) << 8 | (uint32_t)o[j] << 16 | (uint32_t)KB_VEL(k) << 24);
-            } else {
-                input_off(t, o[j]);
-                mo_key(t, 0x08u | (0x80u | mc) << 8 | (uint32_t)o[j] << 16);
-            }
+            scn_sl[s].n[i][j] = (uint8_t)(o[j] + 1u);
+            input_on(t, o[j], KB_VEL(k));
+            if (mo_key(t))
+                mo_kon(i, o[j], KB_VEL(k));
         }
         in_norec = 0;
     }
@@ -1592,6 +1651,7 @@ static void scene_key(uint32_t k, int on)
 /* (the keys' block is RAM code: SCENE's call goes through a pointer, out of the direct calls' +-4 MiB reach check;
  * a key event, not every block) */
 static void (*volatile scene_fp)(uint32_t, int) = scene_key;
+static void (*volatile key_off_fp)(uint32_t, track_t *) = key_off;   /* (stuck notes: a key-up's, likewise) */
 
 #ifdef FM1_INPUT_LAT
 /* the press latency stats (hal/fm1_input.h fm1_in_stat, console `inp`): from the first scan that saw
@@ -1685,7 +1745,7 @@ static void keyboard_block(void)
                 scene_fp(k, 0);
                 continue;
             }
-            key_off(k, &trk[kb_trk[k] % NTRK]);
+            key_off_fp(k, &trk[kb_trk[k] % NTRK]);
         }
     }
     kb_prev = cur;
@@ -3263,6 +3323,52 @@ static int32_t click_beat_now(void)
 }
 
 /* everything that happens between two rendered blocks */
+/* (stuck notes) PANIC (PLAY held, ui_input.c): every voice of every track ends (a short fade), the keys, the SCENE keys, the
+ * latched chords, the arps, the punch-in repeats and the MIDI notes held are forgotten (a key or note let go later does
+ * nothing), every note sent on ends and CC123 goes out on the tracks' channels (MIDI OUT not OFF); then the MIDI owners
+ * are dropped as after a lost note-off (midi_in_overflow, below) */
+static volatile uint8_t panic_all;
+static uint8_t ovf_pr;                             /* the tracks a lost MIDI note-off releases (events_block's pr) */
+static void panic_do(void)
+{
+    uint32_t i;
+    mo_flush();
+    for (i = 0; i < NTRK; i++) {
+        pfx_hush(&trk[i]);
+        midi_silence_track(i);
+        if (mo_lvl != MO_OFF)
+            mo_send(0xB0u | trk_midi_ch(i), 123u, 0);
+    }
+    memset(kb_on, 0, sizeof kb_on);
+    memset(scn_sl, 0, sizeof scn_sl);
+    for (i = 0; i < NTRK * 128u; i++)                  /* (the keys' notes sent on: their note-offs) */
+        mo_koff(i >> 7, i & 127u);
+    scn_keys = kb_lt = 0;
+    midi_in_overflow = 1;
+}
+static __attribute__((noinline)) void panic_block(void)   /* (mo_block, before events_block's panic_req) */
+{
+    uint32_t i;
+    if (panic_all) {
+        panic_all = 0;
+        panic_do();
+    }
+    if (midi_in_overflow) {                            /* a lost note-off must never leave a held note */
+        mi_r = mi_w;
+        memset(midi_sel_on, 0, sizeof midi_sel_on);
+        memset(midi_ch, 0, sizeof midi_ch);
+        memset(midi_owners, 0, sizeof midi_owners);
+        memset(&midi_map, 0, sizeof midi_map);
+        midi_hint = 0;
+        for (i = 0; i < NTRK; i++) {
+            trk[i].rh_n = trk[i].rskip_n = 0;
+            trk[i].seq_n = trk[i].seq_hold = trk[i].slide_glide = trk[i].rat_left = 0;
+        }
+        ovf_pr = (1u << NTRK) - 1u;
+        RING_PUBLISH();
+        midi_in_overflow = 0;
+    }
+}
 static void events_block(uint32_t n)
 {
     uint32_t i, pr, fo, seq_n = n;
@@ -3308,21 +3414,8 @@ static void events_block(uint32_t n)
     if (pr)
         mo_flush_of(pr);                               /* (0.6.72) their MIDI OUT notes too */
     fo = pr;                                           /* (0.6.13) sound loads: what sounds fades on the old sound */
-    if (midi_in_overflow) {                            /* a lost note-off must never leave a held note */
-        mi_r = mi_w;
-        memset(midi_sel_on, 0, sizeof midi_sel_on);
-        memset(midi_ch, 0, sizeof midi_ch);
-        memset(midi_owners, 0, sizeof midi_owners);
-        memset(&midi_map, 0, sizeof midi_map);
-        midi_hint = 0;
-        for (i = 0; i < NTRK; i++) {
-            trk[i].rh_n = trk[i].rskip_n = 0;
-            trk[i].seq_n = trk[i].seq_hold = trk[i].slide_glide = trk[i].rat_left = 0;
-        }
-        pr |= (1u << NTRK) - 1u;
-        RING_PUBLISH();
-        midi_in_overflow = 0;
-    }
+    pr |= ovf_pr;                                      /* (a lost MIDI note-off: every track, panic_block) */
+    ovf_pr = 0;
     for (i = 0; i < NTRK; i++) {
         track_t *t = &trk[i];
         if (((latch_drop_req >> i) & 1u) || (((latch_was >> i) & 1u) && !key_latch(t))) {
@@ -3336,10 +3429,15 @@ static void events_block(uint32_t n)
                 dxo_n[i] = 0;                       /* (0.8.5) the held ratchets stop */
             if ((latch_was >> i) & 1u)
                 latch_release(t);                   /* (0.6.19: MIDI OUT's latched notes end too) */
-            midi_forget_track(i);
+            if (t->arp_note)                        /* (stuck notes) the arp's note ends here: carried onto the new
+                                                     * engine below, nothing would ever end it (arp_forget) */
+                arp_silence(t);
             {   /* (0.6.41) another engine: what is held sounds on in it (kept past the release, which forgets) */
                 uint8_t hn[4], hv[4];
                 uint32_t hc = t->eng_req != t->engine ? xf_held(t, hn, hv) : 0u, h;
+                if (!hc)                            /* (stuck notes) carried: the MIDI notes keep their owners, their
+                                                     * note-offs end them on the new engine (they hung) */
+                    midi_forget_track(i);
                 trk_all_off(t);
                 for (h = 0; h < hc; h++) { t->xp_note[h] = hn[h]; t->xp_vel[h] = hv[h]; }
                 t->xp_n = (uint8_t)hc;
