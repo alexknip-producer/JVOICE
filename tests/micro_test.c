@@ -42,7 +42,7 @@ static uint32_t mfnv(uint32_t h, const void *p, uint32_t n)
                                          * from the project are unchanged, the second check below. Then 0x249e3fdc, rewritten
                                          * by 0.9.9-snd2's chorus (da051a3: 0xd8795d59) and gen6e's notes in a release
                                          * (b587793), the goldens they rewrote; the steps' places as before) */
-#define MICRO_PACK_090 0x49120182u           /* (was 0x55f3c173: the project's defaults since, e.g. GATE 100 % (V10.6z4);
+#define MICRO_PACK_090 0xd49924b3u           /* (V10.7.6: 0x49120182 before FUNC's VEL mark, byte 65 'V'; was 0x55f3c173: the project's defaults since, e.g. GATE 100 % (V10.6z4);
                                          * still no 'M' 'F' block and every MICRO read back x 4, below) */
 static void old_steps(void)
 {

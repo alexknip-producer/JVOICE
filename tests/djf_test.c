@@ -26,7 +26,7 @@ static void ck(const char *what, int ok)
 }
 
 /* ---- 1. centred: the render whose hash 0.9.0's sources give (the same code, built against them) ---- */
-#define DJF_CENTRE_090 0x643f7d41u   /* (2026-11-09 bug review: 0xe800cf98 until the sounds since V10.55 (presets that
+#define DJF_CENTRE_090 0xa884ede6u   /* (V10.7.6: 0x643f7d41 before FM6 BELL's REL 5, its tail in the mix; 2026-11-09 bug review: 0xe800cf98 until the sounds since V10.55 (presets that
                                          * move V10.6i, levelled V10.6t, DRUM-X V10.6q / z9, V10.7's mix, VEL); the
                                          * check that matters, djf_block never ran, below. V10.54: the factory sounds and the master since V10.42; 0.9.9 ctl64: the mix in blocks of 64; the point is the filter centred leaves it
                                          * untouched, checked against the same build's render) */
