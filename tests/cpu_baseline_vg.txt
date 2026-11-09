@@ -41,3 +41,4 @@ seqtick/live 89
 seqtick/plain 79
 song/cputest 2981
 song/cputest.djf 3063
+song/cputest.eq 3221
