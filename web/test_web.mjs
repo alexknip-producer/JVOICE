@@ -1907,7 +1907,7 @@ async function installerPage() {
   let p = await run({ ...PROFILES.v14 });
   ok(els.get("go").disabled === false && /JIANT FM v0\.9\.11/.test(status()), "installer page: the package loads, Install enabled");
   await p.click("go");
-  ok(/firmware oficial más viejo.*FM-1_014/.test(status()) && els.get("tip").hidden === false && /Volver al V15 oficial/.test(tip()) && els.get("stock").open,
+  ok(/firmware oficial más viejo.*FM-1_014/.test(status()) && els.get("tip").hidden === false && /Volver al oficial/.test(tip()) && els.get("stock").open,
     "installer page: V14 (Spanish): its message, its box, Return opened");
   await p.click("copy-report");
   ok(/identity: FM-1_014/.test(clip) && /firmware: oldstock/.test(clip) && /error: oldstock/.test(clip) && /midi inputs: FM-1/.test(clip), "installer page: COPY REPORT: browser, ports, identity, kind, error");

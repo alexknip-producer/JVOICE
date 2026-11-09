@@ -41,7 +41,7 @@ steps: {
   "panel.oct": { t: "OCT− 和 OCT+", d: "用来移动键盘的八度（两个同时按：回到 0）。在操作页面和对话框中它们是 NO / YES：[OCT+] 确认，[OCT−] 取消或返回。" },
 
   "sound.home": { t: "HOME：生态系统", d: "点一下 [HOME]。每条音轨都是一个有脸的生物：形状来自它的旋钮，随自身的声音膨胀、升温，每次发声都会闭眼。所选音轨画得最大。" },
-  "sound.track": { t: "选择音轨", d: "转动 [ALGORITHM]。开机时：T1 DRUM-X（鼓）、T2 VOICE（会唱歌）、T3 ANIMAL（一只鸟）、T4 LOFI。设为 TRACKS 6 时会出现 T5 ANALOG 和 T6 FM6。" },
+  "sound.track": { t: "选择音轨", d: "转动 [ALGORITHM]。开机时：T1 DRUM-X（鼓）、T2 VOICE（会唱歌）、T3 ANIMAL（一只鸟）、T4 MATH。设为 TRACKS 6 时会出现 T5 ANALOG 和 T6 FM6。" },
   "sound.browse": { t: "更换音色", d: "转动 [PRESETS]：依次浏览所有引擎的出厂音色，然后是你自己的音色。切换音色时不会打断正在播放的声音。" },
   "sound.play": { t: "演奏", d: "弹琴键，比如 [E4]。[OCT−] 和 [OCT+] 把八度调低或调高。" },
   "sound.shape": { t: "塑造声音", d: "在 HOME 页面，[KNOB 1] 到 [KNOB 4] 是引擎最常用的四个控制（例如 CUT、RES、ATK、REL）。转动 [KNOB 2]，看看生物怎么变化。" },
@@ -64,7 +64,7 @@ steps: {
   "gen.parts": { t: "调整声部", d: "把 [SELECT] 向右转一格：GEN 2。用旋钮调低 DRUMS 或 ARP，再点 OCT+：同一首曲子，只改了那一部分。" },
   "gen.undo": { t: "撤销", d: "按住 [GLO] 并点 [G4]：UNDO，回到上一次大改动之前（再按一次：重做）。另一种方法：单独按住 REC，不碰其他任何东西就松开。" },
 
-  "edit.engines": { t: "十二种引擎", d: "任何音轨都能使用任何引擎：DRUM-X、VOICE、ANIMAL、LOFI、ANALOG、FM6、PHASE、WHEEL、NOISE、STRING、ADD 和 INPUT（从 USB 传入的音频）。一切都是合成的：没有采样。点一下 [EDIT] 编辑当前音轨的引擎。" },
+  "edit.engines": { t: "十二种引擎", d: "任何音轨都能使用任何引擎：DRUM-X、ANALOG、PHASE、FM6、VOICE、ANIMAL、MATH、WHEEL、NOISE、STRING、ADD 和 EXT（从 USB 传入的音频）。一切都是合成的：没有采样。点一下 [EDIT] 编辑当前音轨的引擎。" },
   "edit.pages": { t: "EDIT 的页面", d: "转动 [SELECT]：EDIT 1 和 EDIT 2（引擎参数），然后是包含 FILTER、VOICE 的 TONE，以及各引擎专属的页面。每种引擎都会画出自己的生物和示波器。" },
   "edit.focus": { t: "FOCUS", d: "连按 [EDIT] 直到 FOCUS：放大显示单个参数。KNOB 1 选择参数，KNOB 2 设置数值，KNOB 3 指定调制源，KNOB 4 设置调制量。" },
   "edit.fm6": { t: "FM6", d: "六算子 FM，32 种算法，支持 DX7 音色库（从网页编辑器发送）。它的 OPERATOR 页面用于编辑每个算子，由 KNOB 1 选择。" },
@@ -113,12 +113,12 @@ steps: {
   "song.arrange": { t: "ARRANGE：串联", d: "[SELECT] 向右两格：ARRANGE，歌曲的各行。OCT+ 添加一行，KNOB 2 选择它的段落，KNOB 3 设置小节数。一行 A，一行 B，然后 PLAY：歌曲按顺序播放各行。" },
   "song.timeline": { t: "TIMELINE", d: "[SAVE] 打开 TIMELINE：歌曲从左到右排列，每条音轨一条通道。每一行可以从别的段落取用某条音轨（FROM），并只在那里做变化（VAR：MUTE、FILL、HALF、REV、OCT…）。" },
   "song.live": { t: "现场切换段落", d: "按住 [SAVE]：[F3] G3 A3 B3 播放段落 A–D（从下一小节开始），C4–F4 存入 A–D，D5 切换 LOOP / SONG。SAVE + OCT+ 存入正在播放的段落。" },
-  "song.projects": { t: "工程与自动保存", d: "在 SAVE › PROJECT › PROJECTS 中从 8 个工程里选一个。设置会自动保存；音乐则在你需要时存入段落。用网页编辑器备份全部内容。" },
+  "song.projects": { t: "工程与自动保存", d: "在 SAVE › PROJECT › PROJECTS 中从 6 个工程里选一个。设置会自动保存；音乐则在你需要时存入段落。用网页编辑器备份全部内容。" },
 
   "connect.menu": { t: "MENU", d: "按住 [HOME]：MENU。DISPLAY（皮肤 AIR、COLORS、BOTTOM、HUD 与配色）、CONTROL（HOLD、MIDI OUT、MIDI MAP 和 LEARN）、AUDIO（节拍器、预备拍、TRACKS、LOAD）和 SYSTEM（USB、BLUETOOTH、校准、ABOUT）。" },
   "connect.tracks": { t: "4 条或 6 条音轨", d: "连按 [GLO] 直到 SYSTEM：KNOB 1 TRACKS 选择 4 条（默认，更轻量）或 6 条音轨，LOAD 设置处理器的工作强度。" },
   "connect.usb": { t: "USB：音频与 MIDI", d: "MENU › SYSTEM › USB（或 GLO › SYSTEM 2）：STEREO、STEMS（每条音轨单独一个通道送进 DAW）、IN+OUT（双向音频）或 HOST（直接插入 USB MIDI 键盘）。MIDI 支持 USB、TRS 和蓝牙。" },
-  "connect.input": { t: "INPUT 引擎", d: "INPUT 把从 USB 传入的音频放到一条音轨上（IN 1、IN 2、1+2 或立体声），可以使用效果器和音序。MOD 的 FOLLOW 调制源让这路音频去调制其他东西。" },
+  "connect.input": { t: "EXT 引擎", d: "EXT 把从 USB 传入的音频放到一条音轨上（IN 1、IN 2、1+2 或立体声），可以使用效果器和音序。MOD 的 FOLLOW 调制源让这路音频去调制其他东西。" },
   "connect.bt": { t: "蓝牙 MIDI 与 PROX", d: "MENU › SYSTEM › BLUETOOTH 设为 ON（或 GLO › SYSTEM 2）：用蓝牙 MIDI 应用连接（显示为 JIANT FM-1）。PROX 是根据手机远近产生的调制源。" },
   "connect.editor": { t: "网页编辑器", d: "网页编辑器（Chrome 或 Edge）在电脑屏幕上显示你的音色和设置，FM-1 同时照常演奏；它还能把 DX7 音色库发送到 FM6，并一键备份所有工程。" },
 

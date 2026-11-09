@@ -61,7 +61,7 @@ takes P_COUNT and P_E0 from `INFO` keeps working (see the table below: in JIANT 
 levels), went in before the engine parameters, which moved from 83..90 to 91..98: P_COUNT 99, P_E0 91. No command
 changed; projects were FUN9 (3648 bytes, see "Projects (FUN9)"; JIANT writes FUNA). See "The DRUM lane levels" below.
 
-**JIANT 0.3: SAMPLE (4), GRAIN (8) and SLICE (13) retired.** Their numbers stay, named `-` in `INFO` and `G_ENGSEL`, with no
+**JIANT 0.3: SAMPLE (4), GRAIN (8) and SLICE (13) retired** (JIANT 0.9.9-snd5: 8 and 13 hold STRING and ADD again, named so). Their numbers stay, named `-` in `INFO` and `G_ENGSEL`, with no
 presets (as PHYS, 9); a sound of theirs that arrives (a project, a user preset, `PRESET`, a `SET` of `G_ENGSEL`, a backup) plays as
 ANALOG's first preset, a SAMPLE PERC sound (SET 4) as DRUM's kit. The factory samples left the firmware.
 
@@ -115,6 +115,134 @@ Projects are FUNB (`46 55 4E 42`, 3840 bytes: FUNA's layout, 96 bytes longer, so
 since 0.3, a 2 for all nine). FUNA (3744, 99
 parameters) and every older format load mapped by count, the new values at their defaults.
 
+## Stability contract (1.0)
+
+From V10.6z3 on (the first firmware after V10.6z2) the editor protocol is a **versioned contract** for the programs
+built on it (the web editor and installer, the JIANT Stems app, anyone's). `INFO` says the version with the tag
+`43 02 major minor` (1.0: `43 02 01 00`), placed right before the last tag (`59`, LYRIC, which the web editor reads
+as the last three bytes). No tag: firmware before the contract (V10.6z2 and older), which speaks everything below
+except what is marked 1.0.
+
+**The rule: only additive changes.** Each addition raises the minor version (1.1, 1.2, ..) and is listed in the
+history below; the major stays 1 (a 2 would be a break, and none is planned). An old client keeps working against a
+newer firmware, byte for byte; a new client tells the additions apart by the version tag (or by the capability
+tag of the addition, as before).
+
+**Frozen** (never renumbered, re-laid out, re-meant or removed):
+
+- **Framing**: `F0 7D 46 4C cmd args F7`, one reply per request with the same `cmd` (no reply: an unknown command or
+  a wrong fixed length), pushes never replies; the encodings v14, u32, pack7, strings.
+- **Command numbers** 1..10, 16..42, 64..77, 80 and (1.1) 81 as listed in this file; 11..15 stay reserved (no reply).
+- **Reply layouts**: every byte stays where it is. New bytes only at the end of a reply, behind a request byte that
+  asks for them (as `STEP_GET`'s flag 1, `WATCH`'s bits), or as a new `INFO` tag before `59`.
+- **INFO's prefix**: version string, NENGINES, P_COUNT, G_COUNT, NSTEP, P_E0, NENGINES engine names, NTRK,
+  CHAIN_ROWS, then the tags (each tag's number and meaning). The JIANT Stems app reads the string, NENGINES, the fifth
+  byte after it (P_E0) and the names, and ignores the rest.
+- **The engine byte**: 0 ANALOG, 1 reserved, 2 PHASE, 3 LOFI (named `MATH` by INFO since V10.6d), 4 reserved,
+  5 VOICE, 6 reserved, 7 WHEEL, 8 STRING, 9 reserved, 10 DRUM, 11 NOISE, 12 FM6, 13 ADD, 14 ANIMAL, 15 INPUT (named
+  `EXT`). New engines take the next numbers. The *names* are display text and may change: a client shows the names
+  `INFO` sends, not a table of its own.
+- **Parameter ids**: the track parameters 0..P_E0−1 keep their id and the slot keeps its meaning for every engine
+  that reads it (a range may widen, a label change: read `DESC`); E1..E8 are always the last eight, P_E0..P_COUNT−1
+  (read P_E0 and P_COUNT from `INFO`: new common parameters go just before P_E0, which then grows). Globals keep
+  their ids; new ones are appended (G_COUNT grows). Enum values keep their numbers (new ones appended).
+- **Pushes**: `CHANGED` 23, `RELOAD` 24, `STEP_CHANGED` 26, `TRACK_CHANGED` 32 and the 1.0 pushes 40..42, each sent
+  only for the `WATCH` bit that asks for it: a client that sends `WATCH 3` gets exactly what it got before 1.0.
+- **MENU ids** (`MENU_SET` takes the id: append-only), the backup protocol (65..67: object ids, u32 / pack7,
+  rc codes; the *count* of objects is the `BACKUP_LIST`'s: 35 since V10.6p), the `PUNCH` bit numbers, the NRPN map
+  (`docs/NRPN.md`: CC99 0 / 1, CC98 the id, the 14-bit scaling) and the fixed CCs (MANUAL, "MIDI and USB").
+
+**May change** (read it from the device): the values of P_COUNT, P_E0, G_COUNT, the menu count, the backup object
+count; labels, units, ranges (`DESC`), the engines' display names and order; new commands, tags, pushes, engines,
+parameters, enum values, menu items, at the end of what there is.
+
+**Enforced** by `tests/app_contract_test.c` (CI, `.github/workflows/voice-user-check.yml`): the requests the JIANT
+Stems app sends (its `Fm1Link` and `Fm1Archive` bytes, cut into USB-MIDI packets as it cuts them) against golden
+descriptions of the replies, byte for byte; the engine table; the pushes' opt-in; NRPN both ways; `docs/NRPN.md`
+regenerated from `params.c` and compared.
+
+| version | firmware | changes |
+| --- | --- | --- |
+| 0.x (no tag) | Felucca 1.0 .. JIANT V10.6z2 | v1 .. v7 and the tagged additions described in this file |
+| 1.0 | V10.6z3 | the contract; `INFO` tag `43 02 01 00`; `WATCH` bits 2..4 and the pushes `TRANSPORT` (40), `PUNCH` (41), `MUTATE` (42); NRPN for every automatable parameter and the globals (`docs/NRPN.md`), sent for knob moves with MIDI OUT ALL |
+| 1.1 | V10.6z5 | `VEL` (81): the velocity diagnostic (below); `INFO` tag `43 02 01 01` |
+| 1.2 | V10.6z7 | `VEL` ops 4 and 5: the keys' velocity, calibration and pressure (below); MENU ids 27..30 (VELOCITY, VEL MIN, AFTERTOUCH, VEL LEARN); `INFO` tag `43 02 01 02` |
+
+## 1.0: performance pushes (40-42)
+
+Asked for with `WATCH` bits 2..4 (`WATCH 31`: everything; 1.0 firmware answers 31, older 3). Each bit asked for anew
+sends the state as it is first (`TRANSPORT`, `PUNCH`; `MUTATE` counts from then on). They need no MIDI OUT setting.
+
+- **TRANSPORT** (40): `playing, beat, bar lo, bar hi`. Sent on PLAY and STOP and at each beat while playing (the
+  beat of the bar 0..3; the bar counts from PLAY, 14 bits). With MIDI OUT CLOCK the realtime messages say the same;
+  this needs neither the setting nor a clock reader.
+- **PUNCH** (41): `m0 m1 m2 m3 tracks`: the punch-in / FX-layer effects running (held, latched, a scene's, the
+  punch-in lane's step) as `m0 | m1 << 7 | m2 << 14 | m3 << 21`; 0 while a menu or dialog turns them off. Bits
+  (frozen): 0 REPEAT 1/8, 1 REPEAT 1/16, 2 REPEAT 1/32, 3 LPF, 4 HPF, 5 OCT−, 6 OCT+, 7 1/2 TEMPO, 8 DEC−, 9 DEC+,
+  10 STUTTER 1/8, 11 STUTTER 1/16, 12 ATK+, 13 ARP, 14 RANDOM, 15..20 the mutes of tracks 1..6 (black keys), 21
+  GLITCH, 22 LOOP 3, 23 LOOP 5, 24 LOOP 7. `tracks`: the MIDI effects' tracks, 0 ALL, 1 SYN, 2 DRM.
+- **MUTATE** (42): `track, count`: a EUCLID MUTATE of that track (EVERY's, or OCT+ on the MUTATE page); count is
+  the track's MUTATEs since power-on, 7 bits, so a missed frame shows as a jump.
+
+## 1.1: the velocity diagnostic (81)
+
+`VEL` turns the key sensing of the velocity diagnostic on and off and reads what it measured
+(`firmware/src/vel_diag.c`, `docs/VELOCITY_DIAG.es.md`; the page `web/vel.html` uses it). It never changes the sound
+or how the keys play; it is off at power-on. Request: `op [drive]`; a firmware before 1.1 does not answer.
+
+| op | request | what it does |
+| --- | --- | --- |
+| 0 | `0` | status only |
+| 1 | `1 drive` | on; `drive` 0..4 (0: no driven samples; 2 the default, Velo's DRIVE 2); again while on: the drive only |
+| 2 | `2` | off (the scan lets go at its next tick) |
+| 3 | `3` | the next press or capture measured, taken (read until `kind` 0) |
+
+Reply: `op, on (0/1), drive, lost v14, timeouts v14, master v14` (presses or captures nobody read in time; ADC
+conversions not done by the next tick; the MASTER pot as the scan reads it, −1 none yet), then for op 3 `kind`:
+
+- 0: nothing to read;
+- 1, a press (sent when the key is let go): `key, dt v14, pmin v14, dmin v14`: the key 0..19 (0 F3 .. 19 C5: the
+  rows PA7 / PA8, the top row has no converter), touch to seated in 1/10 ms (−1: a graze, never seated), the lowest
+  reading with the row pulled up and the lowest with it driven high during the press (0..1023, 1023 open, lower
+  pressed harder; −1: none);
+- 2, a capture (the first key touched while none runs): `key, count (56), count × v14`: 8 pulled-up readings before
+  the touch, then 48 from it (~2.2 ms apart), each `reading | 1024` when it was a driven one.
+
+From 1.2 (V10.6z7) the key sensing also runs whenever MENU > CONTROL > VELOCITY or AFTERTOUCH is not OFF (the
+defaults: NORMAL, MID), the diagnostic or not: `on` in the reply says whether the *diagnostic* is on (its presses
+and captures queued), `drive` is the drive the scan uses (2 unless the diagnostic asked for another; the velocity's
+calibration belongs to drive 2 and learns only there). Op 2 turns the diagnostic off; the sensing stays on for the
+velocity.
+
+## 1.2: the keys' velocity (81, ops 4 and 5)
+
+| op | request | what it does |
+| --- | --- | --- |
+| 4 | `4` | the keys' velocity, calibration and pressure now (a live view: poll it, ~20 a second is fine) |
+| 5 | `5` | the calibration back to its seeds (as MENU > CONTROL > VEL LEARN RESET), saved; then as op 4 |
+
+Reply: the common part (`op, on, drive, lost v14, timeouts v14, master v14`), then (only on a firmware whose
+Bluetooth segment is installed: the code is there; otherwise the reply ends here):
+
+- `curve` (VELOCITY: 0 OFF, 1 SOFT, 2 NORMAL, 3 HARD), `min` (VEL MIN, 1..80), `at` (AFTERTOUCH: 0 OFF, 1 LOW,
+  2 MID, 3 HIGH), `learn` (0/1), `mean` (the mean of the recent velocities, what the top row C#5..G5 plays: it has no
+  converter), `strikes` (a count of the strikes measured, 7 bits: a new one when it changes), `last` (the key of the
+  last strike, 0..19);
+- then 20 × (`vel, reading v14, hard v14, normal v14, soft v14, pressure`), keys 0..19 (F3..C5): the key's last
+  velocity (1..127, 0 none yet), the driven reading it came from (lower = harder), the key's calibration (its HARD,
+  NORMAL and SOFT references, 0..1023: the velocity maps the reading through them, 112 / 76 / 36 before VELOCITY's
+  curve and VEL MIN), and its pressure now (0..127, 0 when not held).
+
+The velocity is continuous: piecewise linear through the three references, half the slope past either end, clamped
+1..127; SOFT `v + v (127 - v) / 254`, HARD `v - v (127 - v) / 254`; VEL MIN scales 1..127 onto MIN..127.
+
+## NRPN (1.0)
+
+Every parameter automation records, and the globals but the transport, routing, loads and engine switch, are set by
+NRPN: CC99 0 (a track's, on its channel) or 1 (a global), CC98 the id, CC6 / CC38 the value (14 bits over the
+range `DESC` gives; CC6 alone 7 bits). With MIDI OUT ALL the panel's knob moves go out the same way. The table,
+generated from `firmware/src/params.c`: `docs/NRPN.md` (and `web/NRPN.md`).
+
 ## Framing
 
 A request is `F0 7D 46 4C <cmd> <args...> F7`:
@@ -138,7 +266,7 @@ watches (v2, `WATCH`), the device also sends push frames (cmds 23, 24, 26) at an
 | string | ASCII bytes, ended by a 0 byte |
 | scope | 0 = parameter of the selected track (`P_*`, 0..P_COUNT−1); 1 = global parameter (`G_*`, 0..G_COUNT−1) |
 | track | 0..NTRK-1: tracks 1..6 (synth parts; JIANT 0.6: six, INFO's NTRK; before, four) |
-| engine byte | 0..NENGINES−1 (firmware before 1.0: NENGINES = its drum track, no engine). The numbers are fixed, new engines are appended: 0 ANALOG, 1 reserved (DIGITAL before 1.0: see below), 2 PHASE, 3 LOFI, 4 SAMPLE, 5 VOICE, 6 TRIO, 7 WHEEL, 8 GRAIN, 9 reserved (PHYS until FELUCCA TONIC: its sounds load as ANALOG's first preset), 10 DRUM, 11 NOISE, 12 FM6, 13 SLICE (retired in JIANT), 14 ANIMAL (JIANT 0.8.3; NENGINES 15, before it 14: an engine byte of 14 from a 0.8.3 store on older firmware is refused as any number past its last; a user-slot favourite (`FAV_GET` / `FAV_SET`, engine = NENGINES) is engine 15 from 0.8.3 on, read NENGINES from `INFO`). The device and the editor list them in another order (JIANT 0.9.9: DRUM VOICE ANIMAL LOFI ANALOG FM6 PHASE WHEEL NOISE, DIGITAL last in FELUCCA_FM4 builds: `ENGINE_ORDER`; 0.8.3 .. 0.9.8: ANALOG FM6 PHASE LOFI VOICE WHEEL NOISE DRUM ANIMAL; PROGRAM CHANGE numbers the sounds in the device's order); the numbers stay. ANIMAL's EDIT values: MODE (0 CMOS, 1 PULSE, 2 WHSTL, 3 WING, 4 GLOTT), PRESS, CHAOS, SIZE, SWEEP (−64..63), RATE (the LFO's Hz scale), GROUP (0..15: HOLD TRILL 1+1 1+3 2+2 2+6 3+3 3+9 4+4 4+12 6+6 8+8 8+24 12+12 16+16 32+32), TEMP (0..40 °C); the device relabels some per MODE (`DESC` sends these, the engine's own) |
+| engine byte | 0..NENGINES−1 (firmware before 1.0: NENGINES = its drum track, no engine). The numbers are fixed, new engines are appended: 0 ANALOG, 1 reserved (DIGITAL before 1.0: see below), 2 PHASE, 3 LOFI, 4 SAMPLE, 5 VOICE, 6 TRIO, 7 WHEEL, 8 GRAIN, 9 reserved (PHYS until FELUCCA TONIC: its sounds load as ANALOG's first preset), 10 DRUM, 11 NOISE, 12 FM6, 13 SLICE (retired in JIANT), 14 ANIMAL (JIANT 0.8.3; NENGINES 15, before it 14: an engine byte of 14 from a 0.8.3 store on older firmware is refused as any number past its last; a user-slot favourite (`FAV_GET` / `FAV_SET`, engine = NENGINES) is engine 15 from 0.8.3 on, read NENGINES from `INFO`); JIANT 0.9.9-snd5 puts STRING in GRAIN's 8 and ADD in SLICE's 13 (both retired; NENGINES stays 15: a GRAIN or SLICE sound of an old store plays as STRING / ADD there). V10.54 appends 15 INPUT (NENGINES 16: the user-slot favourite is engine 16 from then on, read NENGINES from `INFO`): SOURCE (0 IN 1, 1 IN 2, 2 1+2, 3 STEREO), GAIN (64 = 1.0), GATE, PLAY (0 THRU, 1 KEYS), WIDTH, RING, BITS, RATE. The device and the editor list them in another order (JIANT 0.9.9: DRUM VOICE ANIMAL LOFI ANALOG FM6 PHASE WHEEL NOISE, snd5: then STRING ADD, DIGITAL last in FELUCCA_FM4 builds: `ENGINE_ORDER`; 0.8.3 .. 0.9.8: ANALOG FM6 PHASE LOFI VOICE WHEEL NOISE DRUM ANIMAL, the order PROGRAM CHANGE still numbers the sounds in); the numbers stay. ANIMAL's EDIT values: MODE (0 CMOS, 1 PULSE, 2 WHSTL, 3 WING, 4 GLOTT), PRESS, CHAOS, SIZE, SWEEP (−64..63), RATE (the LFO's Hz scale), GROUP (0..15: HOLD TRILL 1+1 1+3 2+2 2+6 3+3 3+9 4+4 4+12 6+6 8+8 8+24 12+12 16+16 32+32), TEMP (0..40 °C); the device relabels some per MODE (`DESC` sends these, the engine's own). STRING's: EXCITE (0 NOISE, 1 PLUCK, 2 PICK, 3 HAMMR, 4 STICK), DECAY, BRIGHT, POS, STRETCH, BODY, SIZE, BOW (0..127). ADD's: MODE (0 HARM, 1 ODD, 2 WIDE, 3 BELL, 4 BAR, 5 DRUM), BRIGHT, EVEN (−64..63), STRETCH (−64..63), PEAK, FORMNT, DECAY (127: held), DAMP |
 
 The engine parameters are `P_E0..P_E7`: P_COUNT−8 .. P_COUNT−1 (91..98), and `INFO` gives `P_E0`.
 Their meaning, range and names depend on the current engine, so re-read `DESC` for them
@@ -221,7 +349,7 @@ at 1..3 and hides 6 5 8: what it sets still plays the right kit, and the device 
 
 | cmd | Request args | Reply args |
 | --- | --- | --- |
-| 1 INFO | — | version string, NENGINES, P_COUNT, G_COUNT, NSTEP, P_E0, then NENGINES engine-name strings, then (v3) NTRK (6 since JIANT 0.6, 4 before), then (v6) CHAIN_ROWS (16), then the tagged blocks `55 01 uiCaps`, `4D 01 64 01`, `42 01 3`, `46 01 nfactory nbank`, `53 01 3`, (1.0.3) `50 01 3` and (1.0.4) `4E 01 count` (MENU settings; 12, 1.1: 15, 1.2: 17, 1.1.5: 18) and (1.0.5) `52 01 4` (ratchet) and (1.1) `4C 01 1` (parameter locks) and (JIANT 0.6.11) `56 01 32` (FM6's voice bank) and (JIANT 0.6.62) `4A 01 1` (JIANT) and (JIANT 0.8.5) `4F 01 7` (DRUM lane modes) (below); older firmware ends earlier |
+| 1 INFO | — | version string, NENGINES, P_COUNT, G_COUNT, NSTEP, P_E0, then NENGINES engine-name strings, then (v3) NTRK (6 since JIANT 0.6, 4 before), then (v6) CHAIN_ROWS (16), then the tagged blocks `55 01 uiCaps`, `4D 01 64 01`, `42 01 3`, `46 01 nfactory nbank`, `53 01 3`, (1.0.3) `50 01 3` and (1.0.4) `4E 01 count` (MENU settings; 12, 1.1: 15, 1.2: 17, 1.1.5: 18) and (1.0.5) `52 01 4` (ratchet) and (1.1) `4C 01 1` (parameter locks) and (JIANT 0.6.11) `56 01 32` (FM6's voice bank) and (JIANT 0.6.62) `4A 01 1` (JIANT) and (JIANT 0.8.5) `4F 01 7` (DRUM lane modes) (below), (JIANT 0.8.5) `59 01 63` (LYRIC, always the last tag) and, just before it, (1.0) `43 02 major minor`: the protocol's version (see "Stability contract (1.0)"); older firmware ends earlier |
 | 2 GET | scope, id | scope, id, v14 |
 | 3 SET | scope, id, v14 | scope, id, v14 (the value after clamping). Setting global `G_ENGSEL` (id from DESC label "ENG") changes the engine: its defaults, then its first preset (as on the device) |
 | 4 DUMP | — | engine, preset, then P_COUNT × v14 (the selected track), then G_COUNT × v14 (globals) |
@@ -238,7 +366,7 @@ at 1..3 and hides 6 5 8: what it sets still plays the right kit, and the device 
 | 19 UP_STORE | slot, name | slot, rc. Stores the current sound: engine, parameters, the first 16 sequencer steps as the pattern (TIE steps → flag 4) |
 | 20 UP_LOAD | slot | slot, rc (0 ok, 1 empty/invalid). Applies its sound (not its pattern; the steps stay) |
 | 21 UP_ERASE | slot | slot, rc |
-| 22 WATCH | on (0/1; v4: 3 = also `TRACK_CHANGED`) | on (0/1; v4 firmware: 3 when 3 was asked for). While on, the device pushes cmds 23, 24, 26 (and 32 with bit 1) |
+| 22 WATCH | on (0/1; v4: 3 = also `TRACK_CHANGED`; 1.0: bit 2 `TRANSPORT`, bit 3 `PUNCH`, bit 4 `MUTATE`) | the bits it took: on (bit 0), bit 1 (v4 firmware), bits 2..4 (1.0 firmware; older answers 3 or 1). While on, the device pushes cmds 23, 24, 26 (and 32 with bit 1, 40 / 41 / 42 with bits 2 / 3 / 4) |
 | 23 CHANGED (push) | — | scope, id, v14 |
 | 24 RELOAD (push) | — | engine, preset, then (v3) the selected track |
 | 25 PING | — | 0 |
@@ -256,10 +384,16 @@ at 1..3 and hides 6 5 8: what it sets still plays the right kit, and the device 
 | 31 TRACK_PARAM | track, id (get), or track, id, v14 (set); id = `P_*` (0..P_COUNT−1) | track, id, v14 (the value after clamping, as `SET`). The selection does not change; no push about the editor's own write |
 | 32 TRACK_CHANGED (push) | — | track, id, v14: `P_LEVEL`, `P_PAN` or `P_MUTE` of a track that is not selected changed on the device (only while `WATCH` was sent with bit 1) |
 
+| cmd (1.0) | Request args | Reply args |
+| --- | --- | --- |
+| 40 TRANSPORT (push) | — | playing (0/1), beat of the bar (0..3), bar lo, bar hi (the bars since PLAY, 14 bits): on PLAY / STOP and each beat while playing (only while `WATCH` was sent with bit 2) |
+| 41 PUNCH (push) | — | the effects running, 4 × 7 bits LSB first (the bit numbers in "1.0: performance pushes"), then their tracks (0 ALL, 1 SYN, 2 DRM): on every change (only with `WATCH` bit 3) |
+| 42 MUTATE (push) | — | track, its MUTATE count (7 bits, wrapping): a EUCLID MUTATE of that track (only with `WATCH` bit 4) |
+
 | cmd (v7) | Request args | Reply args |
 | --- | --- | --- |
 | 64 MOTION | track (query); track, 1, on 0/1 (play on / off); track, 2 (clear); track, 3, step, id, v14 (set an event); track, 4, step, id (delete an event or a lock); (1.1) track, 5, step, id, v14 (set a lock); track, 6, step (clear the step's locks; step 127: every step's); track, 7 (query with the kinds) | track, rc, on (0/1), count (this track's events and locks), max (64), then count × (step, id, v14); after ops 5..7 (1.1) then count × kind (0 automation, 1 lock), in the same order |
-| 65 BACKUP_LIST | — | 1, rc, count (43; 10 before JIANT 0.3), then per object: id, size u32, crc u32 |
+| 65 BACKUP_LIST | — | 1, rc, count (35 since V10.6p, 6 songs; 43 with 8 songs; 10 before JIANT 0.3), then per object: id, size u32, crc u32 |
 | 66 BACKUP_GET | id, offset u32, count lo, count hi (≤ 256) | id, rc, offset u32, count lo, count hi, pack7 data |
 | 67 BACKUP_PUT | op 0 begin: 0, id, size u32, crc u32; op 1 data: 1, id, offset u32, pack7 data; op 2 commit: 2, id; op 3 abort: 3, id | op, id, rc |
 
@@ -692,11 +826,19 @@ against the list; if it differs the device changed, so start again.
 Restoring: `BACKUP_PUT` takes ids 0..9 (firmware before 1.0.3: 0..8, id 9 answers rc 1 at begin and nothing is written).
 
 **JIANT 0.3: every song.** Id 10 is the song index (`song_index_t`, version 2: every song's rows and scenes, 1328
-bytes); a restore keeps the song playing. Ids 40..71 are every song's sections, 40 + 4 × song + section (0 = A): the
+bytes; add15, version 3: + each row's track sources for ARRANGE 2, a `uint32_t` per row, 3 bits a track (0 the row's
+section, 1..4 A..D), 1840 bytes; add15-beta4, version 4: + each row's track variations (VAR), a `uint32_t` per row, 4 bits a track (0 none,
+1 MUTE, 2 THIN, 3 FILL, 4 HALF, 5 REV, 6 SHIFT, 7 OCT+, 8 OCT-, 9..12 VAR 1..4), 2352 bytes; version 2 (1328) and 3
+(1840) indexes are still taken, the missing parts empty); a restore keeps the song playing. Ids 40..71 are every song's sections, 40 + 4 × song + section (0 = A): the
 current song's come from RAM (as ids 2..5), the others are read from flash as they are asked for, into the storage
 driver's own buffer (no RAM of their own). A restore writes each into its song's flash object (an older project format
 becomes today's), the current song's into RAM too. Firmware before answers rc 1 at begin for 10 and 40..71, and the
 web editor skips them (as id 9).
+**V10.6p: 6 songs.** Ids 40..63 (35 objects listed); songs 7 and 8 (ids 64..71) are gone, their flash reserved for a
+drum sample bank. The song index (id 10) keeps its layout (room for 8 songs: the same 2352 bytes; rows 7, 8 unused).
+An archive from 8-song firmware (43 objects) still reads: its songs 1..6 restore, 64..71 get rc 1 at begin (nothing
+written) and the web editor says which songs were not restored (`restoreBackup`'s `notRestored`). A 6-song archive
+restores onto 8-song firmware as it is (songs 7, 8 left as they were).
 Ids 32..34 (Felucca's user sample slots) are retired with the slots: the web editor skips them when it reads an older
 archive and restores the rest. Begin: `0, id, size u32, crc u32`: size is 3744 (FUNA), 3648 (FUN9), 3584 (FUN8) or 3388 (FUN7, FUN6) for id 0,
 the settings record's size for id 1, 3744, 3648, 3584, 3388 or 0 (empty the slot) for ids 2..5, the bank's size or 0 for 6 and 7,
@@ -706,6 +848,8 @@ An archive without id 8 (written before FM6) still restores; the web editor read
 an older archive that also holds the sample slots, 11, 12 or 13 objects, reads with those skipped).
 Since 1.0.3 an id 8 with data (an archive of 1.0..1.0.2) is not stored: like the first boot after the update, every FM6
 user preset whose stored SLOT is a B slot (8..34) and has no patch yet gets that bank slot's patch, and id 9 is written.
+(V10.6s) That move is retired: an id 8 of 3472 bytes is taken (rc 0) and ignored, whatever it holds; a FUN6
+project (3388 bytes, retired with FUN1..FUN5) is refused at commit (rc 2), the slot as it was.
 So restore ids 6 and 7 before 8 (the web editor does); an empty id 8 is taken and ignored (rc 0). Old archives
 therefore restore on both old and new firmware; a 1.0.3 archive on older firmware loses only id 9 (the web editor
 skips it when the device answers rc 1). Data: `1, id, offset u32, pack7` with the next offset (they must follow each other)
@@ -883,28 +1027,19 @@ JIANT appends (index = id; count 23 since 0.9.7): 18 TRACKS (4 / 6, AUDIO), 19 L
 20 MIDI OUT (KEYS / CLOCK / ALL / OFF, CONTROL), 21 SKIN (DISPLAY; 0.9.7: the values in the menu's order, 0 AIR,
 1 COLORS, 2 BOTTOM, 3 HUD, AIR the default of new settings; 0.8.9 had 0 COLORS, 1 BOTTOM, 2 HUD) and (0.9.7) 22 SCOPE
 (0 OFF, 1 ON; OFF the default: an engine's EDIT pages the creature on the whole panel, DISPLAY).
-(0.9.12, count 25; LOAD, id 19, moves to the AUDIO tab beside TRACKS) 23 CPU (0 "1 CORE", 1 "2 CORES"; 2 CORES the default, SYSTEM) and 24 CPU CLOCK (0 "360 MHZ" the
-default, 1 "320 MHZ", SYSTEM): both from the device's next start; the device sets CPU to 1 CORE by itself after a crash
-with both cores at work (`src/cpu_safe.c`). The last crash travels in the settings record (the full backup's settings
-item, `persist_t`): `favorites.factory[13]`, 32 ASCII bytes as MENU > ABOUT > LAST CRASH shows them, e.g.
-`IL01 2C 0.9.12 0201ABCD 02012345` (code and vector, cores, version, PC, RETS; MANUAL › Troubleshooting); any other
-content there is no record.
-
-(JIANT 0.9.12) The tabs are five: 0 DISPLAY, 1 CONTROL, 2 AUDIO, **3 MIDI**, **4 SYSTEM** (SYSTEM was 3). MIDI OUT (id 20)
-moved to MIDI; its id and values are unchanged. MIDI also holds LEARN (arms MIDI LEARN on the device; not a setting) and
-LEARN CLEAR (an action), neither offered over MENU_DESC: the MIDI LEARN map is kept in the settings record (the
-favourites row of engine 1, DIGITAL, bytes 2..31: ten entries of CC | 0x80, track, parameter code; `src/midi_learn.c`),
-so a settings backup carries it; there is no command to read or edit it.
-
-(JIANT 0.9.18) The MENU is regrouped as the device's pages (no id, index, value or default changes; nothing stored
-changes): count 25, tabs **0 SCREEN, 1 AUDIO, 2 MIDI, 3 USB, 4 SYSTEM**. Each item's tab: SCREEN COLOR (0), STYLE (1),
-LARGE (2), ANIMATION (3), LED GLOW (4), SCALE LEDS (16), SCREEN SLEEP (17), SKIN (21), SCOPE (22); AUDIO BPM LOCK (8),
-SPEAKER EQ (9), CLICK (12), CLICK LEVEL (13), COUNT-IN (14), TRACKS (18), LOAD (19); MIDI MIDI OUT (20); USB USB LEVEL
-(10), USB AUDIO (11); SYSTEM HOLD TIME (5), KNOB SPEEDUP (6), FX LATCH (7), RESTORE LAST (15), CPU CORES (23), CPU
-CLOCK (24). Names now whole words: ANIM → ANIMATION, LEDS → LED GLOW (values OFF, LOW, HIGH, INVERT: were OFF, DIM LO,
-DIM HI, INV), HOLD → HOLD TIME, KNOB ACCEL → KNOB SPEEDUP, USB → USB AUDIO, SCREEN OFF → SCREEN SLEEP, CPU → CPU CORES.
-The device's SYSTEM tab also holds CALIBRATION and ABOUT (not offered); INIT SYSTEM left the MENU (SAVE > TOOLS > NEW
-PROJECT). An editor that groups by tab name follows by itself; remember settings by id.
+V10.6z4 appends index 26, id 26 **OCT BEND** (AUDIO; count 27): 0 OFF, 1 "1 ST", 2 "2 ST" (the default), 3 "3 ST",
+4 "4 ST", 5 "5 ST", 6 "7 ST", 7 "12 ST": OCT+ held while a key's note sounds bends it up this far, OCT− a vibrato (the
+expression keys; OFF: OCT is the octave then too). A synth track records them as automation of id 90 (`P_LN7`, a
+DRUM track's lane 8 level, 127 on every synth part): 127 − (bit 0 vibrato, bit 1 bend), 124..127; an editor shows or
+leaves such records on a synth track as it likes (their value is not a level there). With MIDI OUT ALL they go out as
+CC1 and pitch bend (full = OCT BEND's range). GATE's `DESC` default is 127 (100 %) since V10.6z4 (64 before); stores
+still leave out 64, so a project or user preset saved at 50 % loads 50 %.
+V10.6z6 (protocol 1.2) appends index 27..30, the keys' velocity and pressure (CONTROL; count 31): 27 **VELOCITY**
+(0 OFF, 1 SOFT, 2 NORMAL, 3 HARD; NORMAL the default: OFF plays every key 100 as before), 28 **VEL MIN** (0 "1",
+1 "10", 2 "20", 3 "30", 4 "40", 5 "50", 6 "64", 7 "80"; 20 the default: the velocity's floor), 29 **AFTERTOUCH**
+(0 OFF, 1 LOW, 2 MID, 3 HIGH; MID the default), 30 **VEL LEARN** (0 ON, 1 OFF, 2 RESET: setting RESET puts the
+calibration's seeds back, then it learns as ON). A synth track's recording of the keys' pressure joins the
+expression keys' in id 90: 127 − (gates | pressure 0..7 << 2), 96..127 (pressure p plays as p × 18).
 
 The device's AUDIO tab shows SPEAKER EQ, USB LEVEL, CLICK, CLICK LEVEL, COUNT-IN (index 9, 10, 12, 13, 14).
 CLICK: the metronome while the transport runs: OFF, REC (while a track is armed), ON (always); CLICK LEVEL its

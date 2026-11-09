@@ -33,7 +33,8 @@ SHOTS = OUT / 'shots'
 # the screen each page of the map opens (tests/ui_render.c's scene names; the breadcrumb of each checked by hand)
 PAGE_SHOT = {
     'HOME': {'ECO': 'home', 'MACROS': 'home_macros', 'BEING': 'home_being', 'ROUTES': 'home_routes',
-             'GEN 1': 'gen_explore', 'GEN 2': 'gen_parts', 'GEN 3': 'gen_lead'},
+             'GEN 1': 'gen_explore', 'GEN 2': 'gen_parts', 'GEN 3': 'gen_lead',
+             'GENE 1': 'gen_explore', 'GENE 2': 'gen_parts', 'GENE 3': 'gen_lead'},   # (V10.6n: GEN is GENE)
     'CE_SYN': {'EDIT 1': 'edit_analog', 'EDIT 2': 'v6_analog_sqr', 'FILTER': 'ed_filter', 'MORPH': 'morph',
                'VOICE': 'voice', 'VOICE 2': 'ed_voice2', 'WORDS': 'words', 'FOCUS': 'ed_focus',
                'RETRIG': 'pg_retrig', 'ROTOR': 'pg_rotor'},
