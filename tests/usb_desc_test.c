@@ -80,17 +80,67 @@ static uint32_t v11_from_v10(const uint8_t *dev, const uint8_t *cfg, uint32_t n)
     return o;
 }
 
-/* dev / cfg against the 1.0 reference: equal, or (48 kHz) equal to it with the 1.1 changes */
+/* (V10.7.12) the MIDI streaming interface moved after the audio streaming one (macOS 13-15, usb.c D_AUDIO): the MIDI
+ * interface's bytes (its descriptor up to the next interface or IAD) cut out and put back after the audio streaming
+ * interface's settings, the two renumbered (AS m, MIDI m + 1); the AC header's collection (m, m + 1) keeps its bytes;
+ * bcdDevice 3.xx -> 4.xx. Nothing else moves */
+static void midi_last(uint8_t *dev, uint8_t *cfg, uint32_t n)
+{
+    static uint8_t t[512];
+    uint32_t off, m0 = 0, m1 = 0, a1 = 0, o;
+    int in = 0, m = -1;
+    dev[13] = (uint8_t)(dev[13] + 1);
+    for (off = 9; off < n; off += cfg[off]) {
+        const uint8_t *d = cfg + off;
+        if (d[1] == 4 || d[1] == 0x0B) {
+            if (in == 1)
+                m1 = off;                              /* the MIDI block ends */
+            if (in == 2 && !(d[1] == 4 && d[5] == 1 && d[6] == 2)) {
+                a1 = off;                              /* the audio streaming settings end */
+                in = 3;
+            }
+            if (d[1] == 4 && d[5] == 1 && d[6] == 3 && in == 0) {
+                m0 = off;
+                m = d[2];
+                in = 1;
+            } else if (in == 1) {
+                in = 2;
+            }
+        }
+    }
+    if (m < 0 || in < 2)
+        return;
+    if (in == 2)
+        a1 = n;
+    o = 0;
+    memcpy(t + o, cfg + m1, a1 - m1);                  /* the audio streaming settings, now interface m */
+    for (off = 0; off < a1 - m1; off += t[off])
+        if (t[off + 1] == 4)
+            t[off + 2] = (uint8_t)m;
+    o += a1 - m1;
+    memcpy(t + o, cfg + m0, m1 - m0);                  /* then MIDI, m + 1 */
+    t[o + 2] = (uint8_t)(m + 1);
+    o += m1 - m0;
+    memcpy(cfg + m0, t, o);
+}
+
+/* dev / cfg against the 1.0 reference: equal, or (48 kHz) equal to it with the 1.1 changes; (V10.7.12) with the audio
+ * input, the MIDI interface last */
 static int same_as(const uint8_t *dev, const uint8_t *c, uint32_t n, const uint8_t *rdev, const uint8_t *rcfg,
                    uint32_t rn)
 {
-    uint8_t d10[18];
+    static uint8_t d10[18], c10[512];
     memcpy(d10, rdev, 18);
+    memcpy(c10, rcfg, rn);
     d10[15] = USB_STR_PRODUCT;                           /* (0.9.12) iProduct moved from index 2 (usb.c USB_STR_PRODUCT) */
-    if (!AUDIO_48K)
-        return !memcmp(dev, d10, 18) && n == rn && !memcmp(c, rcfg, n);
-    rn = v11_from_v10(d10, rcfg, rn);
-    return !memcmp(dev, v11_dev, 18) && n == rn && !memcmp(c, v11_cfg, n);
+    if (AUDIO_48K) {
+        rn = v11_from_v10(d10, c10, rn);
+        memcpy(d10, v11_dev, 18);
+        memcpy(c10, v11_cfg, rn);
+    }
+    if (T_UAC)
+        midi_last(d10, c10, rn);
+    return !memcmp(dev, d10, 18) && n == rn && !memcmp(c, c10, n);
 }
 
 int main(void)
@@ -138,8 +188,9 @@ int main(void)
         check("strings 2, 4 (the old products) and 3: none", !get_desc(0x0302, &s, &sl) && !get_desc(0x0303, &s, &sl) && !get_desc(0x0304, &s, &sl));
         check("no serial number (iSerial 0)", dev[16] == 0);
     }
-    snprintf(name, sizeof name, "bcdDevice 3.%02X", 0x10 * (T_UAC + AUDIO_48K) + (CDC_SHOWN ? 1 + 2 * T_LAYOUT : 0));
-    check(name, le16(dev + 12) == 0x300u + 0x10 * (T_UAC + AUDIO_48K) + (CDC_SHOWN ? 1 + 2 * T_LAYOUT : 0));
+    snprintf(name, sizeof name, "bcdDevice %u.%02X (4.xx: V10.7.12's MIDI last)", 3u + T_UAC,
+             0x10 * (T_UAC + AUDIO_48K) + (CDC_SHOWN ? 1 + 2 * T_LAYOUT : 0));
+    check(name, le16(dev + 12) == 0x300u + 0x100u * T_UAC + 0x10 * (T_UAC + AUDIO_48K) + (CDC_SHOWN ? 1 + 2 * T_LAYOUT : 0));
 
     /* ---- the configuration, walked as a host does ---- */
     check("wTotalLength = the bytes sent", le16(c + 2) == n);
@@ -234,7 +285,7 @@ int main(void)
     }
     if (cur_if >= 0 && got != cur_neps)
         eps_ok = 0;
-    coll_ok = ncoll == 1 + T_UAC && coll[0] == midi_if && (!T_UAC || coll[1] == as_if);
+    coll_ok = ncoll == 1 + T_UAC && coll[T_UAC] == midi_if && (!T_UAC || coll[0] == as_if);   /* (MIDI last) */
 
     check("descriptor lengths add up to wTotalLength", lens_ok && off == n);
     snprintf(name, sizeof name, "bNumInterfaces %u = the interfaces, numbered 0..n-1 in order", (unsigned)c[4]);
@@ -254,8 +305,9 @@ int main(void)
     } else {
         check("no IAD, audio from IF 0", niad == 0 && aud_if == 0);
     }
-    check("audio function: AC, MIDI, AS in a row", midi_if == aud_if + 1 && (!T_UAC || as_if == aud_if + 2));
-    check("AC header 1.00, collection = the MIDI (and audio streaming) interfaces", ac_ok && coll_ok);
+    check(T_UAC ? "audio function: AC, AS, MIDI in a row (V10.7.12: MIDI last, macOS 13-15)" : "audio function: AC, MIDI",
+          midi_if == aud_if + 1 + T_UAC && (!T_UAC || as_if == aud_if + 1));
+    check("AC header 1.00, collection = the (audio streaming and) MIDI interfaces, MIDI last", ac_ok && coll_ok);
     check("UAC_AS_IF (SET_INTERFACE / GET_INTERFACE) = the audio streaming interface",
           !T_UAC || (int)UAC_AS_IF == as_if);
     check("CDC union and call management name the data interface", union_ok && cm_ok &&
