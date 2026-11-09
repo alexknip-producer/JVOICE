@@ -1769,8 +1769,8 @@ largo y su END (**120 BARS · LOOP**).
   perilla de sonido (EDIT, ENV, LFO, FX, MOD… todo lo que fija un preset), un parche FM6 o el kit de DRUM-X mientras
   suena un tema (o un tema de GENE, o una cadena rápida) y esa pista conserva tu sonido en todas las secciones que
   siguen: las secciones siguen trayendo sus pasos, el patrón (LEN, DIV, swing, gate), el arpegio, la escala, la mezcla
-  (nivel, paneo) y los mutes. Al parar se quedan tus sonidos (SONG END no los pisa) y PLAY de nuevo los sigue
-  manteniendo. Vuelven a seguir las secciones con una nueva tirada de GENE, al cargar un proyecto o una sección, con un
+  (nivel, paneo) y los mutes. Al parar vuelve la música de antes de PLAY (SONG END, también lo no guardado) con
+  tus sonidos encima (V10.7.6), y PLAY de nuevo los sigue manteniendo. Vuelven a seguir las secciones con una nueva tirada de GENE, al cargar un proyecto o una sección, con un
   salto de sección en vivo o un lanzamiento de CLIPS, o, para una pista, con **RECALL** de la capa EDIT (G3; ahora
   funciona con el tema sonando): el sonido guardado de la sección, y después el de las secciones siguientes.
 - END: **STOP** reproduce el tema una vez, **x2–x8** esa cantidad de veces, **LOOP** para siempre.

@@ -1695,8 +1695,8 @@ strip (its rows by their length, a white line where it plays) with its length an
 - (V10.6z8) **A sound you change while a song plays stays.** Change a track's preset, its engine, a sound knob (EDIT,
   ENV, LFO, FX, MOD… anything a preset sets), an FM6 patch or the DRUM-X kit while a song (or a GENE song, or a quick
   chain) plays, and that track keeps your sound over every section after it: the sections still bring their steps,
-  pattern (LEN, DIV, swing, gate), arpeggio, scale, mix (level, pan) and mutes. Stopping then keeps your sounds (no SONG
-  END restore over them) and PLAY again keeps holding them. They follow the sections again after a new GENE throw,
+  pattern (LEN, DIV, swing, gate), arpeggio, scale, mix (level, pan) and mutes. Stopping brings the music you had before PLAY
+  back (SONG END, your unsaved edits too) with your sounds over it (V10.7.6), and PLAY again keeps holding them. They follow the sections again after a new GENE throw,
   a project or section loaded, a live section jump or a CLIPS launch, or, for one track, EDIT layer **RECALL** (G3; it
   works while a song plays now): the section's stored sound back, and the next sections' after it.
 - END: **STOP** plays the song once, **x2–x8** that many times, **LOOP** forever.
