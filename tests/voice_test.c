@@ -69,6 +69,7 @@ static uint32_t sing_phrase(int32_t pi, const char *text, const nt_t *nt, uint32
     uint32_t k, i, frames = 0, eighth = FS * 60u / 100u / 2u;
     memset(trk, 0, sizeof trk);
     memset(sing, 0, sizeof sing);
+    memset(sing_io, 0, sizeof sing_io);
     host_tracks_init();
     host_preset(&trk[0], eng_voice(), (uint32_t)pi);
     lyr_set(0, text);
@@ -138,6 +139,7 @@ static uint32_t render_en(uint32_t lyr, const char *text, int cached, int32_t *o
     uint32_t k, i, n = 0, eighth = FS * 60u / 100u / 2u, nn = sizeof NT / sizeof NT[0];
     memset(trk, 0, sizeof trk);
     memset(sing, 0, sizeof sing);
+    memset(sing_io, 0, sizeof sing_io);
     formant_nz = 0x2545F491;                             /* (the breath's noise: from its start, a render repeats) */
     host_tracks_init();
     host_preset(&trk[0], eng_voice(), (uint32_t)preset_of("SINGER EN"));
@@ -319,6 +321,7 @@ static void vsetup(int32_t pi, uint32_t lang, const char *text)
 {
     memset(trk, 0, sizeof trk);
     memset(sing, 0, sizeof sing);
+    memset(sing_io, 0, sizeof sing_io);
     formant_nz = 0x2545F491;                             /* (the breath's noise: from its start, a render repeats) */
     host_tracks_init();
     host_preset(&trk[0], eng_voice(), (uint32_t)pi);
