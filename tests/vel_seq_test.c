@@ -18,7 +18,9 @@
  * 7. (after V10.7.2) a sound's VEL (EDIT > VOICE 2, core.h P_TVEL): 100 % (127, the default and every older store's)
  *    as played; 0 % every note 100 from the keys, the sequencer, the arp and MIDI in (the matrix's VEL too), a step's
  *    ACCENT 127 still, the recording the key's own; 50 % halfway; a preset sets it (the factory basses 0 %, the others
- *    100 %), a project keeps it, an older one loads at 100 %. */
+ *    100 %), a project keeps it, an older one loads at 100 %.
+ * 8. (V10.7.10) the keys whose press never waits for its strike's velocity (seq.c kb_drum_keys): exactly those whose
+ *    note goes to a DRUM track (the selected one, KEY SPLIT's half either way round, the DRUM grid). */
 #define UI_TEST_NO_MAIN 1
 #include "ui_test.c"
 
@@ -416,6 +418,46 @@ int main(void)
             params_by_count(out, in, 69u, def);         /* (a store of P_COUNT 69: before the DIGITAL slots) */
             ck("   an older store without the slot: VEL 100 % (its default)", out[P_TVEL] == 127);
         }
+    }
+    /* ---- 8. (V10.7.10) the keys whose press never waits for its strike (vel.c vel_note_on, vel_kb.h vs.now: seq.c
+     * kb_drum_keys): those keyboard_block sends to a DRUM track; checked against where each key's note goes */
+    {
+        uint32_t dt = NTRK, st = NTRK, ok = 1, c, kk, m, split_ok = 0;
+        setup();
+        for (i = 0; i < NTRK; i++) {
+            if (drum_track(&trk[i]) && dt == NTRK) dt = i;
+            if (!drum_track(&trk[i]) && st == NTRK) st = i;
+        }
+        ok &= dt < NTRK && st < NTRK;
+        for (c = 0; ok && c < 4u; c++) {                 /* the selected track a DRUM, a synth; KEY SPLIT both ways */
+            memset(split_cfg, 0, sizeof split_cfg);
+            song.sel = (uint8_t)(c == 1u ? st : dt);
+            if (c >= 2u) {
+                split_cfg[0] = 1;
+                split_cfg[1] = (uint8_t)(c == 2u ? 8u : 0u);   /* (0: the default cut, 13) */
+                split_cfg[2] = (uint8_t)(c == 2u ? dt : st);   /* low */
+                split_cfg[3] = (uint8_t)(c == 2u ? st : dt);   /* high */
+            }
+            m = kb_drum_keys();
+            if (c >= 2u)
+                split_ok += m != 0u && (m & 0xFFFFFu) != 0xFFFFFu;
+            for (kk = 0; kk < 20u; kk++) {
+                key_down(kk);
+                blocks(1);
+                ok &= ((m >> kk) & 1u) == (uint32_t)(drum_track(&trk[kb_trk[kk]]) != 0);
+                key_up(kk);
+                blocks(1);
+            }
+        }
+        memset(split_cfg, 0, sizeof split_cfg);
+        song.sel = (uint8_t)st;
+        song.grid = 1;                                   /* (the DRUM grid: its lanes) */
+        ok &= kb_drum_keys() == ~0u;
+        song.grid = 0;
+        ok &= kb_drum_keys() == 0u;
+        song.sel = 0;
+        ck("8. no wait on a DRUM track's keys: the selected one, KEY SPLIT's half (both ways), the DRUM grid; a synth's wait",
+           ok && split_ok == 2u);
     }
     printf("vel_seq: %s\n", bad ? "FAILED" : "all ok");
     return bad != 0;

@@ -161,8 +161,8 @@ def main(src, dst):
                   # FAR / NEAR values
                   "sw_prep", "sw_step", "sw_sv",
                   # (V10.6z6) the keys' velocity: once a strike, a release, a driven sample of a held key (every
-                  # 4.4 ms), a press; the keys' pressure once a block
-                  "vel_map", "vel_driven", "vel_lift", "vel_take", "vel_wait", "vel_note_on",
+                  # 4.4 ms), a press (V10.7.10: and its wait's bound, a test a tick); the keys' pressure once a block
+                  "vel_map", "vel_driven", "vel_lift", "vel_take", "vel_tick", "vel_note_on",
                   # .. and to make room for it, more of the same kind: a voice stolen, a SHIFT pass prepared (once a
                   # pass) and its conditions, a lyric's POS, the PLAYHEADS back in phase, a chord glide's note, USB's
                   # control transfers, a step's parts

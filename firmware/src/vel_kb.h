@@ -8,8 +8,9 @@
                                                     * places) */
 #define VK_NTRK 6u                      /* the tracks (core.h NTRK: seq.c checks) */
 #define VK_NK 20u                       /* the keys with a converter: F3..C5 (the top row C#5..G5 has none) */
-#define VK_WAIT 2u                      /* a press waits for its strike's window at most this many of its key's samples
-                                         * (2 x 2.2 ms; measured: tests/vel_test.c) */
+#define VK_WAIT_T 22u                   /* (V10.7.10) a press waits for its strike's window at most this many scan ticks
+                                         * (100 us each: 2.2 ms, one sample period of its key) from its debounce, whatever
+                                         * its readings do (a conversion timed out, none at all): vel.c vel_tick */
 typedef struct {
     uint8_t vel;                        /* the strike's velocity 1..127 so far (0: no driven reading yet) */
     uint8_t at;                         /* the key's pressure 0..127, smoothed (0 when let go) */
@@ -32,12 +33,17 @@ typedef struct {                        /* (the bytes first: short offsets) */
     uint8_t atl[VK_NTRK], ato[VK_NTRK];       /* (seq.c kx_block) each track's held keys' pressure; MIDI OUT's last / 2 */
     uint8_t arpv[VK_NTRK];              /* (seq.c) each track's arp notes' velocity: its keys' last, ^ 100 */
     vk_t k[VK_NK];
-    uint8_t cnt[VK_NK];                 /* a waiting press: the samples it may still wait */
+    uint8_t cnt[VK_NK];                 /* a waiting press: the scan ticks it may still wait (VK_WAIT_T at its debounce) */
+    uint8_t km[VK_NK];                  /* (V10.7.10, vel.c) each key's recent strikes' mean (0: none yet): a press with no
+                                         * reading of its own plays it */
     uint8_t n[VK_NK];                   /* (vel.c) strikes learnt since a reset (to 24) */
     uint8_t velx[27];                   /* each key's press's velocity ^ 100 (0, as zeroed: 100) */
     uint32_t hold;                      /* the keys whose press waits for its strike's window (the scan's ISR, vel.c
                                          * vel_note_on): the keys' block (seq.c) sees them pressed once let through */
     uint32_t t;                         /* (vel.c) the last strike learnt, fm1_ms */
+    uint32_t now;                       /* (V10.7.10, vel.c vel_poll: seq.c kb_drum_keys) the keys whose press never waits:
+                                         * those going to a DRUM track (a drum needs its hit on time; no velocity yet: the
+                                         * key's recent mean) */
     uint16_t at8[VK_NTRK];                 /* (seq.c kx_block) each track's pressure, Q8 */
     uint16_t strike[VK_NK];             /* (vel_diag.c) each key's strike: the lowest driven reading from the touch to
                                          * the first driven sample after it seated (VD_NONE: the window still open) */
@@ -53,10 +59,13 @@ static vel_t vs VK_BSS;
 #define vk_cal (vs.cal)
 #define kb_velx (vs.velx)
 #define KB_VEL(k) (kb_velx[k] ^ 100u)
-/* the velocity of key k's press now: 100 with VELOCITY OFF (bit for bit as before); its strike's, or the mean */
+/* the velocity of key k's press now: 100 with VELOCITY OFF (bit for bit as before); its strike's so far, else (V10.7.10)
+ * the key's recent mean, else every key's */
 static inline uint32_t vk_vel(uint32_t k)
 {
     if (!(vk_on & 1u))
         return 100u;
-    return k < VK_NK && vk[k].vel ? vk[k].vel : vk_mean ? vk_mean : 100u;
+    if (k < VK_NK && (vk[k].vel || vs.km[k]))
+        return vk[k].vel ? vk[k].vel : vs.km[k];
+    return vk_mean ? vk_mean : 100u;
 }

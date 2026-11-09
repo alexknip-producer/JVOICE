@@ -17,7 +17,7 @@ a generator and effects, all inside the little keyboard. It is a fork of [Felucc
 The emulator runs the same code as the FM-1, with sound, played with the computer keyboard or the mouse. The installer
 always offers the current public version first, and the earlier ones under it.
 
-## This release: V10.7.9
+## This release: V10.7.10
 
 ### Installing
 
@@ -469,6 +469,14 @@ JIANT's modifications are distributed under the same license.
 
 Every update is listed here, newest first. (Since 0.6.80 at the end of the page: what the synth does comes first.)
 
+### V10.7.10 — public (2026-11-09)
+
+- DRUM-X kits come dry: no factory kit sends anything to DELAY, REVERB or CHORUS any more; add your own per sound in EDIT. Saved projects keep their sends.
+- EXTENDED key map: the FX keys no longer force the hit into the delay or reverb (they stay timbre variants).
+- Key velocity: the wait for the strike is never longer than 2.2 ms, and there is none on DRUM tracks.
+- MENU › SYSTEM › BLUETOOTH reads MISSING (was NO SEG) when the Bluetooth part is not installed, with a message to reinstall with the JIANT installer.
+- GENE: EBM dark techno, MINIMAL TECHNO's sub and swing, PHONK's cowbell sixteenths, after reference tracks.
+
 ### V10.7.9 — public (2026-11-09)
 
 - DRUM-X: a güiro (MODE GR: band-passed noise in ticks; SCRAPE the stroke, a strong hit long, a soft one short) on any lane; the factory kit LATIN PERC.
@@ -827,7 +835,7 @@ included, stay selectable.
 ### V10.12 (beta: the first radio test)
 - **MENU › SYSTEM › BLUETOOTH** (OFF by default): ON, with the music stopped, calibrates the radio by itself and
   advertises **JIANT FM-1** as a Bluetooth MIDI device. The row shows ADV (advertising) or CONN (connected) and the
-  connections since power-on; NO SEG if the Bluetooth code did not install, FAILED if the start failed. No MIDI goes
+  connections since power-on; MISSING (was NO SEG) if the Bluetooth part did not install (reinstall with the web installer), FAILED if the start failed. No MIDI goes
   through it yet: this beta tests the radio. If a start hangs, the next boot turns BLUETOOTH OFF by itself.
 - The Bluetooth stack (Optimist's, open source) lives in its own flash area at 0xEA000, written by the installer with
   the rest of the package and checked before use.

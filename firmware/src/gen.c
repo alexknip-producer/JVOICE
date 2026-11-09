@@ -2900,7 +2900,7 @@ static void gen_go(void)
     uint32_t k;
     char b[8];
     uint32_t play = song.playing || chain_busy() || seq_counting();
-    if (!bt_hw_seg()) { ui_message("UPDATE PACKAGE"); return; }   /* (V10.6y: gen_pick in the segment) */
+    if (!bt_hw_seg()) { seg_missing(); return; }        /* (V10.6y: gen_pick in the segment) */
     if (play) {
         fm1_irq_off(); seq_stop(); transport_req = 0; fm1_irq_on();
         song_poll();
@@ -3021,7 +3021,7 @@ static const char *dice_seq(track_t *t)
     uint16_t s0 = gp.seed;
     int16_t was[NSTEP], now[NSTEP];
     uint8_t lead0, arp0, arp1, pads0, drum0;
-    if (!bt_hw_seg()) return "UPDATE PACKAGE";         /* (V10.6y: gen_pick in the segment) */
+    if (!bt_hw_seg()) return SEG_MISS;                  /* (V10.6y: gen_pick in the segment) */
     rng_state ^= fm1_ticks() * 2654435761u;
     if (!rng_state) rng_state = 0x1234567u;
     for (i = 0; i < NSTEP; i++)                         /* (what it plays now: its register, its chords) */

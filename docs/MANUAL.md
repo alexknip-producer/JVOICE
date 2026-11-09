@@ -1,6 +1,6 @@
 # JIANT FM — User Manual
 
-**JIANT FM V10.7.9 for the M-VAVE FM-1**
+**JIANT FM V10.7.10 for the M-VAVE FM-1**
 
 > *Versión en español: [MANUAL.es.md](MANUAL.es.md).*
 
@@ -204,7 +204,9 @@ Vestal's, *Velo*, github.com/charlesvestal/fm1-velocity, GPL-3.0). JIANT reads i
 
 - **Velocity**: how hard the key lands, in the first milliseconds after it touches. It is continuous (1..127: every
   strike between soft and hard gives a value between), then MENU > CONTROL > **VELOCITY**'s curve and **VEL MIN**'s
-  floor. A note waits at most one reading of its key (2.2 ms) for its strike, under what you can feel. It reaches
+  floor. On a synth track a note waits for its strike at most 2.2 ms (V10.7.10: a hard limit, even when a reading of
+  the key is lost), under what you can feel; on a **DRUM** track (the selected one, or KEY SPLIT's half that goes to
+  one) it never waits: it plays at once with the strike as read so far, or the key's recent average. It reaches
   everything a key plays: the sound (the engines and the matrix's VEL), chords and strums, the arpeggiator, recording
   (only 127 records as an accent) and MIDI OUT. VELOCITY **OFF**: every key 100, as before.
 - **The top row (C#5..G5)** has no sensor (the FM-1 cannot read those seven keys' pressure), so it plays the **average of
@@ -1111,7 +1113,8 @@ DRUM-X is a synthesized kit of eight sounds, **BD SD CP CH OH TM RS CB**, genera
       sound, more as it goes up: from a metal edge to a clang with no note, so the sound melts into the rhythm and stays
       out of the harmony (the factory kit has it on the snare, the hats and the cowbell); **FEEDBK** (OFF, 1–15): that
       sound's own (added to KIT 3's); **SEND**: that hit alone into one effect, OFF then CHO, DLY, REV with 16 amounts
-      each, on one knob ("REV 75%"), on top of the track's own sends. The dice (DICE ALL; the sound dice) set
+      each, on one knob ("REV 75%"), on top of the track's own sends (V10.7.10: every factory kit comes with all
+      SENDs OFF, dry; a saved project keeps its own). The dice (DICE ALL; the sound dice) set
       LAYER and FEEDBK boldly. Each sound with a LAYER costs a little CPU (about as FEEDBK).
   - **LEVELS / LEVELS 2**: the level of each sound (KICK, SNARE, CLAP, HATCL, HATOP, TOM, RIM, BELL).
   - **STEREO**: **IMAGE** (automatable) sweeps the kit through its placings in the stereo field. 0 (MONO): every sound
@@ -1176,7 +1179,7 @@ when OCT changes:
 | **+1** | **FILLS**: real fills, nine kinds (snare rolls from 8ths to 16ths to 32nds, tom descents, flams, unisons, 3-3-2…) in three lengths; a crash on the next downbeat |
 | **0** | **DRUM-X KIT**: the kit as always |
 | **−1** | **KICK / TOM**: the kick (lower keys) and the tom (upper keys) played **chromatically**; or, with KEY MAP on one sound (KICK … BELL), that sound chromatic over the 27 keys (**BELL** for cowbell melodies) |
-| **−2** | **FX KIT**: the sounds through their effects (reversed, delayed, fed back, folded) |
+| **−2** | **FX KIT**: the sounds as variants (longer, fed back, folded, noisier); V10.7.10: no delay or reverb of their own any more (the kit's SENDs and the track's FX as any hit) |
 | **−3** | **FLAM** |
 
 A note recorded in EXTENDED plays back on the same sound at the same pitch. The sound itself: V10.6q rewrote the
@@ -2925,6 +2928,10 @@ browser, the MIDI ports it saw, the FM-1's firmware, the step it stopped at).
   `:1:1` stuck to it) now redirect by themselves.
 
 ### The firmware
+
+**MENU › SYSTEM › BLUETOOTH says MISSING (was NO SEG), or "BLUETOOTH PART MISSING: REINSTALL: JIANT INSTALLER".** The
+Bluetooth part of JIANT (it also holds GEN, the songs' saving, USB HOST and more) was not installed: reinstall with the
+web installer (above). Other flashing tools write only the main firmware.
 
 **My songs are not kept after power-off (a newer FM-1).** FM-1s sold from late 2026 (the logo on the front) have a
 different flash chip (JEDEC 0xB36014). JIANT before V10.6z did not know it and ran from RAM only: nothing was saved,

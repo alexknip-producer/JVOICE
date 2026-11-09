@@ -1,6 +1,6 @@
 # JIANT FM — Manual de usuario
 
-**JIANT FM V10.7.9 para el M-VAVE FM-1**
+**JIANT FM V10.7.10 para el M-VAVE FM-1**
 
 > *English version: [MANUAL.md](MANUAL.md).*
 
@@ -211,7 +211,7 @@ de Charles Vestal, *Velo*, github.com/charlesvestal/fm1-velocity, GPL-3.0). JIAN
 
 - **Velocidad**: qué tan fuerte llega la tecla, en los primeros milisegundos después de tocar. Es continua (1..127:
   cada toque entre suave y fuerte da un valor intermedio), y después pasa por la curva de MENU > CONTROL >
-  **VELOCITY** y el piso de **VEL MIN**. Una nota espera como mucho una lectura de su tecla (2,2 ms), por debajo de lo que se nota. Llega a todo lo que toca una tecla: el sonido (los motores y el VEL de la matriz), los
+  **VELOCITY** y el piso de **VEL MIN**. En una pista de sintetizador una nota espera su golpe como mucho 2,2 ms (V10.7.10: un límite fijo, aunque se pierda una lectura de la tecla), por debajo de lo que se nota; en una pista **DRUM** (la elegida, o la mitad de KEY SPLIT que va a una) no espera nada: suena enseguida con el golpe leído hasta ahí, o el promedio reciente de la tecla. Llega a todo lo que toca una tecla: el sonido (los motores y el VEL de la matriz), los
   acordes y el strum, el arpegiador, la grabación (solo 127 se graba como acento) y el MIDI OUT. VELOCITY **OFF**:
   todas las teclas 100, como antes.
 - **La fila de arriba (C#5..G5)** no tiene sensor (el FM-1 no puede leer la presión de esas siete teclas), así que toca con el
@@ -1158,7 +1158,8 @@ DRUM-X es un kit sintetizado de ocho sonidos, **BD SD CP CH OH TM RS CB**, gener
       sonido, más cuanto más alto: de un filo metálico a un golpe sin nota, así el sonido se funde en el ritmo y no
       molesta a la armonía (el kit de fábrica lo tiene en redoblante, hi-hats y cowbell); **FEEDBK** (OFF, 1–15): el de
       ese sonido (se suma al de KIT 3); **SEND**: ese golpe solo hacia un efecto, OFF y después CHO, DLY, REV con 16
-      cantidades cada uno, en una sola perilla ("REV 75%"), además de los envíos de la pista. Los dados (DICE ALL; los
+      cantidades cada uno, en una sola perilla ("REV 75%"), además de los envíos de la pista (V10.7.10: todos los kits de fábrica vienen
+      con los SEND en OFF, secos; un proyecto guardado conserva los suyos). Los dados (DICE ALL; los
       dados de sonido) mueven fuerte LAYER y FEEDBK. Cada sonido con LAYER usa un poco de CPU (como FEEDBK).
   - **LEVELS / LEVELS 2**: el nivel de cada sonido (KICK, SNARE, CLAP, HATCL, HATOP, TOM, RIM, BELL).
   - **STEREO**: **IMAGE** (automatizable) barre el kit por sus ubicaciones en el estéreo. 0 (MONO): todos al medio; los
@@ -1223,7 +1224,7 @@ nombre en pantalla al cambiar OCT:
 | **+1** | **FILLS**: redobles de verdad, nueve clases (redobles de caja de corcheas a semicorcheas a fusas, bajadas de toms, flams, unísonos, 3-3-2…) en tres largos; un platillo en el tiempo fuerte siguiente |
 | **0** | **DRUM-X KIT**: el kit de siempre |
 | **−1** | **KICK / TOM**: el bombo (teclas de abajo) y el tom (teclas de arriba) **cromáticos**; o, con KEY MAP en un sonido (KICK … BELL), ese sonido cromático en las 27 teclas (**BELL** para melodías de cencerro) |
-| **−2** | **FX KIT**: los sonidos a través de sus efectos (al revés, con delay, realimentados, plegados) |
+| **−2** | **FX KIT**: los sonidos como variantes (más largos, realimentados, plegados, con más ruido); V10.7.10: ya sin delay ni reverb propios (los SENDs del kit y los FX de la pista, como cualquier golpe) |
 | **−3** | **FLAM** |
 
 Una nota grabada en EXTENDED vuelve a sonar en el mismo sonido y a la misma altura. El sonido en sí: la V10.6q reescribió
@@ -3121,6 +3122,10 @@ La que dice **(la última)** es la versión estable aprobada. Las de abajo son a
 instalador *preview* (enlace al pie) tiene la próxima versión sin aprobar: solo para probar.
 
 ### El firmware
+
+**MENU › SYSTEM › BLUETOOTH dice MISSING (antes NO SEG), o "BLUETOOTH PART MISSING: REINSTALL: JIANT INSTALLER".** La
+parte Bluetooth de JIANT (que también tiene GEN, el guardado de canciones, USB HOST y más) no se instaló: reinstalá
+con el instalador web (arriba). Otras herramientas de flasheo escriben solo el firmware principal.
 
 **Mis canciones no quedan guardadas al apagar (un FM-1 nuevo).** Los FM-1 vendidos desde fines de 2026 (con el logo en
 el frente) traen otro chip de flash (JEDEC 0xB36014). JIANT antes de la V10.6z no lo conocía y andaba solo desde la RAM:

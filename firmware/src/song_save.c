@@ -55,7 +55,7 @@ static __attribute__((noinline)) int song_save_as(uint32_t target, const char *n
     song_index_t *index = (song_index_t *)proj_wire_u.raw;
     _Static_assert(sizeof(song_index_t) <= sizeof proj_wire_u.raw, "song index fits existing staging RAM");
     if (transport_busy()) { ui_message("STOP TO SAVE"); return 1; }
-    if (!bt_hw_seg()) { ui_message("UPDATE PACKAGE"); return 1; }
+    if (!bt_hw_seg()) { seg_missing(); return 1; }
     if (target >= NSONG) { ui_message("CHOOSE ANOTHER PROJECT"); return 1; }
     if (!flash_ok) { ui_message("NO FLASH: NOT SAVED"); return 1; }
     current = live.cur >= 0 && live.cur < 4 ? (uint32_t)live.cur : proj_cur < 4u ? proj_cur : 0u;
@@ -168,7 +168,7 @@ static int song_erase_parts(uint32_t target, uint32_t parts)
     song_index_t *index = (song_index_t *)proj_wire_u.raw;
     uint32_t mask = parts ? parts : 15u, done = 0, k;
     int draft = parts && song_draft && target == song_cur;
-    if (!bt_hw_seg()) { ui_message("UPDATE PACKAGE"); return 1; }
+    if (!bt_hw_seg()) { seg_missing(); return 1; }
     if (target >= NSONG || transport_busy()) { ui_message("STOP TO ERASE"); return 1; }
     if (draft) { memcpy(index, &song_idx, sizeof *index); index->rows[target] = chain_config; }
     else if (song_saved_index(index)) { ui_message("SAVE INDEX ERROR"); return 1; }

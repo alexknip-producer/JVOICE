@@ -10,9 +10,16 @@
  * docs/VELOCITY_DIAG.es.md: the minimum in an early window is the reliable measure, lower = harder; a sample that
  * catches the key still falling reads high). The digital scan debounces a press 1.1..2.2 ms after its contact closes;
  * a press whose window is still open then waits (vel_note_on: its bit held back from the keys' block, vk_hold) and its
- * key's next sample is taken driven: the window closes there, at most one sample period later (2.2 ms; tests/vel_test.c
- * measures it on 400 modelled presses: 1.7 ms on average). A key whose touch has not been sampled yet waits too (at
- * most VK_WAIT of its samples, then the velocity so far). The pressure's zero is the lowest driven reading once seated.
+ * key's next sample is taken driven: the window closes there, at most one sample period later. (V10.7.10, a user: "drums
+ * almost impossible to use") The wait is capped in scan ticks, not in samples: VK_WAIT_T (22 ticks, 2.2 ms) after the
+ * debounce the press plays whatever its readings did (a conversion that timed out, fm1_an.timeouts, drops its reading:
+ * before, the wait then ran on to the key's next one, 4.4 ms or more), with the velocity so far, else the key's recent
+ * mean (vel_tick). A key whose touch has not been sampled yet waits the same. A key going to a DRUM track (seq.c
+ * kb_drum_keys, as keyboard_block routes it: the selected track or KEY SPLIT's half; the DRUM grid) never waits: it
+ * plays at its debounce with the velocity read so far, else its recent mean; its strike is still read and learnt.
+ * tests/vel_test.c: 400 modelled presses, with conversions timing out and with none at all: the wait never over 2.2 ms;
+ * on a DRUM track none. No setting: the synth tracks keep the (capped) wait. The pressure's zero is the lowest driven
+ * reading once seated.
  *
  * The velocity (vel_map), continuous: each key keeps three references, its HARD, NORMAL and SOFT strikes (vs.ref);
  * the strike's reading maps piecewise-linearly through them, HARD 112, NORMAL 76, SOFT 36, on at half the slope past
@@ -42,6 +49,7 @@
 #define VEL_BARRIER() __asm__ volatile("" ::: "memory")
 static const int8_t VC_OFS[VK_NK] = {0, 0, 0, 0, 0, 0, 0, 15, 0, 77, -1, 0, 5, 0, 34, 0, 0, -31, 0, 0};
 static const uint8_t VC_MIN[8] = {1, 10, 20, 30, 40, 50, 64, 80};
+static uint32_t kb_drum_keys(void);             /* (V10.7.10, seq.c) the keys going to a DRUM track */
 
 static __attribute__((noinline)) void vel_cal_reset(void)
 {
@@ -78,11 +86,13 @@ static __attribute__((noinline)) void vel_take(uint32_t k)
     vk_hold &= ~(1u << k);
 }
 /* (the scan's ISR, hal/fm1_input.h fm1__key) key k's press debounced, before its bit sets: its strike's window still
- * open, it waits (at most VK_WAIT of its samples: vel_wait), else it plays now */
+ * open, it waits (at most VK_WAIT_T scan ticks: vel_tick), else it plays now; (V10.7.10) a key going to a DRUM track
+ * (vs.now) never waits: its velocity as far as it is read, else the key's recent mean */
 static __attribute__((noinline)) void vel_note_on(uint32_t k)
 {
-    if ((vk_on & 1u) && k < VK_NK && (vk[k].pend || vd_key[k].st == VD_OPEN)) {   /* (open: its touch not sampled yet) */
-        vk_cnt[k] = VK_WAIT;
+    if ((vk_on & 1u) && k < VK_NK && !((vs.now >> k) & 1u) && (vk[k].pend || vd_key[k].st == VD_OPEN)) {   /* (open:
+                                                 * its touch not sampled yet) */
+        vk_cnt[k] = VK_WAIT_T;
         vk_hold |= 1u << k;
         if (vd_key[k].st != VD_OPEN)
             vd_key[k].dnext = 1;                /* (its next sample driven: the window closes there) */
@@ -91,11 +101,16 @@ static __attribute__((noinline)) void vel_note_on(uint32_t k)
     }
     VEL_BARRIER();                              /* (before the caller sets the key's bit) */
 }
-/* (ISR, vd_sample) a sample of key k: a press waiting past its time plays with the velocity so far */
-static __attribute__((noinline)) void vel_wait(uint32_t k)
+/* (V10.7.10; the scan's ISR, every tick, after the sample taken: hal/fm1_input.h FM1_INPUT_TICK) a press waiting past
+ * VK_WAIT_T ticks plays with the velocity so far (a conversion timed out, its reading dropped: no longer than that) */
+static __attribute__((noinline)) void vel_tick(void)
 {
-    if ((vk_hold >> k) & 1u && !--vk_cnt[k])
-        vel_take(k);
+    uint32_t k;
+    if (!vk_hold)
+        return;
+    for (k = 0; k < VK_NK; k++)
+        if ((vk_hold >> k) & 1u && !--vk_cnt[k])
+            vel_take(k);
 }
 /* (ISR, vd_sample) a driven reading v of key key, touched: the strike's window (its velocity so far from k's lowest
  * driven reading; it closes once seated, or once its press waits: vel_note_on), the pressure's zero once seated, then
@@ -113,6 +128,7 @@ static __attribute__((noinline)) void vel_driven(uint32_t key, const vd_key_t *k
             if ((vk_hold >> key) & 1u)
                 vel_take(key);
             vk_mean = (uint8_t)(((vk_mean ? vk_mean : 100u) * 7u + x + 4u) / 8u);
+            vs.km[key] = (uint8_t)(vs.km[key] ? (vs.km[key] * 3u + x + 2u) / 4u : x);   /* (V10.7.10: the key's own) */
             vs.last = (uint8_t)key;
             vs.rn++;
         }
@@ -203,6 +219,7 @@ static void vel_poll(void)
     vs.atr = (uint8_t)(a & 3u);
     vs.learn = (a & 12u) != 4u;                 /* (VEL LEARN ON 0, OFF 1, RESET 2: learning) */
     on = (vs.curve != 0u) | (uint32_t)(vs.atr != 0u) << 1;
+    vs.now = kb_drum_keys();                    /* (V10.7.10) the keys going to a DRUM track: no wait */
     if (vk_cal != 1u || (vs.dirty && fm1_ms - vs.t >= 30000u && !fm1_in.notes)) {   /* (power-on, a restore: read;
                                                  * RESET: the seeds; learnt, no key held: saved, settings_poll once
                                                  * the transport stops) */

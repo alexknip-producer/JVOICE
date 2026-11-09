@@ -34,7 +34,7 @@ static __attribute__((noinline)) void trackgen_make(void)
     const tg_config_t *c=&tg_config[k];
     struct { __typeof__(gp) p; __typeof__(gs) s; ggenre_t g; __typeof__(gx) x; uint32_t q; }
         save={gp,gs,gmut,gx,gq};
-    if(!bt_hw_seg()) {ui_message("UPDATE PACKAGE");return;}   /* (V10.6y: gen.c gen_pick in the segment) */
+    if(!bt_hw_seg()) {seg_missing();return;}   /* (V10.6y: gen.c gen_pick in the segment) */
     track_t temp;
     _Static_assert(sizeof temp+sizeof save<8192,"track generator main-stack budget (15.75 KiB stack)");
     if(!trackgen_ok(t)||chain_busy()) {ui_message("STOP SONG TO EDIT");return;}

@@ -123,6 +123,11 @@
 #ifndef FM1_INPUT_NOTE_ON
 #define FM1_INPUT_NOTE_ON(k) ((void)0)
 #endif
+/* (V10.7.10) every tick, after the last tick's sample was taken, before the keys are read: the key velocity's bound on a
+ * press's wait, in ticks (src/vel.c vel_tick) */
+#ifndef FM1_INPUT_TICK
+#define FM1_INPUT_TICK() ((void)0)
+#endif
 
 #ifndef FM1_INPUT_IDLE
 #define FM1_INPUT_IDLE() ((void)0)
@@ -561,6 +566,7 @@ static void fm1_input_tick(void)
     uint32_t br = 0, kb = 0;
     if (fm1_an.on)                                 /* (V10.6z5) the velocity diagnostic (see top) */
         fm1__an_take();
+    FM1_INPUT_TICK();
     fm1__led_lines(0);
     fm1_in_stat.last = t0;
     while (b < FM1_GAP_BINS - 1u && g >= (150u * FM1_TICKS_PER_US << b))
