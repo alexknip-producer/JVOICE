@@ -10680,6 +10680,46 @@ static int test_preset_types(void)
     frame();
     ok &= list_get() == 0u && !favorites.filter;
     bad += check("PRESETS LIST: ALL FAV BASS .. FX (KNOB 4, no wrap); BASS lists every engine's basses only; kept with the settings", ok);
+    {   /* (a YouTube user, V10.7.6: "I can't change the instruments on the tracks in the song with the PRESETS knob. It
+         * goes to the voice synth and can't go back") LIST VOX, left on SAVE > PRESETS (kept with the settings): the
+         * PRESETS knob on HOME browses the VOX sounds alone, in a song or not; HOME now says the LIST. LIST ALL: every
+         * track's PRESETS knob both ways over the whole list again, a song playing, and the knob says nothing */
+        uint32_t t, all, i, p0, seen;
+        ui_power_on();
+        list_put(1u + PT_VOX);
+        ui.home = 1; song.sel = 0; frame();
+        turn(EN_PRESET, 1); frame();
+        ok = TSEL->eng_req == ENGI_VOICE && msg_is("LIST VOX");   /* (DRUM-X: the first VOX sound, VOICE's) */
+        for (i = 0, seen = 0; i < 40u; i++) {
+            turn(EN_PRESET, i < 20u ? -1 : 1); frame();
+            k = TSEL->eng_req == ENGI_DRUM ? 0u : 1u;
+            seen |= 1u << k;
+            ok &= PR_TAG(&trk_engp(TSEL)->presets[TSEL->preset]) == PT_VOX && msg_is("LIST VOX");
+        }
+        ok &= seen == 2u;                               /* (never back to an instrument: the user's report) */
+        go_page(GR_BROWSE); frame(); ui.msg_t = 0;
+        turn(EN_PRESET, 1); frame();
+        ok &= !msg_is("LIST VOX");                      /* (SAVE > PRESETS shows its LIST in KNOB 4's column) */
+        bad += check("  LIST VOX: PRESETS browses the VOX sounds alone (the 'voice synth, can't go back' report); HOME says LIST VOX", ok);
+        list_put(0);
+        ui_power_on();
+        ui_rec_prefs |= PREF_SIX >> 8; rp_apply();
+        ui.home = 1; frame();
+        press(B_PLAY); events_block(CTL); frame();
+        ok = song.playing != 0;
+        for (t = 0; t < trk_live; t++) {
+            song.sel = (uint8_t)t; frame();
+            p0 = preset_all_pos(&all);
+            for (i = 0; i < 2u * all; i++) {           /* right round the list, then left round it */
+                uint32_t a2, want = (preset_all_pos(&a2) + (i < all ? 1u : all - 1u)) % all;
+                turn(EN_PRESET, i < all ? 1 : -1); events_block(CTL); frame();
+                ok &= preset_all_pos(&a2) == want && a2 == all;
+            }
+            ok &= preset_all_pos(&all) == p0 && !msg_is("LIST ALL");
+        }
+        stop_transport(); frame();
+        bad += check("  LIST ALL: every track's PRESETS knob both ways round the whole list, playing (every engine, back again)", ok);
+    }
     return bad;
 }
 static int test_usb_serial(void)
@@ -13471,6 +13511,10 @@ static int test_engine_order_099(void)
     {   /* (V10.6h) PROGRAM CHANGE as 0.9.8 counted: MATH 18 (LOFI's), ANIMAL 24; ANIMAL's first is right after VOICE's
          * 15, LOFI's slot 15 (PC 3 + 15 .. after PHASE and FM6) MATH BASS */
         uint32_t base = preset_shown(ENGI_ANALOG) + preset_shown(ENGI_FM6) + preset_shown(ENGI_PHASE), q;
+#if FELUCCA_FM4
+        base += preset_shown(ENGI_DIGITAL);             /* (ENGINE_PC_ORDER: DIGITAL after FM6 in FELUCCA_FM4 builds;
+                                                         * left out of this sum since V10.6h, the FM4 build failed here) */
+#endif
         ok &= preset_all_at_in(base + 15u, &q, ENGINE_PC_ORDER) == ENGI_LOFI && q == 4u;
         ok &= preset_all_at_in(base + 18u, &q, ENGINE_PC_ORDER) == ENGI_VOICE && q == preset_nth(ENGINES[ENGI_VOICE], 0);
     }
