@@ -20,6 +20,7 @@
  *   seqtick/live   .. every track under GLO > LIVE's modifiers (seq_live.c: x2, a LOOP of 4, REV, THIN 30 %, GIRO +1)
  *   song/cputest   SAVE > TOOLS 6 CPU TEST's song (song_dice.c cpu_test_song), playing: what the device is measured on
  *   song/cputest.djf  (0.9.1) .. with the master DJ FILTER on (GLO > MIXER KNOB 4 at -24, a low-pass): its cost on top
+ *   song/cputest.eq   (p9) .. with the master's EQ on (FX > EQ, the four bands 6 -3 3 -6 dB): its cost on top
  *   mix/idle       (0.9.9 ctl64) nothing sounding, stopped: the fixed cost of a block (the events, the split, the buses,
  *                  the buffers, the master)
  *   seq/mono4      (0.9.9 ctl64) four MONO tracks (ANALOG FM6 VOICE WHEEL) at 1/16, 150 BPM, one note a step, each
@@ -270,6 +271,9 @@ int main(void)
     song.g[G_DJF] = -24;                                /* (0.9.1) the same song through the DJ FILTER (a low-pass, ~1.4 kHz) */
     vg_section("song/cputest.djf");
     song.g[G_DJF] = 0;
+    eq_v[0] = 6; eq_v[1] = -3; eq_v[2] = 3; eq_v[3] = -6;   /* (p9) .. through the master's EQ, every band off 0 */
+    vg_section("song/cputest.eq");
+    eq_v[0] = eq_v[1] = eq_v[2] = eq_v[3] = 0;
     {   /* (cpu5) the idle floor: mix/idle the power-on state 2 s on, nothing played (the buses never excited: cpu4's
          * certificates); mix/idle.tail after a chord into CLOUD, the delay and the chorus has rung out and the buses'
          * gate has shut (fx.c fx_rest), 6 s after the keys went up (the delay's FEEDBK holds the gate ~4 s) */

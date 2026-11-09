@@ -5,7 +5,7 @@
  * storage layer's A/B protection; the four sections and index are NOT one atomic transaction. On an
  * interrupted overwrite the source remains available to retry the complete copy. */
 
-/* Normalize a source section into proj_wire, including current song-wide globals. 0 empty, 1 ready,
+/* Normalize a source section into proj_wire, including current song-wide globals (and the master EQ, TAPE). 0 empty, 1 ready,
  * -1 cannot serialize. song_keep holds the unsaved live section for the duration of this operation. */
 BTAPP_FN static int song_copy_section(uint32_t section, uint32_t current, const char *name)
 {
@@ -19,6 +19,7 @@ BTAPP_FN static int song_copy_section(uint32_t section, uint32_t current, const 
     for (uint32_t i = 0; i < G_COUNT; i++)
         p->g[i] = mom_base(MOM_G, i, song.g[i]);
     p->g[G_DJF] = mom_base(MOM_G, G_DJF, motion_djf_value());
+    proj_master_put(p);                          /* the master's EQ and TAPE, song-wide too */
     if (song_save_loop) chain_defaults(&p->chain); else p->chain = chain_config;
     p->chain.rsv[1] = 0;                         /* saved sections belong to the player, not GEN */
     p->chain.rsv[2] = SONG_MODE_TAG | (!song_save_loop && live.mode ? 1u : 0u);

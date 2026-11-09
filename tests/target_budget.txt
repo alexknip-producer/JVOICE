@@ -49,6 +49,7 @@ add_render 297
 formant_word_render 553
 formant_block 99
 djf_block 199
+eq_block 355
 track_comb 115
 tf_run 124
 tf_ms20 94

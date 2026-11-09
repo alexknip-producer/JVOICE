@@ -476,6 +476,7 @@ static int songs_test(void)
 #include "fit_storage_cases.h"
 #include "voice_user_cases.h"
 #include "split_storage_cases.h"
+#include "eq_save_cases.h"
 
 #ifndef PERSISTENCE_TEST_NO_MAIN
 int main(void)
@@ -850,6 +851,7 @@ int main(void)
     bad += fit_storage_test();
     bad += voice_user_test();
     bad += split_storage_test();
+    bad += eq_save_test();
     {
         static project_store_t follow_store;
         song.playing = 0; transport_req = 0; chain.armed = chain.running = 0;

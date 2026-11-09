@@ -1341,6 +1341,15 @@ static void proj_fetch(uint32_t slot)
 }
 #endif
 
+/* (V10.58) the master's EQ and TAPE playing -> p (no sum). project_capture; SAVE SONG AS (song_save.c
+ * song_copy_section): every section stored with them, as the song's globals, so loading the project (its section A) or
+ * changing section gives them back, whichever section was playing when it was saved */
+static __attribute__((noinline)) void proj_master_put(project_t *p)
+{
+    uint32_t k;
+    for (k = 0; k < 4u; k++) p->eq[k] = (int8_t)eq_v[k];
+    p->tp[0] = (uint8_t)tape_v[0]; p->tp[1] = (uint8_t)tape_v[1];
+}
 static void project_capture(project_t *p)
 {
     uint32_t i;
@@ -1369,11 +1378,7 @@ static void project_capture(project_t *p)
     memcpy(p->dx, dx_kit, sizeof p->dx);
     p->dx_mute = dx_mute;
     memcpy(p->dx_mot, dx_mot, sizeof p->dx_mot);
-    {                                                   /* (V10.58) the master's EQ and TAPE */
-        uint32_t k;
-        for (k = 0; k < 4u; k++) p->eq[k] = (int8_t)eq_v[k];
-        p->tp[0] = (uint8_t)tape_v[0]; p->tp[1] = (uint8_t)tape_v[1];
-    }
+    proj_master_put(p);                                 /* (V10.58) the master's EQ and TAPE */
     {                                                   /* (V10.31) SCENE */
         uint32_t i;
         memset(p->scene, 0, sizeof p->scene);
@@ -2002,6 +2007,8 @@ static uint32_t autosave_sig(void)
     h = as_mix(h, &scn_on, 1);
     h = as_mix(h, scn_role, sizeof scn_role);           /* (V10.31) SCENE */
     h = as_mix(h, scn_pat, sizeof scn_pat);
+    h = as_mix(h, eq_v, sizeof eq_v);                   /* the master's EQ and TAPE (an EQ change alone: */
+    h = as_mix(h, tape_v, sizeof tape_v);               /* autosaved, RESTORE LAST gives it back) */
     return as_mix(h, proj_name, sizeof proj_name);
 }
 
