@@ -34,6 +34,8 @@
   .diag pre { max-height: 220px; overflow: auto; margin: 8px 0; }
   .diag button { font-size: 13px; padding: 4px 12px; margin: 0 6px 6px 0; }
   a { color: inherit; }
+  #download-fw { display: inline-block; padding: 12px 16px; border: 1px solid currentColor; border-radius: 6px; text-decoration: none; }
+  #download-fw:hover { color: var(--accent, #ff8a00); }
 </style>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -62,6 +64,8 @@
   <p class="small"><label><span data-t="verLabel"></span> <select id="ver" style="font:inherit"></select></label>
     <br><span data-t="verOld"></span></p>
   <p id="edition-info" class="small"></p>
+  <p><a id="download-fw" download data-t="downloadFw"></a></p>
+  <p class="small" data-t="downloadFwHelp"></p>
   <!-- (0.8.5) the release's notice, before 0.8.5 is written (releaseNotice) -->
   <div id="notice" class="jiant-notice" hidden>
     <p style="margin:0 0 8px;font-weight:600" data-t="n085Title"></p>
@@ -531,6 +535,9 @@ for (const L of ["en", "es", "ja"])
   for (const k of ["tip_stockModified", "tip_stockCustom", "tip_stockOtherVer", "tip_stockNotV15", "tip_stockZip", "tip_stockError"])
     TEXT[L][k] = TEXT[L].tip_stock;
 for (const L of ["en", "es", "ja"]) TEXT[L].stockV16 = "";   /* (stockWhere names V16 itself now) */
+Object.assign(TEXT.es, { downloadFw: "Descargar firmware (.fwsc)", downloadFwHelp: "Descarga la versión seleccionada sin conectar el FM-1." });
+Object.assign(TEXT.en, { downloadFw: "Download firmware (.fwsc)", downloadFwHelp: "Download the selected version without connecting the FM-1." });
+Object.assign(TEXT.ja, { downloadFw: "ファームウェアをダウンロード (.fwsc)", downloadFwHelp: "FM-1 を接続せずに、選択したバージョンをダウンロードできます。" });
 const LANGS = ["es", "en", "ja"];
 const navLang = (navigator.language || "en").toLowerCase();
 let lang = navLang.startsWith("ja") ? "ja" : navLang.startsWith("es") ? "es" : "en";
@@ -616,6 +623,8 @@ function fillVersions() {
 }
 function showEdition() {
   const v = versions[+$("ver").value] || versions[0];
+  $("download-fw").href = v.pkg;
+  $("download-fw").download = v.pkg.split("/").pop();
   $("edition-info").textContent = t((v.edition || "").startsWith("SAMPLE") ? "editionSample" : (v.edition || "").startsWith("ADDITIVE") ? "editionAdd" : "editionStandard");
 }
 async function loadVersion(i) {
