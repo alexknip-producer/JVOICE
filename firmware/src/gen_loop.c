@@ -6,19 +6,26 @@
  * The music as it is is the loop: its tracks, their steps and sounds stay as they are and are section A, the song's
  * peak (its drop). Read from it (gls_hear): the key (each pitch class weighed by its length, its velocity and the beat
  * it falls on; the bass's, the lowest notes', count again for the tonic; DRUM-X's tonal lanes, little noise, not METAL,
- * a LONG or long ring, and an EXTENDED kit's chromatic run, by their pitch) and a chord a bar (a half bar in a one-bar
- * loop), the mode's triad whose root, third and fifth sound most there, the bass's note the root's hint, a seventh
- * where it sounds. That becomes the piece's harmony (no tone in it: GEN's own key and progression in the genre). Each
- * track a role by what it plays (gls_role). On EMPTY tracks only (no note), by GEN's knobs (BASS CHORDS ARP; AUTO: the
+ * a LONG or long ring, and an EXTENDED kit's chromatic run, by their pitch), one of six modes (PHRY MIN HARM DOR MIX
+ * MAJ; where the loop leaves two alike, the genre's, the minor, the darker where the loop is distorted or the genre
+ * heavy). (MY LOOP 2, the owner: "every seed the same major chords, the aggression gone, the genre does nothing") Its
+ * chords made again each seed (gls_reharm): a chord a segment (a bar; a half bar in a one-bar loop) holding the loop's
+ * notes there, the heard progression a quarter of the seeds, else drawn by fit with the genre's own chords and a dark
+ * loop's minor ones likelier (EXPLORE: wider). No tone in it: GEN's own key and progression in the genre. Each track a
+ * role by what it plays (gls_role). On EMPTY tracks only (no note), by GEN's knobs (BASS CHORDS ARP; AUTO: the
  * genre's): a bass where the loop has none, chords on the progression where it has none, an arp: a counter-melody made
- * of the loop's own melody (gls_counter) or, without one, an arp of the chords. The genre (GENRE; RANDOM and EXPLORE:
- * inferred, gls_genre) gives the sounds and the mix of those parts and the form: SONG's rows (gen_parts) from the
- * loop's material only: the intro and outro its drums thinned, the layers in by the genre's priorities, the build its
- * drums repeated with a roll on its own snare (clap, rim), the high-pass and the chords' filter opening, the break
- * without drums and bass, the fills ARRANGE's FILL of the kit's own sounds, every drop row the loop whole. A seed a
- * song; OCT+ again a new seed, the loop kept (the parts this one added made again). UNDO (GLO + G4) the loop as it
- * was, in LOOP mode. gls_hear, gls_prep, gls_counter live in the Bluetooth segment (BTAPP_FN: GEN runs only once
- * bt_hw_seg() said it is this build's, gen_go; else its message, BLUETOOTH MISSING) */
+ * of the loop's own melody (gls_counter) or, without one, an arp of the chords. The genre (GENRE; RANDOM: inferred,
+ * gls_genre; EXPLORE: a seed's, near the loop's tempo) gives the sounds and the mix of those parts, and its DNA to every
+ * section but the drop (gen_parts): the verse (B) its drums (its map, on the loop's kit), its bass, chords, arp and
+ * lead on the loop's sounds over its own progression (gls.v); the build (C) the genre's parts on the drop's chords, the
+ * drums the verse's or the loop's (half the seeds) repeated with a roll on its snare (clap, rim), the high-pass and the
+ * chords' filter opening; the break (D) without drums and bass, on the genre's or the drop's chords from the
+ * predominant. The rows SONG's (the club's or the arc's, a seed's), the verse in the groove and in a seed's intros and
+ * outros, a seed's lengths and energies; the intro and outro drums thinned, the layers in by the genre's priorities,
+ * the fills ARRANGE's FILL, every drop row the loop whole. A seed a song; OCT+ again a new seed, the loop kept (the
+ * parts this one added made again). UNDO (GLO + G4) the loop as it was, in LOOP mode. gls_hear, gls_role, gls_any,
+ * gls_begin, gls_counter live in the Bluetooth segment (BTAPP_FN: GEN runs only once bt_hw_seg() said it is this
+ * build's, gen_go; else its message, BLUETOOTH MISSING) */
 
 static uint32_t gls_sig __attribute__((section(".bss.gls")));   /* the music the last FROM LOOP left (its parts: gls.add) */
 static uint32_t gls_hash(void)
@@ -28,7 +35,7 @@ static uint32_t gls_hash(void)
     return h;
 }
 /* a track's role by its steps (RL_N: no note) */
-static uint32_t gls_role(const track_t *t)
+BTAPP_FN static uint32_t gls_role(const track_t *t)   /* (the segment's: gls_begin, gls_prep) */
 {
     uint32_t i, n = 0, ch = 0, sum = 0, len = dlen(t);
     for (i = 0; i < len; i++) {
@@ -38,16 +45,18 @@ static uint32_t gls_role(const track_t *t)
     }
     return !n ? RL_N : drum_track(t) ? RL_DRUM : sum < 48u * n ? RL_BASS : ch * 3u > n ? RL_PAD : n * 2u > len ? RL_ARP : RL_LEAD;
 }
-/* the loop's key and chords (0: nothing tonal); seg: a chord's steps. The modes it tells apart: MAJ MIN DOR MIX (a
- * constant, not a table: the sound's merged constants stay put) */
-#define GLS_MODE(i) ((SC_MAJ | SC_MIN << 8 | SC_DOR << 16 | SC_MIX << 24) >> (8u * (i)) & 255u)
-BTAPP_FN static uint32_t gls_hear(uint32_t span)   /* (in the Bluetooth segment: GEN runs
-                                                         * only once bt_hw_seg() said it is this build's, gen_go) */
+/* the loop's key (0: nothing tonal; else its segments, a chord's steps each: gs.cst): w, b each segment's pitch classes
+ * heard and its lowest's (gls_reharm's). The modes it tells apart: PHRY MIN HARM DOR MIX MAJ (a constant, not a table:
+ * the sound's merged constants stay put), the darkest first; where the loop leaves two of them alike (no third, no
+ * sixth, no second: a power riff, an 808 on its root), the genre's own modes, then the minor one, the darker ones
+ * first where the loop is distorted or its genre heavy (gls.dark) */
+#define GLS_MODE(i) ((SC_PHRY | SC_MIN << 4 | SC_HARM << 8 | SC_DOR << 12 | SC_MIX << 16 | SC_MAJ << 20) >> (4u * (i)) & 15u)
+BTAPP_FN static uint32_t gls_hear(uint32_t span, uint16_t (*w)[12], uint16_t (*b)[12])   /* (in the Bluetooth segment:
+                                                         * GEN runs only once bt_hw_seg() said it is this build's, gen_go) */
 {
-    uint16_t w[4][12], b[4][12], tot[12];
-    uint8_t pcs[14];
+    uint16_t tot[12];
     uint32_t k, i, j, l, seg = span <= 16u || span % 16u ? 8u : 16u, ns = span / seg, all = 0, best = 0, bk = 0;
-    memset(w, 0, sizeof w); memset(b, 0, sizeof b); memset(tot, 0, sizeof tot);
+    memset(w, 0, 4u * sizeof *w); memset(b, 0, 4u * sizeof *b); memset(tot, 0, sizeof tot);
     if (!ns) ns = 1;
     if (ns > 4u) ns = 4;
     for (k = 0; k < NTRK; k++) {
@@ -82,33 +91,62 @@ BTAPP_FN static uint32_t gls_hear(uint32_t span)   /* (in the Bluetooth segment:
         }
     }
     if (all < 12u) return 0;                            /* (a few hits: the genre's own harmony) */
-    for (k = 0; k < 4u * 12u; k++) {                    /* the key: the mode's notes against the others, the tonic heard */
-        uint32_t r = k % 12u, m = SCALE_MASK[GLS_MODE(k / 12u)] * 0x1001u >> (12u - r), sc = 1u << 30, lo = 0;   /* (the
-                                                         * mode on r: m bit l; unsigned, from 2^30, never under 0) */
+    for (k = 0; k < 6u * 12u; k++) {                    /* the key: the mode's notes against the others, the tonic heard */
+        uint32_t r = k % 12u, mi = k / 12u, md = GLS_MODE(mi), m = SCALE_MASK[md] * 0x1001u >> (12u - r), sc = 1u << 24, lo = 0;   /* (the
+                                                         * mode on r: m bit l; unsigned, from 2^24, never under 0) */
         for (l = 0; l < 12u; l++) sc += (m >> l & 1u) ? 2u * tot[l] : -3u * tot[l];
         for (i = 0; i < ns; i++) lo += b[i][r];
         sc += 2u * tot[r] + 3u * lo + 6u * b[0][r] + w[0][r] + tot[(r + 7u) % 12u];   /* (the first bar's bass: the
                                                          * tonic's likeliest) */
+        for (j = 0, l = 0; j < 4u; j++) l |= gs.g->scale[j] == md;
+        sc = sc * 8u + 2u * l + (mi == 1u) + (gls.dark && mi < 3u ? 4u : 0u);   /* (alike: the genre's, minor, dark) */
         if (sc > best) { best = sc; bk = k; }
     }
     gs.root = (int16_t)(bk % 12u); gs.scale = (int16_t)GLS_MODE(bk / 12u);
     for (j = 0, l = 0; l < 12u; l++) if ((SCALE_MASK[gs.scale] >> l) & 1u) gs.sc[j++] = (uint8_t)l;
-    for (j = 0; j < 14u; j++) pcs[j] = (uint8_t)((gs.root + gs.sc[j % 7u]) % 12u);
     gs.pal = 0x7Fu;
     gs.hx = (uint8_t)(HXF(gs.hx) == HF_JAZZ ? HF_JAZZY : HXF(gs.hx));   /* (no colour of GEN's over the loop's chords) */
-    for (i = 0; i < ns; i++) {                          /* a chord a segment: the mode's triad heard most */
-        uint32_t bd = i ? gs.pdeg[i - 1u] : 0u, bs = 0, d;
-        const uint16_t *x = w[i];
-        for (d = 0; d < 7u; d++) {
+    gs.cst = seg;
+    return ns;
+}
+/* (MY LOOP) the drop's chords, a seed's own: a chord a segment that holds the loop's notes there (its root, third and
+ * fifth what sounds most, the bass's note one of them, no note of the loop a semitone off them louder than half its
+ * tones but the tonic's own, the mode's b2 and b6; a seventh where it sounds; the genre's power chords where it plays
+ * them): a quarter of the seeds the heard one (each segment's likeliest), else each segment's drawn by how well it fits
+ * (EXPLORE: more often, and chords fitting less well), the genre's own chord there (gen_pick's progression) and a dark
+ * loop's minor chords likelier. The verse's (gen_parts' B): the genre's own where the loop's mode takes it (gls.v) */
+static __attribute__((noinline)) void gls_reharm(const uint16_t (*w)[12], const uint16_t (*b)[12], uint32_t ns)
+{
+    uint32_t i, d, l, x = gp.genre == GEN_EXPLORE, way = gr() % 100u, s7[7], best, bd, sum;
+    uint8_t pc[14];
+    for (d = 0; d < 14u; d++) pc[d] = (uint8_t)gpc((int32_t)d);
+    for (i = 0; i < ns; i++) {
+        for (d = best = bd = 0; d < 7u; d++) {
             gch_t c = {0, 0, (uint8_t)d, 0, 0};
-            uint32_t sc = 4u * x[pcs[d]] + 3u * (x[pcs[d + 2u]] + x[pcs[d + 4u]]) + x[pcs[d + 6u]] + 5u * b[i][pcs[d]];
-            if (sc > bs && gtriad_ok(&c)) { bs = sc; bd = d; }
+            uint32_t r = pc[d], m = 1u << r | 1u << pc[d + 2u] | 1u << pc[d + 4u], sv = pc[d + 6u];
+            uint32_t nb = (m * 2u | m / 2u | m << 11 | m >> 11) & ~(m | 1u << sv), neg = 0, pos = 0;
+            int32_t v;
+            for (l = 0; l < 12u; l++) {
+                uint32_t y = w[i][l] + b[i][l];
+                if (m >> l & 1u) pos += y;
+                else if (nb >> l & 1u && d) neg += y;   /* (the tonic's: the mode's own tensions) */
+            }
+            v = (int32_t)(3u * pos + 2u * b[i][r] + w[i][sv]) - 3 * (int32_t)neg;   /* (the bass the root, the seventh
+                                                         * where it sounds; a semitone off a chord tone against) */
+            s7[d] = gtriad_ok(&c) && 2u * neg <= pos && v > 0 ?
+                    (uint32_t)v << ((gls.dark && giv(&c, 2) == 3) + (gls.v.n && d == (uint32_t)gls.v.deg[i % gls.v.n])) : 0u;
+            if (s7[d] > best) { best = s7[d]; bd = d; }
         }
+        for (d = sum = 0; d < 7u; d++) sum += s7[d] = s7[d] * (x ? 4u : 3u) >= best ? s7[d] : 0u;
+        if (way >= (x ? 10u : 25u) && sum)              /* (drawn by its fit) */
+            for (l = gr() % sum, bd = 0; l >= s7[bd]; bd++) l -= s7[bd];
         gs.pdeg[i] = (uint8_t)bd;
-        gs.pq[i] = (uint8_t)(2u * x[pcs[bd + 6u]] > x[pcs[bd]] ? Q_7 : Q_TRI);
+        gs.pq[i] = (uint8_t)(2u * w[i][pc[bd + 6u]] > w[i][pc[bd]] ? Q_7 : gs.vm == VM_POWER ? Q_POWER : Q_TRI);
     }
-    gs.pn = (uint8_t)ns; gs.cst = seg;
-    return 1;
+    gs.pn = (uint8_t)ns;
+    d = gs.hx; gs.hx = gls.hx;
+    if (!gprog_ok(&gls.v)) gls.v.n = 0;                 /* (the verse's: with the genre's colours) */
+    gs.hx = (uint8_t)d;
 }
 /* (FROM LOOP) the counter-melody: the loop's melody src again, displaced an eighth or a beat, its first half
  * answered, turned upside down round its first note or kept to the beats, an octave away, in the key */
@@ -151,10 +189,12 @@ static uint32_t gls_genre(void)
 {
     uint32_t bpm = (uint32_t)song.g[G_BPM], i, n = 0, dr = gs.trk_of[RL_DRUM] % NTRK;
     if (gp.genre && gp.genre <= NGENRE) return gp.genre - 1u;
-    for (i = 0; i < 64u; i++) n += gkick(i);
+    if (gp.genre == GEN_EXPLORE)                        /* (EXPLORE: a seed's, any whose tempo is near the loop's) */
+        for (i = 0; i < 32u; i++) { n = gr() % NGENRE; if (bpm + 24u >= GENRE[n].bpm_lo && bpm <= GENRE[n].bpm_hi + 24u) return n; }
+    for (i = n = 0; i < 64u; i++) n += gkick(i);
     return bpm >= 100u && n * 4u >= dlen(&trk[dr]) ? (bpm > 138u ? 1u : 3u) : bpm >= 110u ? 16u : 22u;
 }
-static uint32_t gls_any(void)                           /* the music has a note */
+BTAPP_FN static uint32_t gls_any(void)                  /* the music has a note */
 {
     uint32_t k, n = 0;
     for (k = 0; k < NTRK; k++) n |= gls_role(&trk[k]) < RL_N;
@@ -162,7 +202,7 @@ static uint32_t gls_any(void)                           /* the music has a note 
 }
 /* gen_go's first step: the UNDO point (FROM LOOP again on its own song: still the project before the first); 1: an
  * empty loop, nothing to make */
-static __attribute__((noinline)) uint32_t gls_begin(void)
+BTAPP_FN static uint32_t gls_begin(void)   /* (the segment's: gen_go asked bt_hw_seg() first) */
 {
     if (gp.form == 3u && !gls_any()) { ui_message("THE LOOP IS EMPTY"); return 1; }
     if (gp.form != 3u || !gls.u || gls_sig != gls_hash()) undo_mark();
@@ -173,7 +213,8 @@ static __attribute__((noinline)) uint32_t gls_begin(void)
 static __attribute__((noinline)) void gls_prep(void)
 {
     static const uint8_t ROLE[3] = {RL_BASS, RL_PAD, RL_ARP}, AMT[3] = {GP_BASS, GP_CHORDS, GP_ARP};
-    uint32_t k, r, j, span = 1, room = 1, ld = NTRK, ml = NTRK, fm6 = 0;
+    uint16_t w[4][12], b[4][12];
+    uint32_t k, r, j, span = 1, room = 1, ld = NTRK, ml = NTRK, fm6 = 0, dk = 0;
     if (gls_sig != gls_hash()) gls.add = 0;             /* (OCT+ again: the parts it added made again) */
     for (k = 0; k < NTRK; k++)
         if ((gls.add >> k) & 1u) { load_begin(&trk[k], LOAD_PAT); gclear_all(&trk[k]); motion_clear(&trk[k]); load_end(&trk[k]); }
@@ -192,18 +233,23 @@ static __attribute__((noinline)) void gls_prep(void)
         if (r != RL_DRUM && ml == NTRK) ml = k;
         gls.mute |= (uint8_t)((t->p[P_MUTE] != 0) << k);
         fm6 += t->eng_req == ENGI_FM6;
+        dk |= t->p[P_DIST] >= 30;                       /* (a distorted part: the darker mode where two are alike) */
         if (dlen(t) > span) span = dlen(t);
     }
     if (gs.act[RL_DRUM]) gkick_of(&trk[gs.trk_of[RL_DRUM]], dlen(&trk[gs.trk_of[RL_DRUM]]));
+    gseed(GS_PICK);
     gs.gi = gls_genre();
     gmut = GENRE[gs.gi]; gs.g = &gmut;
-    gseed(GS_PICK);
     gen_pick();                                         /* (the genre's choices: amounts, voicing, bass, its harmony) */
     gs.len = span;
-    if ((gls.heard = (uint8_t)gls_hear(span)) != 0) {
+    gls.hx = gs.hx; gls.v.n = gs.pn;                   /* (the genre's progression: the verse's) */
+    memcpy(gls.v.deg, gs.pdeg, 8);
+    gls.dark = (uint8_t)(dk | ((gmut.spec & GSP_HEAVY) != 0));
+    if ((gls.heard = (uint8_t)(r = gls_hear(span, w, b))) != 0) {
         gs.hx &= 7u;
         if (gs.vm == VM_PLANE) gs.vm = VM_PLAIN;        /* (a shape moved would leave the key the loop's chords keep) */
-    }
+        gls_reharm(w, b, r);
+    } else gls.v.n = 0;
     gplan(0);
     gs.fm6 = fm6;
     gseed(GS_SOUND);

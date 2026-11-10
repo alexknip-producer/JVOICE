@@ -1,9 +1,12 @@
 /* SPDX-License-Identifier: GPL-3.0-only */
-/* GEN FORM FROM LOOP (gen_loop.c): the loop made a song. The loop's key and chords heard (C major I V vi IV, A minor
- * i VI III VII, a DRUM-X 808 line alone, drums without a tone: the genre's own), the loop untouched as section A, every
- * section of the loop's material only, the new parts on empty tracks in the heard key, the song played from its first
- * row to its last and round, kept through a round trip of its sections and rows, UNDO, a seed a song, OCT+ again
- * another song from the same loop, no empty track: only arranged. Host UI model (tests/ui_test.c) */
+/* GEN FORM FROM LOOP (gen_loop.c): the loop made a song. The loop's key heard (C major, A minor, a DRUM-X 808 line
+ * alone, drums without a tone: the genre's own; an aggressive phrygian loop, a power riff without a third, a dark
+ * techno loop: phrygian, minor, never major), its chords made again each seed (every chord of the drop holding the
+ * loop's notes there; the heard progression one seed's; many progressions over sixteen seeds, a dark loop's mostly
+ * minor), the loop untouched as section A, the verse and the break the genre's (its drums on the loop's kit: other
+ * drums for another genre), the new parts on empty tracks in the heard key, the rows a seed's, the song played from
+ * its first row to its last and round, kept through a round trip of its sections and rows, UNDO, a seed a song, OCT+
+ * again another song from the same loop, no empty track: only arranged. Host UI model (tests/ui_test.c) */
 #define UI_TEST_NO_MAIN 1
 #include "ui_test.c"
 
@@ -99,7 +102,7 @@ static int lt_same(void)
         }
     return (int)ok;
 }
-/* every note of a loop track in section s is one the loop's track plays; the drums' lanes the loop's */
+/* every note of a loop track in section s is one the loop's track plays; the drums' lanes the loop's (the drop's: A) */
 static int lt_derived(uint32_t s)
 {
     uint32_t k, i, j, ii, ok = 1;
@@ -142,6 +145,83 @@ static int lt_in_key(uint32_t pct, uint32_t *nadd)
     return all && in * 100u >= all * pct;
 }
 
+/* (MY LOOP 2) the loops of the owner's report: 0 an aggressive E phrygian (a distorted 808 E F E F, a distorted lead
+ * on E F G C B), 1 a power riff without a third (E B D, distorted), 2 dark techno (A one-note bass, a m7 stab) */
+static void lt_dark(int which)
+{
+    static const uint8_t B0[8] = {28, 29, 28, 29, 28, 31, 29, 28}, L0[16] = {64, 65, 64, 0, 65, 64, 0, 67, 65, 64, 0, 0, 72, 71, 65, 64};
+    static const uint8_t B1[8] = {28, 28, 26, 28, 28, 35, 33, 28}, L1[16] = {64, 0, 64, 71, 0, 74, 71, 0, 64, 0, 76, 74, 0, 71, 69, 71};
+    uint32_t i, b;
+    uint8_t n;
+    lt_clear();
+    for (i = 0; i < 64u; i++) {
+        if (i % 4u == 0u) lt_hit(&trk[0], i, 1u << DV_KICK);
+        if (i % 8u == 4u) lt_hit(&trk[0], i, 1u << (which == 2 ? DV_CLAP : DV_SNARE));
+        if (i % 2u) lt_hit(&trk[0], i, 1u << DV_HATC);
+    }
+    set_engine_of(&trk[1], 0);
+    if (which == 2) {
+        uint8_t c[3] = {57, 60, 67};
+        song.g[G_BPM] = 132;
+        for (i = 0; i < 64u; i++) if (i % 4u) { n = i % 16u == 14u ? 36 : 33; lt_note(&trk[1], i, &n, 1, 0); }
+        set_engine_of(&trk[2], 0);
+        for (b = 0; b < 4u; b++) lt_note(&trk[2], b * 16u + 6u, c, 3, 1);
+        return;
+    }
+    song.g[G_BPM] = 145;
+    trk[0].p[P_DIST] = 70; trk[1].p[P_DIST] = 110; trk[3].p[P_DIST] = 100;
+    for (i = 0; i < 8u; i++) lt_note(&trk[1], i * 8u, which ? &B1[i] : &B0[i], 1, 3);
+    for (b = 0; b < 4u; b++) for (i = 0; i < 16u; i++) if ((which ? L1 : L0)[i]) lt_note(&trk[3], b * 16u + i, &(which ? L1 : L0)[i], 1, 0);
+}
+/* the drop's plan against the loop: every segment's chord holds the loop's notes there (its tones heard, a note a
+ * semitone off them softer than half of them, the tonic's chord its mode's tensions); its chords major (power chords
+ * not), all; a hash of its degrees and qualities */
+static int lt_fits(uint32_t *nmaj, uint32_t *nall, uint32_t *hash)
+{
+    uint32_t i, k, l, ok = 1, seg = gs.cst ? gs.cst : 16u, h = 2166136261u;
+    for (i = 0; i < gs.pn; i++) {
+        uint32_t w[12] = {0}, m = 0, nb, pos = 0, neg = 0, sv;
+        const gch_t *c = gchord(i * seg);
+        for (k = 0; k < NTRK; k++) {
+            const track_t *t = &trk[k];
+            uint32_t len = dlen(t), j, st;
+            if (!((lt_used >> k) & 1u) || drum_track(t)) continue;
+            for (st = i * seg; st < (i + 1u) * seg; st++) {
+                const step_t *s = &t->step[st % len];
+                uint32_t d = 1;
+                if (s->time != ST_NOTE) continue;
+                while (d < len && t->step[(st + d) % len].time == ST_TIE) d++;
+                for (j = 0; j < s->n; j++) w[s->note[j] % 12u] += d;
+            }
+        }
+        for (k = 0; k < 3u; k++) m |= 1u << (uint32_t)gtone(c, 2 * (int32_t)k, 12) % 12u;
+        sv = 1u << (uint32_t)gtone(c, 6, 12) % 12u;
+        nb = (m * 2u | m / 2u | m << 11 | m >> 11) & 0xFFFu & ~(m | sv);
+        for (l = 0; l < 12u; l++) { if (m >> l & 1u) pos += w[l]; else if (nb >> l & 1u) neg += w[l]; }
+        ok &= pos > 0 && (c->deg == 0 || 2u * neg <= pos);
+        if (getenv("LT_V") && !(pos > 0 && (c->deg == 0 || 2u * neg <= pos))) printf("   segment %u deg %u: tones %u, a semitone off %u\n", i, c->deg, pos, neg);
+    }
+    for (i = 0; i < gs.nch; i++) {
+        h = (h ^ (gs.ch[i].deg * 16u + gs.ch[i].q)) * 16777619u;
+        ++*nall; *nmaj += gs.ch[i].q != Q_POWER && giv(&gs.ch[i], 2) == 4;
+    }
+    *hash = h;
+    return (int)ok;
+}
+static int lt_distinct(const uint32_t *h, int n) { int i, j, d = 0; for (i = 0; i < n; i++) { for (j = 0; j < i && h[j] != h[i]; j++) {} d += j == i; } return d; }
+/* section s's drum track steps (a hash) */
+static uint32_t lt_drums_of(uint32_t s)
+{
+    if (!proj_import(&proj_scratch, &proj_slot[s], sizeof(project_store_t))) return 0;
+    return lt_fh(2166136261u, proj_scratch.t[0].step, sizeof proj_scratch.t[0].step);
+}
+static uint32_t lt_rows(void)
+{
+    uint32_t h = 2166136261u, r;
+    for (r = 0; r < chain_config.count; r++) h = (h ^ (chain_config.row[r].slot * 64u + chain_config.row[r].bars)) * 16777619u;
+    return h;
+}
+
 int main(void)
 {
     static const uint8_t CMAJ[4][3] = {{60, 64, 67}, {55, 59, 62}, {57, 60, 64}, {53, 57, 60}};   /* I V vi IV */
@@ -153,18 +233,59 @@ int main(void)
     char msg[32];
 
     /* ---- the key and the chords heard */
-    lt_clear(); lt_drums(16); lt_prog(CMAJ, MEL_C); lt_keep();
-    lt_go(4, 21);                                       /* (HOUSE) */
-    ok = gls.heard && gs.root == 0 && gs.scale == SC_MAJ && gs.pn == 4 && gs.pdeg[0] == 0 && gs.pdeg[1] == 4 &&
-         gs.pdeg[2] == 5 && gs.pdeg[3] == 3;
-    printf("  heard: root %d scale %d chords %u: %u %u %u %u\n", gs.root, gs.scale, gs.pn, gs.pdeg[0], gs.pdeg[1], gs.pdeg[2], gs.pdeg[3]);
-    bad += check("FROM LOOP hears C major's I V vi IV (the key, a chord a bar)", ok);
-    lt_clear(); lt_drums(16); lt_prog(AMIN, MEL_A); lt_keep();
-    lt_go(4, 21);
-    ok = gls.heard && gs.root == 9 && gs.scale == SC_MIN && gs.pn == 4 && gs.pdeg[0] == 0 && gs.pdeg[1] == 5 &&
-         gs.pdeg[2] == 2 && gs.pdeg[3] == 6;
-    printf("  heard: root %d scale %d chords %u: %u %u %u %u\n", gs.root, gs.scale, gs.pn, gs.pdeg[0], gs.pdeg[1], gs.pdeg[2], gs.pdeg[3]);
-    bad += check("FROM LOOP hears A minor's i VI III VII", ok);
+    for (r = 0; r < 2u; r++) {   /* (a seed a progression: the heard one some seed's, every one holding the loop's notes) */
+        static const uint8_t HEARD[2][4] = {{0, 4, 5, 3}, {0, 5, 2, 6}};
+        uint32_t seen = 0, fit = 1, key = 1, hs[16], nmj = 0, nal = 0;
+        for (k = 0; k < 16u; k++) {
+            lt_clear(); lt_drums(16); lt_prog(r ? AMIN : CMAJ, r ? MEL_A : MEL_C); lt_keep();
+            lt_go(4, 21 + k * 13u);                     /* (HOUSE) */
+            key &= gls.heard && gs.root == (r ? 9 : 0) && gs.scale == (r ? SC_MIN : SC_MAJ) && gs.pn == 4;
+            seen |= !memcmp(gs.pdeg, HEARD[r], 4);
+            fit &= lt_fits(&nmj, &nal, &hs[k]);
+        }
+        printf("  heard: root %d scale %d; %d progressions of 16 seeds\n", gs.root, gs.scale, lt_distinct(hs, 16));
+        bad += check(r ? "FROM LOOP hears A minor; its i VI III VII one seed's, every drop's chords holding the loop's notes" :
+                         "FROM LOOP hears C major (a chord a bar); its I V vi IV one seed's, every drop's chords holding the loop's notes",
+                     key && seen && fit && lt_distinct(hs, 16) >= 4);
+    }
+    {   /* (MY LOOP 2, the owner: "always the same major chords, the aggression gone") dark loops stay dark */
+        static const char *const W[3] = {"an aggressive E phrygian loop (its 808 and lead distorted, the b2): E PHRYGIAN",
+                                         "a power riff without a third (distorted): E MINOR, not major",
+                                         "a dark techno loop (one note, a m7 stab): A MINOR"};
+        static const int16_t ROOT[3] = {4, 4, 9}, SC[3] = {SC_PHRY, SC_MIN, SC_MIN};
+        static const unsigned GN[4] = {9, 3, 2, GEN_EXPLORE};   /* REGGAETON HARD BASS HARD TECHNO EXPLORE */
+        for (r = 0; r < 3u; r++) {
+            uint32_t key = 1, fit = 1, nmj = 0, nal = 0, hs[16], hr[16], g;
+            for (g = 0; g < 4u; g++)
+                for (k = 0; k < 4u; k++) {
+                    uint32_t i = g * 4u + k;
+                    lt_dark((int)r); lt_keep();
+                    lt_go(GN[g], 5 + i * 31u);
+                    key &= gls.heard && gs.root == ROOT[r] && gs.scale == SC[r];
+                    fit &= lt_fits(&nmj, &nal, &hs[i]);
+                    hr[i] = lt_rows() ^ lt_song();
+                }
+            printf("  %s: root %d scale %d, %d drop progressions and %d songs of 16, %u%% of the drops' chords major\n",
+                   W[r], gs.root, gs.scale, lt_distinct(hs, 16), lt_distinct(hr, 16), nal ? nmj * 100u / nal : 0u);
+            bad += check(W[r], key);
+            bad += check("  every drop chord holds the loop's notes; many progressions, every song another; mostly not major",
+                         fit && lt_distinct(hs, 16) >= (r == 2u ? 3 : 5) && lt_distinct(hr, 16) == 16 && nmj * 100u <= nal * 35u);
+        }
+    }
+    {   /* (MY LOOP 2: "the genre does nothing") the genre's DNA in the verse: its drums on the loop's kit, another for
+         * another genre; its progression; EXPLORE a genre a seed (near the loop's tempo) */
+        uint32_t dA, dR, dH, gi[8], nv = 0;
+        lt_dark(0); lt_keep(); lt_go(9, 77); dA = lt_drums_of(0); dR = lt_drums_of(1); nv += gls.v.n != 0;
+        lt_dark(0); lt_go(3, 77); dH = lt_drums_of(1); nv += gls.v.n != 0;
+        printf("  verse drums: loop %08x REGGAETON %08x HARD BASS %08x\n", dA, dR, dH);
+        bad += check("the verse's drums the genre's (not the loop's; REGGAETON's not HARD BASS's), its progression the genre's",
+                     dA && dR && dH && dR != dA && dH != dA && dR != dH && nv == 2u);
+        for (k = 0; k < 8u; k++) { lt_dark(0); lt_go(GEN_EXPLORE, 100 + k); gi[k] = gs.gi; }
+        ok = 1;
+        for (k = 0; k < 8u; k++) ok &= song.g[G_BPM] + 24 >= GENRE[gi[k]].bpm_lo && song.g[G_BPM] <= GENRE[gi[k]].bpm_hi + 24;
+        printf("  EXPLORE: %d genres of 8 seeds\n", lt_distinct(gi, 8));
+        bad += check("EXPLORE: a genre a seed, near the loop's tempo", ok && lt_distinct(gi, 8) >= 4);
+    }
     lt_clear(); lt_drums(16);
     {   /* an 808 line on DRUM-X's KICK, its chromatic run (EXTENDED: notes 0..12 the kick a semitone each) */
         static const uint8_t L[8] = {9, 9, 12, 16, 9, 7, 12, 9};   /* (A A C E A G C A as the run's pitch classes) */
@@ -206,13 +327,12 @@ int main(void)
         project_capture(&proj_scratch);
         ok &= lt_same();
         bad += check("the loop's tracks untouched (steps, sound, mix) in section A and in the music after", ok);
-        ok = 1;
-        for (k = 0; k < 4u; k++) ok &= lt_derived(k);
-        bad += check("every section's notes and drum lanes the loop's own (B C D derived from A)", ok);
+        bad += check("the drop's notes and drum lanes the loop's own (A as it was)", lt_derived(0));
         ok = lt_in_key(g == 1 ? 90u : 95u, &n) && n >= 1u && !(gls.add & lt_used);
         bad += check("its new parts only on empty tracks, in the heard key", ok);
         if (g == 0) bad += check("RANDOM / EXPLORE aside: the genre the knob chose", gs.gi == 3u);
-        else bad += check("RANDOM / EXPLORE: a club genre for a four-on-the-floor loop at 124 BPM", gs.g->form != FM_ARC);
+        else if (g == 1) bad += check("RANDOM: a club genre for a four-on-the-floor loop at 124 BPM", gs.g->form != FM_ARC);
+        else bad += check("EXPLORE: a genre near the loop's tempo", song.g[G_BPM] + 24 >= gs.g->bpm_lo && song.g[G_BPM] <= gs.g->bpm_hi + 24);
         /* played from the first row to the last and round again */
         press(B_PLAY); events_block(CTL); song_poll(); frame();
         ok = chain.running && chain.row == 0;

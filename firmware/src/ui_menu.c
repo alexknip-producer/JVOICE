@@ -411,34 +411,36 @@ static __attribute__((noinline)) void menu_panel(void)
 #define BPC_MS 2500u
 static struct { uint32_t t0, ts; uint8_t on, n, v[64]; } bpc __attribute__((section(".bss.bpc")));   /* (V10.6z8) a point
                                                          * being taken (bt_cal_tick): 1 FAR 2 NEAR, its samples */
-static const char BP_S[][28] BTAPP_RO = {"BLUETOOTH \xB7 PROX", "SELECT: BACK", "NOT CONNECTED", "NOT CALIBRATED",
-                                          "OCT-  FAR: PHONE AWAY", "OCT+  NEAR: PHONE ON THE", "FM-1, TOP LEFT (ANTENNA)",
-                                          "PROX FAR SET", "PROX NEAR SET", "LEVEL ", "   RAW ", "FAR ", "   NEAR ", "%",
-                                          "K1 MIN ", "%  K2 MAX ", "%  K3 SPD "};
+/* (the texts one after the other, each after the one before's NUL: BPS(i) the i-th; no row padded to the longest) */
+static const char BP_P[] BTAPP_RO = "BLUETOOTH \xB7 PROX\0""SELECT: BACK\0""NOT CONNECTED\0""NOT CALIBRATED\0""OCT-  FAR: PHONE AWAY\0"
+                                     "OCT+  NEAR: PHONE ON THE\0""FM-1, TOP LEFT (ANTENNA)\0""PROX FAR SET\0""PROX NEAR SET\0""LEVEL \0"
+                                     "   RAW \0""FAR \0""   NEAR \0""%\0""K1 MIN \0""%  K2 MAX \0""%  K3 SPD ";
+static const uint8_t BP_O[17] BTAPP_RO = {0, 17, 30, 44, 59, 81, 106, 131, 144, 158, 165, 173, 178, 187, 189, 197, 208};
+#define BPS(i) (BP_P + BP_O[i])
 BTAPP_FN static void bt_prox_panel(const aafont_t *fx, const aafont_t *fm, const aafont_t *fs)   /* (the fonts
                                                                                                   * from the app: V10.14) */
 {
     char b[40];
     uint32_t k;
     int32_t p = mod_prox;
-    cv_text(10, 6 - AF_X_CAP_Y, fx, BP_S[0], T_THEME);
-    cv_text_r(228, 6 - AF_X_CAP_Y, fx, BP_S[1], T_DIM, T_SURF);
+    cv_text(10, 6 - AF_X_CAP_Y, fx, BPS(0), T_THEME);
+    cv_text_r(228, 6 - AF_X_CAP_Y, fx, BPS(1), T_DIM, T_SURF);
     cv_rect(10, 18, 220, 14, T_RAISE);
     heat_bar(10, 18, p * 220 / 32767, 220, 14, T_ACCENT);   /* (V10.7.7: cold to hot, the thermal palette) */
     fmt_int(b, p * 100 / 32767);
-    str_cpy(b + str_len(b), BP_S[13], 2);
+    str_cpy(b + str_len(b), BPS(13), 2);
     cv_text(10, 40 - AF_M_CAP_Y, fm, b, T_TEXT);
     if (bp.conn && bp.have) {
-        str_cpy(b, BP_S[9], sizeof b);
+        str_cpy(b, BPS(9), sizeof b);
         fmt_fix(b + str_len(b), bp.lvl * 10 / 256, 1);
-        str_cpy(b + str_len(b), BP_S[10], 10);
+        str_cpy(b + str_len(b), BPS(10), 10);
         for (k = 0; k < 4u; k++)
             b[str_len(b) + 1u] = 0, b[str_len(b)] = "0123456789ABCDEF"[bp.raw >> (12u - 4u * k) & 15u];
         b[str_len(b) + 3u] = 0;                         /* (V10.18) the reading used: "R" its word, its kind */
         k = str_len(b);
         b[k] = ' '; b[k + 1u] = (char)('0' + bp.src / 3u); b[k + 2u] = "WLH"[bp.src % 3u];
     } else
-        str_cpy(b, BP_S[2], sizeof b);
+        str_cpy(b, BPS(2), sizeof b);
     cv_text(10, 64 - AF_S_CAP_Y, fs, b, T_TEXT);
     {                                                   /* (V10.19) the link as seen: the radio's link, the RSSI hook's
                                                          * packets, the good packets received (16 bits each) */
@@ -456,22 +458,22 @@ BTAPP_FN static void bt_prox_panel(const aafont_t *fx, const aafont_t *fm, const
     if (bpc.on) {                                       /* (V10.6z8) a point being taken: how far */
         str_cpy(b, bpc.on > 1u ? "HOLD STILL: NEAR " : "HOLD STILL: FAR ", sizeof b);
         fmt_int(b + str_len(b), (int32_t)((fm1_ms - bpc.t0) * 100u / BPC_MS));
-        str_cpy(b + str_len(b), BP_S[13], 2);
+        str_cpy(b + str_len(b), BPS(13), 2);
     } else if (BT_CAL[0] != BT_CAL[1]) {
-        str_cpy(b, BP_S[11], sizeof b);
+        str_cpy(b, BPS(11), sizeof b);
         fmt_fix(b + str_len(b), BT_CAL[0] * 5, 1);
-        str_cpy(b + str_len(b), BP_S[12], 10);
+        str_cpy(b + str_len(b), BPS(12), 10);
         fmt_fix(b + str_len(b), BT_CAL[1] * 5, 1);
     } else
-        str_cpy(b, BP_S[3], sizeof b);
+        str_cpy(b, BPS(3), sizeof b);
     cv_text(10, 82 - AF_S_CAP_Y, fs, b, T_MID);
     for (k = 0; k < 3u; k++)
-        cv_text(10, 98 + 10 * (int32_t)k - AF_X_CAP_Y, fx, BP_S[4u + k], T_DIM);
-    str_cpy(b, BP_S[14], sizeof b);                     /* (V10.61) KNOB 1 MIN, KNOB 2 MAX, KNOB 3 SPEED */
+        cv_text(10, 98 + 10 * (int32_t)k - AF_X_CAP_Y, fx, BPS(4u + k), T_DIM);
+    str_cpy(b, BPS(14), sizeof b);                     /* (V10.61) KNOB 1 MIN, KNOB 2 MAX, KNOB 3 SPEED */
     fmt_int(b + str_len(b), BT_MIN());
-    str_cpy(b + str_len(b), BP_S[15], 16);
+    str_cpy(b + str_len(b), BPS(15), 16);
     fmt_int(b + str_len(b), BT_MAX() < BT_MIN() + 10 ? BT_MIN() + 10 : BT_MAX());
-    str_cpy(b + str_len(b), BP_S[16], 16);
+    str_cpy(b + str_len(b), BPS(16), 16);
     fmt_int(b + str_len(b), (int32_t)BT_SPEED() + 1);
     cv_text(10, 136 - AF_S_CAP_Y, fs, b, T_TEXT);
 }
@@ -489,7 +491,7 @@ static __attribute__((noinline)) void bt_prox_input(uint32_t up, uint32_t dn)   
         ui.force = 1;
     } else if (up || dn) {
         if (!bp.conn || !bp.have) {
-            ui_message(BP_S[2]);
+            ui_message(BPS(2));
             return;
         }
         bpc.on = (uint8_t)(up + 1u);                    /* (V10.6z8: ~2.5 s of it, bt_cal_tick) */
@@ -521,7 +523,7 @@ static __attribute__((noinline)) void bt_cal_tick(void)
     bpc.on = 0;
     ui.force = 1;
     if (!(n = bpc.n)) {
-        ui_message(BP_S[2]);
+        ui_message(BPS(2));
         return;
     }
     for (i = 1; i < n; i++)                             /* (sorted: its middle) */
@@ -532,7 +534,7 @@ static __attribute__((noinline)) void bt_cal_tick(void)
         ui_message("FAR AND NEAR TOO CLOSE");           /* (V10.20) under 4 levels apart: noise, not distance */
         return;
     }
-    ui_message(BP_S[7u + k]);
+    ui_message(BPS(7u + k));
 }
 static uint32_t bt_prox_sig(void) { return ui.menu == 3 ? (bpc.on ? (fm1_ms - bpc.t0) / 100u * 67u : 0u) + (uint32_t)mod_prox * 31u + bp.raw * 977u + bp.w4[0] * 13u + bp.w4[1] * 17u + bp.w4[2] * 19u + bp.w4[3] * 23u + bp.src * 29u + bp.have * 37u + bp.seen * 41u + (bt_hw_rxdiag() >> 4) * 43u + bp.conn * 5u + BT_CAL[0] * 3u + BT_CAL[1] * 7u + BT_TUNE[0] * 11u + BT_TUNE[1] * 53u + BT_TUNE[2] * 59u : 0u; }
 

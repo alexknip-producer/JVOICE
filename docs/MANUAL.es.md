@@ -2148,30 +2148,46 @@ los más importantes.
 
 Poné **FORM** en **MY LOOP** y apretá **OCT+**: GEN convierte el loop que estás tocando en un tema entero, con las
 reglas del **GENRE** que elegiste. De tu loop no cambia nada: sus pistas, pasos, sonidos y mezcla quedan como están, y
-son la sección **A**, el pico del tema (su drop). GEN:
+son la sección **A**, el pico del tema (su drop). Las demás secciones son del género, tocadas con tus sonidos. GEN:
 
-- **escucha tu loop**: su tonalidad y escala (mayor, menor, dórica o mixolidia; cada nota pesa por su duración, su
-  velocity y si cae en el tiempo; el bajo, las notas más graves, dicen cuál es la tónica) y un acorde por compás (medio
-  compás en un loop de un compás): la tríada de la tonalidad que más suena ahí, la nota del bajo como su fundamental,
-  una séptima donde suena. DRUM-X también cuenta cuando toca una altura: un carril con poco ruido y que suena largo (un
-  808, un tom afinado) y las notas de la escala cromática de un kit EXTENDED (KICK / TOM o el CHROM de un carril). Un loop
-  de batería sola no tiene tonalidad: se usan la tonalidad y la progresión propias de GEN para el género.
+- **escucha tu loop**: su tonalidad y su modo (mayor, menor, dórico, mixolidio, frigio o menor armónico; cada nota pesa
+  por su duración, su velocity y si cae en el tiempo; el bajo, las notas más graves, dicen cuál es la tónica). Cuando
+  tu loop no define (un riff de quintas sin tercera, un 808 en la fundamental y la quinta), GEN toma el modo propio del
+  género, después el menor, y el más oscuro si tu loop está distorsionado (el DIST de una pista) o el género es pesado:
+  un loop oscuro sigue oscuro, un riff de E-F es E frigio. DRUM-X también cuenta cuando toca una altura: un carril con
+  poco ruido y que suena largo (un 808, un tom afinado) y las notas de la escala cromática de un kit EXTENDED (KICK / TOM
+  o el CHROM de un carril). Un loop de batería sola no tiene tonalidad: se usan la tonalidad y la progresión propias de
+  GEN para el género.
+- **lo rearmoniza con cada semilla**: un acorde por compás (medio compás en un loop de un compás) que **contiene las
+  notas de tu loop ahí** (su fundamental, tercera y quinta lo que más suena, la nota del bajo una de ellas, casi nada tuyo a
+  un semitono de ellas; una séptima donde tu loop la toca; acordes de quinta en los géneros que los usan). Un cuarto de
+  las semillas se queda con los acordes que escuchó en el loop; las demás eligen el acorde de cada compás según qué tan
+  bien calza, con más chances los acordes propios del género y, en un loop oscuro, los menores: otra progresión debajo
+  del mismo loop, siempre en su tonalidad y su modo.
 - **agrega las partes que le faltan a tu loop, solo en pistas vacías** (sin notas; nunca en las tuyas), según **BASS**,
-  **CHORDS** y **ARP** de GENE 2 (AUTO: las del género; OFF: ninguna): un bajo si tu loop no tiene, acordes sobre los
-  acordes que escuchó si no tiene, y en la pista del arp una **contramelodía hecha con tu melodía**: las mismas notas
-  corridas una corchea o un tiempo, su primera mitad respondida, dada vuelta alrededor de su primera nota o solo en los
-  tiempos, a una octava, en tu tonalidad (si el loop no tiene melodía: un arpegio de los acordes). Sus sonidos y su
-  mezcla son los del género. Sin pistas vacías el tema se arma solo con tu loop y la pantalla dice **NO EMPTY TRACK:
-  ARRANGED**.
-- **lo arma** con las reglas de SONG para el género (el plan de club, o un arco para ambient, cine y parecidos;
-  **RANDOM** y **EXPLORE** eligen según tu tempo y tu batería: cuatro bombos por compás desde 100 BPM HOUSE, pasando
-  138 BPM HARD TECHNO, si no KRAUT desde 110 BPM, DREAM POP abajo de eso): la intro y el outro con tu batería raleada
-  (afuera las semicorcheas a contratiempo) y pocas capas, las capas que entran según las prioridades del género, **B**
-  los primeros compases del drop, **C** el build (tu batería en cuatro compases con un redoble en tu propio snare, clap o
-  rim cada vez más rápido y más fuerte, el bombo afuera al final, el pasaaltos del master abriéndose, el filtro de los
-  acordes subiendo, un stutter hacia el drop), **D** el break (sin batería ni bajo, los acordes más húmedos, los synths
-  una octava arriba en su último compás), rellenos al final de las frases (el FILL de ARRANGE: los sonidos de tu propio
-  kit), y cada fila de drop tu loop entero tal cual. Las pistas tuyas que estaban muteadas siguen muteadas.
+  **CHORDS** y **ARP** de GENE 2 (AUTO: las del género; OFF: ninguna): un bajo si tu loop no tiene, acordes sobre la
+  progresión de esa semilla si no tiene, y en la pista del arp una **contramelodía hecha con tu melodía**: las mismas
+  notas corridas una corchea o un tiempo, su primera mitad respondida, dada vuelta alrededor de su primera nota o solo
+  en los tiempos, a una octava, en tu tonalidad (si el loop no tiene melodía: un arpegio de los acordes). Sus sonidos y
+  su mezcla son los del género. Sin pistas vacías no se agrega nada y la pantalla dice **NO EMPTY TRACK: ARRANGED** (las
+  otras secciones igual son del género, con tus sonidos).
+- **mete el género en el tema** alrededor del drop: **B**, la estrofa, toca la batería del género (su propio patrón: el
+  dembow de REGGAETON, los bombos de HARD BASS, ...) con tu kit, y el bajo, los acordes, el arp y la melodía del género
+  con los sonidos de tus pistas, sobre la progresión propia del género en tu tonalidad (con sus acordes prestados y sus
+  colores); **C**, el build, las partes del género sobre los acordes del drop, su batería la de la estrofa o la de tu
+  loop (la mitad de las semillas) en cuatro compases con un redoble en el snare, clap o rim cada vez más rápido y más
+  fuerte, el bombo afuera al final, el pasaaltos del master abriéndose, el filtro de los acordes subiendo, un stutter
+  hacia el drop; **D**, el break, sin batería ni bajo, sobre los acordes del género o los del drop desde su
+  predominante, más húmedo, los synths una octava arriba en su último compás.
+- **lo arma** con las filas de SONG, cada semilla las suyas: el plan de club o un arco (más seguido un arco en los
+  géneros que lo usan), la estrofa en el groove y en algunas intros y outros, el largo de las filas, la energía de cada
+  sección (qué tan cargados van el arp, la melodía, el pulso de los acordes); la intro y el outro con la batería raleada
+  (afuera las semicorcheas a contratiempo) y pocas capas, las capas que entran según las prioridades del género,
+  rellenos al final de las frases (el FILL de ARRANGE), y cada fila de drop tu loop entero tal cual. **RANDOM** elige el
+  género según tu tempo y tu batería (cuatro bombos por compás desde 100 BPM HOUSE, pasando 138 BPM HARD TECHNO, si no
+  KRAUT desde 110 BPM, DREAM POP abajo de eso); **EXPLORE** elige otro género en cada semilla, uno con un tempo cerca
+  del de tu loop, y rearmoniza más libre. Las pistas tuyas que estaban muteadas siguen muteadas. El tempo y el swing
+  siguen siendo los de tu loop.
 
 Es un SONG como los de GEN: **PLAY** lo toca (TIMELINE y ARRANGE muestran sus filas), **SAVE** lo guarda (todas sus
 partes y sus filas, como cualquier tema de GEN: es un borrador hasta que lo guardás). **OCT+** otra vez tira otra

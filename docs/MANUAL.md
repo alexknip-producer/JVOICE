@@ -2048,28 +2048,41 @@ play go on the first tracks (drums on the DRUM track), so with TRACKS 4 you hear
 
 Set **FORM** to **MY LOOP** and press **OCT+**: GEN turns the loop you are playing into a whole song, by the rules of
 the **GENRE** you picked. Nothing of your loop changes: its tracks, steps, sounds and mix stay as they are, and they are
-section **A**, the song's peak (its drop). GEN:
+section **A**, the song's peak (its drop). Every other section is the genre's, played on your sounds. GEN:
 
-- **listens to your loop**: its key and scale (major, minor, dorian or mixolydian; each note weighed by its length, its
-  velocity and whether it falls on the beat; the bass, the lowest notes, tell the tonic) and a chord a bar (a half bar
-  in a one-bar loop): the triad of the key heard most there, the bass note as its root, a seventh where it sounds.
-  DRUM-X counts too where it plays a pitch: a lane with little noise and a long ring (an 808, a tuned tom) and the notes
-  of an EXTENDED kit's chromatic run (KICK / TOM or a lane's CHROM). A loop of drums alone has no key: GEN's own key
-  and progression for the genre are used.
+- **listens to your loop**: its key and mode (major, minor, dorian, mixolydian, phrygian or harmonic minor; each note
+  weighed by its length, its velocity and whether it falls on the beat; the bass, the lowest notes, tell the tonic).
+  Where your loop does not decide (a power riff with no third, an 808 on its root and fifth), GEN takes the genre's own
+  mode, then the minor one, and the darker one when your loop is distorted (a track's DIST) or the genre is a heavy one:
+  a dark loop stays dark, an E-F riff is E phrygian. DRUM-X counts too where it plays a pitch: a lane with little noise
+  and a long ring (an 808, a tuned tom) and the notes of an EXTENDED kit's chromatic run (KICK / TOM or a lane's CHROM).
+  A loop of drums alone has no key: GEN's own key and progression for the genre are used.
+- **harmonises it again with every seed**: a chord a bar (a half bar in a one-bar loop) that **contains your loop's
+  notes there** (its root, third and fifth what sounds most, the bass note one of them, little of yours a semitone off
+  them; a seventh where your loop plays it; power chords in the genres that play them). A quarter of the seeds keep the
+  chords heard in the loop; the others draw each bar's chord by how well it fits, the genre's own chords and, in a dark
+  loop, the minor ones more likely: another progression under the same loop, still in its key and mode.
 - **adds the parts your loop lacks, only on empty tracks** (no note; never on yours), by **BASS**, **CHORDS** and **ARP**
-  on GENE 2 (AUTO: the genre's; OFF: none): a bass where your loop has none, chords on the chords it heard where it has
-  none, and on the arp's track a **counter-melody made of your melody**: the same notes moved an eighth or a beat, its
-  first half answered, turned upside down round its first note or kept to the beats, an octave away, in your key (no
-  melody in the loop: an arp of the chords). Their sounds and mix are the genre's. No empty track: the song is arranged
-  from your loop alone and the screen says **NO EMPTY TRACK: ARRANGED**.
-- **arranges it** with SONG's rules for the genre (the club's plan, or an arc for ambient, film and the like; **RANDOM**
-  and **EXPLORE** pick one by your tempo and drums: four kicks a bar from 100 BPM HOUSE, over 138 BPM HARD TECHNO, else
-  KRAUT from 110 BPM, DREAM POP below): the intro and the outro with your drums thinned (the off-beat sixteenths out)
-  and few layers, the layers coming in by the genre's priorities, **B** the drop's first bars, **C** the build (your
-  drums over four bars with a roll on your own snare, clap or rim getting faster and louder, the kick out at the end, the
-  master's high-pass opening, the chords' filter rising, a stutter into the drop), **D** the break (no drums, no bass, the
-  chords wetter, the synths an octave up on its last bar), fills at the phrases' ends (ARRANGE's FILL: your kit's own
-  sounds), and every drop row your whole loop as it is. Muted tracks of yours stay muted.
+  on GENE 2 (AUTO: the genre's; OFF: none): a bass where your loop has none, chords on that seed's progression where it
+  has none, and on the arp's track a **counter-melody made of your melody**: the same notes moved an eighth or a beat,
+  its first half answered, turned upside down round its first note or kept to the beats, an octave away, in your key
+  (no melody in the loop: an arp of the chords). Their sounds and mix are the genre's. No empty track: nothing is added
+  and the screen says **NO EMPTY TRACK: ARRANGED** (the other sections are still the genre's, on your sounds).
+- **brings the genre into the song** around the drop: **B**, the verse, plays the genre's drums (its own pattern:
+  REGGAETON's dembow, HARD BASS's kicks, ...) on your kit, and the genre's bass, chords, arp and lead on your tracks'
+  sounds, over the genre's own progression in your key (its borrowed chords and colours included); **C**, the build,
+  the genre's parts on the drop's chords, its drums the verse's or your loop's (half the seeds) over four bars with a
+  roll on the snare, clap or rim getting faster and louder, the kick out at the end, the master's high-pass opening,
+  the chords' filter rising, a stutter into the drop; **D**, the break, no drums and no bass, on the genre's chords or
+  the drop's from its predominant, wetter, the synths an octave up on its last bar.
+- **arranges it** with SONG's rows, each seed its own: the club's plan or an arc (an arc more often in the genres that
+  play one), the verse in the groove and in some of the intros and outros, the rows' lengths, each section's energy (how
+  busy the arp, the lead, the chords' pulse); the intro and the outro with the drums thinned (the off-beat sixteenths
+  out) and few layers, the layers coming in by the genre's priorities, fills at the phrases' ends (ARRANGE's FILL), and
+  every drop row your whole loop as it is. **RANDOM** picks the genre by your tempo and drums (four kicks a bar from
+  100 BPM HOUSE, over 138 BPM HARD TECHNO, else KRAUT from 110 BPM, DREAM POP below); **EXPLORE** picks a different
+  genre each seed, one whose tempo is near your loop's, and harmonises more freely. Muted tracks of yours stay muted.
+  The tempo and the swing stay your loop's.
 
 It is a SONG as GEN's are: **PLAY** plays it (TIMELINE and ARRANGE show its rows), **SAVE** keeps it (all its parts and
 its rows, as any GEN song: a draft until you save it). **OCT+** again throws another seed: another song from the same
