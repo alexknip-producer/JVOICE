@@ -33,68 +33,30 @@ static void ed_cap(int32_t x, int32_t y, const char *s, uint16_t c)   /* a capti
 static __attribute__((noinline)) void graph_sound_lz(const track_t *t)
 {
     const engine_t *e = trk_engp(t);
-    uint32_t k, two = cur_page()->id[0] != P_E0, n = 0;
+    uint32_t two = cur_page()->id[0] != P_E0;
     int32_t x = 122, w = 106, ty = 2, bare = ux.skin != 0u;
     uint16_t tb = lz_tile_bg();
     char b[40];
-    /* (0.8.9, the skins' mock-up) the being large on the left (its tendrils kept on its side), the page's name over it, the
-     * sound's under it; on the right the scope in a tile (COLORS) or bare (BOTTOM, HUD), the page's four parameters as
-     * chips in their knobs' colours (the knob turning: its label TEXT), the other page's names under them */
-    if (!ui_scope && vx_draw(t, 4, 2, 232, (int32_t)cv_h - 4, -1)) {   /* (0.9.7) MENU > DISPLAY > SCOPE
-                                                         * OFF (the default): the creature on the whole panel, centred, no
-                                                         * SCOPE card and no chips (the knobs' cards say them); the page's name
-                                                         * and the sound's small in its corners (BOTTOM, HUD, AIR: outlined) */
-        cv_halo = (uint8_t)bare;
-        ed_cap(10, 6, e->page_title[two] && e->page_title[two][0] != '-' ? e->page_title[two] : e->name, T_THEME);
-        sound_name(t, b);
-        cv_clip_text(10, (int32_t)cv_h - 12 - AF_X_CAP_Y, &AF_X, b[0] ? b : e->name, bare ? T_TEXT : T_MID, T_SURF, 104);
-        cv_halo = 0;
-        return;
+    /* (V10.7.15, the owner) no parameter list beside the being: the knobs' cards above say the same. SCOPE OFF (the
+     * default): the creature (or the generic being) on the whole panel; SCOPE ON: the being left, the scope tall right */
+    if (!ui_scope) {
+        if (!vx_draw(t, 4, 2, 232, (int32_t)cv_h - 4, -1))
+            graph_being_at(t, 120 * 16, ((int32_t)cv_h / 2) * 16, 34 * 16);
+    } else {
+        if (!vx_draw(t, 8, 14, 108, 112, -1))          /* (0.9.4 / 0.9.6: the engines' own creatures: ui_engvis.c) */
+            graph_being_at(t, 60 * 16, 68 * 16, 22 * 16);
+        cv_rect(0, 0, 4, (int32_t)cv_h, T_BG);
+        cv_rect(116, 0, 60, (int32_t)cv_h, T_SURF);
+        lz_tile(x, ty, w, 124, 0, T_THEME);
+        GFX_HOOK_ALIGN(0, ty + 4, 0, ty + 11, AL_V | AL_PASS, "EDIT scope title");
+        cv_text_on(x + (bare ? 0 : 4), ty + 4 - AF_X_CAP_Y, &AF_X, "SCOPE", bare ? T_MID : T_TEXT, tb);
+        scope_at(x + 4, w - 8, ty + 68, 48, T_THEME);
     }
-    if (!vx_draw(t, 8, 14, 108, 112, -1))              /* (0.9.4 / 0.9.6: the engines' own creatures: ui_engvis.c) */
-        graph_being_at(t, 60 * 16, 68 * 16, 22 * 16);
-    cv_rect(0, 0, 4, (int32_t)cv_h, T_BG);
-    cv_rect(116, 0, 60, (int32_t)cv_h, T_SURF);
-    cv_halo = (uint8_t)bare;                            /* (0.9.0) BOTTOM, HUD: no panel, the being's spikes reach the words:
-                                                         * outlined, as HUD's */
+    cv_halo = (uint8_t)bare;                            /* (0.9.0) BOTTOM, HUD: outlined, as HUD's */
     ed_cap(10, 6, e->page_title[two] && e->page_title[two][0] != '-' ? e->page_title[two] : e->name, T_THEME);
     sound_name(t, b);
-    cv_clip_text(10, 128 - AF_X_CAP_Y, &AF_X, b[0] ? b : e->name, bare ? T_TEXT : T_MID, T_SURF, 104);
+    cv_clip_text(10, (int32_t)cv_h - 12 - AF_X_CAP_Y, &AF_X, b[0] ? b : e->name, bare ? T_TEXT : T_MID, T_SURF, 104);
     cv_halo = 0;
-    lz_tile(x, ty, w, 58, 0, T_THEME);
-    GFX_HOOK_ALIGN(0, ty + 4, 0, ty + 11, AL_V | AL_PASS, "EDIT scope title");
-    cv_text_on(x + (bare ? 0 : 4), ty + 4 - AF_X_CAP_Y, &AF_X, "SCOPE", bare ? T_MID : T_TEXT, tb);
-    scope_at(x + 4, w - 8, ty + 36, 18, T_THEME);
-    for (k = 0; k < 4u; k++) {                          /* the page's four */
-        const param_desc_t *d = track_desc(t, P_E0 + two * 4u + k);
-        int32_t y = ty + 63 + (int32_t)k * 13, hot = ui.hot_t && ui.hot_col == k;
-        const char *u = "";
-        char v[16];
-        int32_t r = d && d->label && d->label[0] != '-' ? RATIO(d, enum_rank(d, t->p[P_E0 + two * 4u + k])) : -1;
-        uint16_t kc = knob_col(k, r, d && d->min < 0 && d->max > 0);   /* (0.9.5 JIANT: its value's heat) */
-        if (!bare) {
-            cv_rrect(x, y, w, 12, 3, T_RAISE, T_SURF);
-            cv_rect(x, y + 2, 2, 8, kc);
-        }
-        if (!d || !d->label || d->label[0] == '-')
-            continue;
-        param_format(d, t->p[P_E0 + two * 4u + k], v, &u);
-        str_cpy(v + str_len(v), u, sizeof v - str_len(v));
-        GFX_HOOK_ALIGN(0, y, 0, y + 12, AL_V | AL_N(2), "EDIT chip on its row");
-        cv_clip_text(x + (bare ? 2 : 6), y + 3 - AF_X_CAP_Y, &AF_X, d->label, hot ? T_TEXT : T_MID, tb, 58);
-        cv_text_r(x + w - (bare ? 2 : 4), y + 3 - AF_X_CAP_Y, &AF_X, v, heat_on(r) ? ux_mix(kc, T_TEXT, 20) : kc, tb);
-    }
-    str_cpy(b, two ? "1/2" : "2/2", sizeof b);          /* the other page's names, as many as fit */
-    for (k = 0; k < 4u; k++) {
-        const param_desc_t *d = track_desc(t, P_E0 + (1u - two) * 4u + k);
-        if (d && d->label && d->label[0] != '-' && text_w(&AF_X, b) + text_w(&AF_X, d->label) + 6 <= w - 2) {
-            str_cpy(b + str_len(b), " ", 2);
-            str_cpy(b + str_len(b), d->label, sizeof b - str_len(b));
-            n++;
-        }
-    }
-    if (n)
-        cv_text(x + 2, ty + 63 + 52 + 3 - AF_X_CAP_Y, &AF_X, b, T_DIM);
 }
 /* FILTER: y of the response at x (px, 10..226), the cut at xc, res 0..1000; the unity line at y 62 */
 static int32_t ed_resp(uint32_t ty, int32_t x, int32_t xc, int32_t res)
