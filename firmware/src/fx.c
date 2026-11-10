@@ -32,7 +32,8 @@ static union {                          /* ROOM's allpasses; SPRING's allpass ch
     int32_t sp[(556 + 441) / 2];
 } rev_u __attribute__((section(".pool")));
 #define rev_ap (rev_u.ap)
-#define RPRE_LEN 2048u                   /* (JIANT) the reverb's pre-delay line, at half rate (4 KB): up to 92 ms */
+#define RPRE_LEN 8192u                   /* (JIANT) the reverb's pre-delay line, at the full rate (16 KB of rev_x's 32): up to
+                                         * 186 ms (PRE 100: 91 ms) */
 #define SH_LEN 2048u                     /* (JIANT 0.5) SHIMMER's line (4 KB) */
 #define CL_LEN 16384u                    /* .. CLOUD's, half rate: ~0.74 s (32 KB) */
 /* (0.8.4) the models' own lines in one place (32 KB, was 40): the reverb runs one model at a time (a change fades the
@@ -71,7 +72,6 @@ static struct {
     int32_t dw_m;                        /* .. the read points' offset by them now (Q8 samples) */
     int32_t dt1, dt2, rt1, rt2;          /* .. (0.6.86) the resonant TONE (delay loop) and FILT (reverb input) filters */
     int32_t cd_cur, cw_cur, dm_cur;      /* .. the chorus's DEPTH, its side's width, the delay's MIX as they are (glide) */
-    int32_t rpre_s;                      /* .. the even sample, averaged with the odd one into the line */
     uint16_t comb_i[4], ap_i[2];
     int32_t comb_lp[4];
     uint8_t rtype;                       /* the reverb model running (G_RTYPE: 0 ROOM, 1 SPRING, 0.5: 2 SHIMMER 3 RESO 4 CLOUD) */
@@ -1936,7 +1936,7 @@ static __attribute__((noinline)) int fx_rest(int32_t *wet, uint32_t n, uint32_t 
         memset(cho_buf, 0, sizeof cho_buf);
         memset(&dlo, 0, sizeof dlo);
         fx.dt1 = fx.dt2 = fx.rt1 = fx.rt2 = 0;
-        fx.dly_lp = fx.dly_hp = fx.rf_lp = fx.rpre_s = fx.cl_lp = fx.cl_half = 0;
+        fx.dly_lp = fx.dly_hp = fx.rf_lp = fx.cl_lp = fx.cl_half = 0;
         fx.dl_xf = fx.dr_xf = 0;                        /* (a crossfade between two silent reads: nothing) */
         cho_zeros = CHO_LEN;
     } else if (ph <= 4u) {
@@ -2044,16 +2044,15 @@ static inline __attribute__((always_inline)) void fx_buses(const int32_t *cho_in
                                                          * RESO: PITCH; 0.6.12: SHIMMER, CLOUD: AIR). (0.8.4) Its line in
                                                          * rev_x: not in a change's block from SHIMMER or CLOUD (their
                                                          * line is there until the change clears it); else the same */
-        uint32_t pd = (uint32_t)song.g[G_RPRE] * 20u;   /* (ms -> half-rate samples: 2000 at 100) */
-        for (i = 0; i < n; i++) {                       /* half rate: two samples averaged in, read back between */
-            uint32_t h = fx.rpre_w >> 1;
-            int32_t a = rpre_buf[(h - pd) & (RPRE_LEN - 1u)], b = rpre_buf[(h - pd + 1u) & (RPRE_LEN - 1u)];
-            if (fx.rpre_w & 1u)
-                rpre_buf[h & (RPRE_LEN - 1u)] = (int16_t)clamp((fx.rpre_s + (rev_in[i] >> 3)) >> 1, -32768, 32767);
-            else
-                fx.rpre_s = rev_in[i] >> 3;
-            rpre_out[i] = ((fx.rpre_w & 1u) ? (a + b) >> 1 : a) * 8;
-            fx.rpre_w++;
+        uint32_t pd = (uint32_t)song.g[G_RPRE] * 40u;   /* (ms -> samples: 4000 at 100, the times of before) */
+        for (i = 0; i < n; i++) {                       /* (cf. 0.6.80) at the full rate: it was at half rate, two samples
+                                                         * averaged in and read back between, no filter, so whatever was
+                                                         * over 11 kHz (hats, cymbals) folded back down, inharmonic, into
+                                                         * the tail (a 12 kHz tone came out of it as 10 kHz, 20 dB over
+                                                         * itself): the "digital" fizz. Its line has the room since 0.8.4 */
+            uint32_t w = fx.rpre_w++;
+            rpre_buf[w & (RPRE_LEN - 1u)] = (int16_t)clamp((rev_in[i] + 4) >> 3, -32768, 32767);
+            rpre_out[i] = rpre_buf[(w - pd) & (RPRE_LEN - 1u)] * 8;
         }
         rev_in = rpre_out;
     }
@@ -2837,7 +2836,7 @@ static __attribute__((noinline)) void fx_trip(uint32_t c1, uint32_t n)
     cho_zeros = CHO_LEN;
     rev_clear();                                         /* (the pre-delay's line too: rev_x) */
     fx.dt1 = fx.dt2 = fx.rt1 = fx.rt2 = 0;
-    fx.dly_lp = fx.dly_hp = fx.rf_lp = fx.rpre_s = fx.cl_lp = fx.cl_half = 0;
+    fx.dly_lp = fx.dly_hp = fx.rf_lp = fx.cl_lp = fx.cl_half = 0;
     dly_used = 0;
     rest_ph = 6;                                         /* (all of it silenced here) */
     fx_bad = 0;

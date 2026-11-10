@@ -25,6 +25,7 @@
  *    and of the whole bus stage (fx_buses), with the device estimate (1.7 % per 100, drum_test's ratio).
  * 8. (JIANT 0.3) the GRAIN delay's PITCH (an octave up / down) and SPRY (bounded with feedback), the reverb's FILT
  *    and WIDE, MOD's depth (~5.7 ms), DUCK's depth and hold.
+ * 9. PRE: a plain delay at the full rate, no alias (src/fx.c: the half-rate line folded the send's highs down).
  * Demos (WAV) into DEMODIR: a drum pattern and a pluck through SPRING, the drums through ROOM to compare. */
 #define main hostsim_main
 #include "hostsim.c"
@@ -912,9 +913,36 @@ static void test_trip(void)
           fx_trips == t0 + 1u && !kept && quiet);
     song.g[G_RMOD] = song.g[G_RWIDE] = 0;
 }
+/* PRE: a plain delay of the send at the full rate (it was at half rate, without a filter, up to V10.7.15: a 12
+ * kHz send came back as a 10 kHz alias, louder than itself): ROOM's output with PRE 20 is PRE 0's 800 samples later, but
+ * for the line's rounding (12 kHz, where the alias was) */
+static int32_t tone12k(uint32_t t) { return (int32_t)(40000.0 * sin(2.0 * M_PI * 12000.0 * t / FS)); }
+static void test_pre(void)
+{
+    static int32_t ref[FS];
+    double side, e = 0, r = 0;
+    uint32_t i;
+    jreset();
+    jrun(0, tone12k, FS, &side);
+    memcpy(ref, jw, sizeof ref);
+    jreset();
+    song.g[G_RPRE] = 20;
+    jrun(0, tone12k, FS, &side);
+    for (i = FS / 4u; i < FS - CTL; i++) {
+        double d = (double)jw[i] - ref[i - 800u];
+        e += d * d;
+        r += (double)ref[i - 800u] * ref[i - 800u];
+    }
+    char what[160];
+    snprintf(what, sizeof what, "PRE 20 on ROOM: PRE 0's output 800 samples later, no alias (12 kHz: the rest %.1f dB)",
+             10.0 * log10(e / r + 1e-30));
+    check(what, r > 0 && e < r * 1e-5);
+    song.g[G_RPRE] = 0;
+}
 int main(int argc, char **argv)
 {
     test_room_identical();
+    test_pre();
     test_spring();
     test_clear();
     test_switch();
