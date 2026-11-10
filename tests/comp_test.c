@@ -9,6 +9,8 @@
  *   MONO/POLY  C2's condition ELSE (MONO: C1 wins, C2 when C1 did not act) against POLY (both stack).
  *   FORMAT     a v2 project round trip; a project of before seq2d (its CP_* and EVERY, no x bit 7) loads migrated:
  *              ARP over its TIEs, ARP SEQ the walker, TRIG 1:2 MUTE !1:2, OCT with EVERY 1:4 OCT+ 1:4, ECHO RATCHET.
+ *   TRIG       a MUTE of the inverted condition (VALUE CV_MUTE_TRIG): 4:4, 1:2, 50 %, LENGTH, = MUTE !c, FILL 1ST PRE,
+ *              MONO / POLY, the format, its card, the global lane.
  *   UI         SEQ > COMP / COMP 2: KNOB 1 ACTION, KNOB 2 LENGTH, KNOB 3 CONDITION (ELSE on COMP 2 alone), KNOB 4 VALUE.
  *   GLOBAL     (0.9.9-seq2f: seq.c glane, GLO > COMPS) the mock-up's example (d): a STUTTER of 2 steps every 4 bars on all
  *              the tracks and a MUTE of the drum track in bar 8, over 8 bars of the whole sequencer (events_block); MONO
@@ -567,9 +569,162 @@ static int gl_ui(void)
     return bad;
 }
 
+/* ---- TRIG (an Elektron trig condition: core.h CV_MUTE_TRIG, a MUTE of the inverted condition) ---- */
+static uint32_t trig_run(uint32_t c, uint32_t nm, uint32_t len, uint32_t steps, uint8_t *nt, uint16_t *at, uint32_t max,
+                         uint32_t act, uint32_t v)
+{
+    static const uint8_t P[4] = {60, 62, 64, 65};
+    track_t *t = pat(4, P);
+    comp_set(&t->step[0], 0, act, c, nm, len, v);
+    seq_start();
+    return run_at(t, steps, nt, at, max);
+}
+/* the passes (of `passes` 4-step passes) step 1's 60 plays */
+static uint32_t trig_passes(uint32_t c, uint32_t nm, uint32_t passes)
+{
+    static uint8_t nt[1024];
+    static uint16_t at[1024];
+    uint32_t n = trig_run(c, nm, 1, passes * 4u, nt, at, sizeof nt, CA_MUTE, CV_MUTE_TRIG), i, m = 0;
+    for (i = 0; i < n; i++)
+        if (nt[i] == 60u && at[i] % 4u == 0u && at[i] / 4u < 32u) m |= 1u << (at[i] / 4u);
+        else if (nt[i] == 60u) m |= 1u << 31;
+    return m;
+}
+static int trig(void)
+{
+    int bad = 0, ok, k;
+    static uint8_t nt[1024], n2[1024];
+    static uint16_t at[1024], a2[1024];
+    uint32_t n, m, i, p;
+    track_t *t;
+    static const uint8_t P[4] = {60, 62, 64, 65};
+    ok = trig_passes(CC_NM, CNM_MAKE(4u, 4u), 16) == 0x8888u;
+    bad += check("TRIG 4:4: the step plays on pass 4 of every 4 alone (the others as written)", ok);
+    ok = trig_passes(CC_NM, CNM_MAKE(1u, 2u), 16) == 0x5555u && trig_passes(CC_NNM, CNM_MAKE(1u, 2u), 16) == 0xAAAAu;
+    bad += check("TRIG 1:2: every other pass (the first); !1:2 the others", ok);
+    rng_state = 0x1234567u;
+    n = trig_run(CC_P50, 0, 1, 800, nt, 0, sizeof nt, CA_MUTE, CV_MUTE_TRIG);
+    for (i = m = 0; i < n; i++) m += nt[i] == 60u;
+    ok = n == 600u + m && m >= 70u && m <= 130u;
+    if (!ok) printf("ui:   50%%: %u of 200 (%u notes)\n", m, n);
+    bad += check("TRIG 50%: about half the passes", ok);
+    {   /* LENGTH 3 at 1:2: pass 1 the four, pass 2 the fourth alone */
+        static const uint8_t W[10] = {60, 62, 64, 65, 65, 60, 62, 64, 65, 65};
+        n = trig_run(CC_NM, CNM_MAKE(1u, 2u), 3, 16, nt, 0, sizeof nt, CA_MUTE, CV_MUTE_TRIG);
+        bad += check("TRIG 1:2 LENGTH 3: three steps gated by it", seq_is(nt, n, W, 10));
+    }
+    {   /* TRIG c = MUTE !c, note for note */
+        static const uint8_t C[][3] = {{CC_NM, CC_NNM, 0x31}, {CC_NNM, CC_NM, 0x10}, {CC_FIRST, CC_NFIRST, 0},
+                                       {CC_NFIRST, CC_FIRST, 0}, {CC_FILL, CC_NFILL, 0}, {CC_NFILL, CC_FILL, 0},
+                                       {CC_ALWAYS, CC_ALWAYS, 0}};
+        ok = 1;
+        for (k = 0; k < (int)(sizeof C / sizeof C[0]); k++) {
+            uint32_t l = 1u + (uint32_t)k % 3u;
+            n = trig_run(C[k][0], C[k][2], l, 32, nt, at, sizeof nt, CA_MUTE, CV_MUTE_TRIG);
+            m = C[k][0] == CC_ALWAYS ? trig_run(C[k][0], 0, l, 32, n2, a2, sizeof n2, CA_NONE, 0)
+                                     : trig_run(C[k][1], C[k][2], l, 32, n2, a2, sizeof n2, CA_MUTE, 0);
+            ok &= n == m && !memcmp(nt, n2, n) && !memcmp(at, a2, n * sizeof at[0]);
+        }
+        bad += check("TRIG = MUTE of the inverted condition (N:M, !N:M, 1ST, !1ST, FILL, !FILL; ALWAYS: as written)", ok);
+    }
+    seq_fill = 1;
+    ok = trig_passes(CC_FILL, 0, 4) == 0xFu && !trig_passes(CC_NFILL, 0, 4);
+    seq_fill = 0;
+    ok &= !trig_passes(CC_FILL, 0, 4) && trig_passes(CC_NFILL, 0, 4) == 0xFu;
+    ok &= trig_passes(CC_FIRST, 0, 8) == 1u && trig_passes(CC_NFIRST, 0, 8) == 0xFEu;
+    bad += check("TRIG FILL / !FILL (FX held or not), 1ST / !1ST", ok);
+    {   /* PRE: step 2's TRIG PRE plays when step 1's TRIG 1:2 held (PRE reads the condition, not the mute) */
+        static const uint8_t W[6] = {60, 62, 64, 65, 64, 65};
+        t = pat(4, P);
+        comp_set(&t->step[0], 0, CA_MUTE, CC_NM, CNM_MAKE(1u, 2u), 1, CV_MUTE_TRIG);
+        comp_set(&t->step[1], 0, CA_MUTE, CC_PRE, 0, 1, CV_MUTE_TRIG);
+        seq_start();
+        n = run(t, 8, nt, sizeof nt);
+        bad += check("TRIG PRE: after a TRIG 1:2, the passes it played", seq_is(nt, n, W, 6));
+    }
+    {   /* MONO: C1 TRIG 1:2, C2 OCT+ ELSE: the pass it plays, an octave up (it did not mute); POLY (C2 ALWAYS): the same;
+         * C1 OCT+ 1:2, C2 TRIG ELSE: the step plays the passes C1 did not act */
+        static const uint8_t W[7] = {72, 62, 64, 65, 62, 64, 65}, W2[7] = {62, 64, 65, 60, 62, 64, 65};
+        for (p = 0; p < 2u; p++) {
+            t = pat(4, P);
+            comp_set(&t->step[0], 0, CA_MUTE, CC_NM, CNM_MAKE(1u, 2u), 1, CV_MUTE_TRIG);
+            comp_set(&t->step[0], 1, CA_OCTU, p ? CC_ALWAYS : CC_ELSE, 0, 1, 0);
+            seq_start();
+            n = run(t, 8, nt, sizeof nt);
+            ok = p ? ok & seq_is(nt, n, W, 7) : seq_is(nt, n, W, 7);
+        }
+        t = pat(4, P);
+        comp_set(&t->step[0], 0, CA_OCTU, CC_NM, CNM_MAKE(1u, 2u), 1, 0);
+        comp_set(&t->step[0], 1, CA_MUTE, CC_ELSE, 0, 1, CV_MUTE_TRIG);
+        seq_start();
+        n = run(t, 8, nt, sizeof nt);
+        ok &= seq_is(nt, n, W2, 7);
+        bad += check("TRIG MONO / POLY: C2 OCT+ ELSE over a TRIG 1:2 (up when it plays), C2 TRIG ELSE (plays when C1 did not act)", ok);
+    }
+    {   /* the format: kept (MUTE, VALUE TRIG), and read back a TRIG */
+        project_store_t st;
+        ui_power_on();
+        trk[2].step[7] = (step_t){{60}, 1, ST_NOTE, 0, 100};
+        comp_set(&trk[2].step[7], 1, CA_MUTE, CC_NM, CNM_MAKE(4u, 4u), 3, CV_MUTE_TRIG);
+        glane[5] = (gcomp_t){CO_MAKE(CA_MUTE, CC_NM), CV_MUTE_TRIG, 0, CNM_MAKE(2u, 2u), 9};
+        gl_touch();
+        project_capture(&proj_scratch);
+        ok = proj_pack(&st, &proj_scratch);
+        memset(&trk[2].step[7], 0, sizeof trk[2].step[7]);
+        memset(glane, 0, sizeof glane);
+        ok &= proj_import(&proj_scratch, &st, sizeof st) && !project_restore_runtime(&proj_scratch);
+        ok &= trk[2].step[7].comp2 == CO_MAKE(CA_MUTE, CC_NM) && trk[2].step[7].carg2 == CV_MUTE_TRIG &&
+              trk[2].step[7].clen[1] == 2u && trk[2].step[7].cnm[1] == CNM_MAKE(4u, 4u) &&
+              glane[5].comp == CO_MAKE(CA_MUTE, CC_NM) && glane[5].val == CV_MUTE_TRIG && glane[5].mask == 9u;
+        bad += check("TRIG FORMAT: a step's and the lane's round trip (MUTE, VALUE TRIG: no new ACTION code)", ok);
+    }
+    {   /* the UI: KNOB 1's last, "TRIG" on the card, CONDITION as any (4:4), no VALUE; GLO > COMPS too */
+        ui_power_on();
+        t = TSEL;
+        t->step[0] = (step_t){{60}, 1, ST_NOTE, 0, 100};
+        go_page(GR_COMP); frame();
+        turn(EN_K1, 4); turn(EN_K1, 4); turn(EN_K1, 4); turn(EN_K1, 4); turn(EN_K1, 4); frame();
+        ok = comp_view() == CA_TRIG && t->step[0].comp == CO_MAKE(CA_MUTE, CC_ALWAYS) && t->step[0].carg == CV_MUTE_TRIG &&
+             strstr(ui.col[0], "TRIG") != 0;
+        for (i = 0; i < 20u && !(CO_COND(t->step[0].comp) == CC_NM && t->step[0].cnm[0] == CNM_MAKE(4u, 4u)); i++)
+            turn(EN_K3, 1);
+        frame();
+        ok &= CO_ACT(t->step[0].comp) == CA_MUTE && t->step[0].carg == CV_MUTE_TRIG && strstr(ui.col[2], "4:4") != 0;
+        turn(EN_K4, 1);
+        ok &= t->step[0].carg == CV_MUTE_TRIG;
+        turn(EN_K1, -1); frame();
+        ok &= comp_view() == CA_CHORD && strstr(ui.col[0], "CHORD") != 0;
+        turn(EN_K1, 1); turn(EN_K1, -4); turn(EN_K1, -4); turn(EN_K1, -1);
+        ok &= comp_view() == CA_MUTE && t->step[0].carg == 0u;
+        if (!ok) printf("ui:   comp %02x carg %u view %u col0 %s col2 %s\n", t->step[0].comp, t->step[0].carg, comp_view(), ui.col[0], ui.col[2]);
+        bad += check("SEQ > COMP: TRIG KNOB 1's last (MUTE, VALUE TRIG), its card TRIG, CONDITION 4:4, no VALUE", ok);
+        gl_clear();
+        go_page(GR_GCOMP); frame();
+        turn(EN_K1, 4); turn(EN_K1, 4); turn(EN_K1, 4); frame();
+        ok = glane[0].comp == CO_MAKE(CA_MUTE, CC_ALWAYS) && glane[0].val == CV_MUTE_TRIG && strstr(ui.col[0], "TRIG") != 0;
+        turn(EN_K3, 1); turn(EN_K4, 1);
+        ok &= glane[0].comp == CO_MAKE(CA_MUTE, CC_P25) && glane[0].val == CV_MUTE_TRIG;
+        bad += check("GLO > COMPS: TRIG its last", ok);
+    }
+    {   /* the global lane: TRIG 2:2 over 16 steps on T1: its hits on bar 2 of 2 alone */
+        uint32_t hits[4] = {0};
+        gl_blank();
+        for (i = 0; i < 16u; i++) { trk[0].step[i] = (step_t){{0}, 0, ST_NOTE, 0, 100}; trk[0].step[i].hit = 1; }
+        gl_set(0, CA_MUTE, CC_NM, CNM_MAKE(2u, 2u), 16, CV_MUTE_TRIG, 1);
+        n = grun(4u * 16u);
+        for (i = 0; i < n; i++)
+            if (g_trk[i] == 0u && g_at[i] / 16u < 4u) hits[g_at[i] / 16u]++;
+        ok = !hits[0] && hits[1] == 16u && !hits[2] && hits[3] == 16u;
+        if (!ok) printf("ui:   hits %u %u %u %u\n", hits[0], hits[1], hits[2], hits[3]);
+        bad += check("GLOBAL TRIG 2:2 LENGTH 16 on T1: its bar 2 of every 2 alone", ok);
+        gl_clear();
+    }
+    return bad;
+}
+
 static int original_comp_main(void)
 {
-    int bad = cycle() + actions() + mono_poly() + format() + comp_ui();
+    int bad = cycle() + actions() + mono_poly() + format() + comp_ui() + trig();
     bad += gl_example() + gl_mono_poly() + gl_empty() + gl_format() + gl_ui();
     printf("%s\n", bad ? "COMP TEST FAILED" : "comp tests passed");
     return bad != 0;

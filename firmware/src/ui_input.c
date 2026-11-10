@@ -1064,11 +1064,11 @@ static __attribute__((noinline)) void comp_knob(uint32_t slot, int32_t steps)
     uint8_t *lp = &st->clen[k & 1u], *np = &st->cnm[k & 1u];
     if (chain_busy()) { ui_message("SONG PLAYS: STOP IT TO EDIT"); return; }
     if (slot == 0u) {
-        uint32_t na = (uint32_t)clamp((int32_t)a + d, 0, CA_N - 1);
+        uint32_t na = (uint32_t)clamp((int32_t)a + d, 0, CA_TRIG);   /* (TRIG the last: MUTE, CV_MUTE_TRIG) */
         if (na == a) return;
         if (!na) { *cp = *ap = *lp = *np = 0; return; }
-        *cp = CO_MAKE(na, a && na != CA_SHIFT ? CO_COND(*cp) : CC_ALWAYS);
-        *ap = CA_VDEF[na];
+        *cp = CO_MAKE(na == CA_TRIG ? CA_MUTE : na, a && na != CA_SHIFT ? CO_COND(*cp) : CC_ALWAYS);
+        *ap = na == CA_TRIG ? CV_MUTE_TRIG : CA_VDEF[na];
         if (!a) { *lp = 0; *np = CNM_MAKE(1u, 2u); }
         if (na == CA_ARP || na == CA_STUT) *lp = 3;     /* (an ARP, a STUTTER: four steps to start with) */
         if (na == CA_RAMP) {                            /* (V10.6v: a RAMP 16 steps; the step's LOCK is what it moves) */
@@ -1093,9 +1093,9 @@ static __attribute__((noinline)) void comp_knob(uint32_t slot, int32_t steps)
             i += steps > 0 ? 1 : -1;
         if (a == CA_SHIFT) shift_cond_at((uint32_t)i, &c, &nm);
         else cond_at((uint32_t)i, &c, &nm);
-        *cp = CO_MAKE(a, c);
+        *cp = CO_MAKE(*cp, c);
         if (c >= CC_NM) *np = (uint8_t)nm;
-    } else {
+    } else if (a < CA_N) {                              /* (TRIG: no VALUE) */
         uint32_t b = a == CA_RAMP ? *ap & CV_RAMP_BARS : 0u;   /* (V10.6v: a RAMP's BARS, KNOB 2's) */
         int32_t i = clamp((int32_t)comp_vidx(a, *ap ^ b) + steps, 0, CA_VMAX[a]);
         *ap = (uint8_t)(comp_vat(a, (uint32_t)i) | b);

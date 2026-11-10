@@ -1981,7 +1981,7 @@ static void gl_eval(uint32_t g)                         /* every global step up 
         int32_t mv = 0;
         if (!a || !c->mask)
             continue;
-        ok = (uint32_t)gl_cond(c, p);
+        ok = (uint32_t)gl_cond(c, p) ^ (CA_VIEW(a, v) == CA_TRIG);   /* (TRIG: a MUTE when it does not hold) */
         if (a == CA_TRANS) {
             mv = CV_TR_MOVE(v);
             if (CV_TR_RANGE(v) > 1u) {                  /* adding up, as a track's (its passes: the bars) */
@@ -2022,7 +2022,7 @@ static void gl_take(track_t *t, const step_t *s, uint32_t ti, uint32_t g)
         if (!((G->mask >> ti) & 1u) || g < G->g0 || g >= G->g0 + G->len || (int8_t)(G->ser - gl_took[ti]) <= 0)
             continue;
         gl_took[ti] = G->ser;
-        if (G->act == CA_MUTE && G->val)
+        if (G->act == CA_MUTE && (G->val & CV_MUTE_CUT))
             trk_fade_out(t);
         if (G->act == CA_STUT)
             t->cvp = *s;
@@ -2085,7 +2085,8 @@ static __attribute__((noinline)) const step_t *comp_run(track_t *t, const step_t
         if (a == CA_SHIFT) { acted |= shift_cond(t, s, k, t->loops); continue; }
         if (a == CA_RAMP)                           /* (V10.6v: no condition, no span: seq_tick's ramp_run) */
             continue;
-        ok = (uint32_t)comp_cond(t, s, k, acted);
+        ok = (uint32_t)comp_cond(t, s, k, acted) ^ (CA_VIEW(a, v) == CA_TRIG);   /* (TRIG: a MUTE when it does not
+                                                     * hold; PRE reads the condition, as it held) */
         if (a == CA_TRANS) {
             mv = CV_TR_MOVE(v);
             if (CV_TR_RANGE(v) > 1u) {              /* adding up: every pass, a place further each time it held */
@@ -2101,7 +2102,7 @@ static __attribute__((noinline)) const step_t *comp_run(track_t *t, const step_t
         if (!ok)
             continue;
         acted = 1;
-        if (a == CA_MUTE && v)
+        if (a == CA_MUTE && (v & CV_MUTE_CUT))
             trk_fade_out(t);                        /* CUT: what sounds goes (~3 ms) */
         if (a == CA_STUT)
             t->cvp = *s;

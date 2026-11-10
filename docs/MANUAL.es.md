@@ -1363,6 +1363,13 @@ timing. Una nota tocada justo en el primer instante después de PLAY va al paso 
   - **RATCH**: cada paso de su LENGTH partido en x2 … x8; DECAY FLAT, FADE (cada parte más suave) o RISE.
   - **STUT** (stutter): este paso otra vez en lugar de los siguientes (EVERY 1 … 4 pasos; los del medio, en silencio).
   - **MUTE**: su LENGTH de pasos en silencio (CUT: además corta lo que suena en la pista).
+  - **TRIG** (el último de KNOB 1): una trig condition al estilo Elektron, un MUTE al revés: los pasos de su LENGTH
+    suenan sólo en las pasadas en que su CONDITION da, y en las otras callan (sin CUT, sin VALUE). La tarjeta muestra
+    la CONDITION como cualquiera: "4:4" suena en la pasada 4 de cada 4. Ejemplo: que suene sólo en la 4ª pasada:
+    **TRIG 4:4**. Después de él, PRE lee su condición (da en las pasadas en que sonó); un C2 ELSE sobre un C1 TRIG
+    actúa en las pasadas en que suena (no silenció), y un C2 TRIG ELSE suena en las pasadas en que C1 no actuó. Su
+    marca es la de MUTE (gris). También está en GLO > COMPS. Se guarda como un MUTE con un VALUE propio: el firmware
+    anterior a TRIG lo carga como un MUTE CUT con la condición tal cual (las pasadas opuestas).
   - **TRANS** (transponer): las notas se mueven MOVE grados (−7 … +7, en la escala). RANGE **FIX**: cada vez que su condición da;
     RANGE 2 … 16: suma un MOVE cada pasada en que su condición da, en una vuelta de RANGE lugares (vuelve a 0), y actúa
     en todas las pasadas.
@@ -1398,7 +1405,7 @@ timing. Una nota tocada justo en el primer instante después de PLAY va al paso 
   - **Componentes globales** (0.9.9-seq2f): **GLO > COMPS** (la tercera pestaña de GLO, después de MIX desde la V10.37) es un carril
     de 16 pasos sobre la 1/16 del transporte (un compás, en loop) cuyos componentes actúan sobre varias pistas a la
     vez. Las teclas blancas eligen su paso, **KNOB 1–4** son ACTION, LENGTH, CONDITION, VALUE como en COMP (acciones
-    MUTE, STUTTER, OCT+ / OCT−, RATCH, TRANSP, ARP sobre las notas de cada pista, RANDOM; condiciones como las de
+    MUTE, TRIG, STUTTER, OCT+ / OCT−, RATCH, TRANSP, ARP sobre las notas de cada pista, RANDOM; condiciones como las de
     las pistas, sin NEI ni ELSE; las pasadas son los compases desde PLAY, el carril tiene su propio PRE y sus propios
     dados). Las teclas negras 1–6 prenden y apagan las pistas a las que aplica (el roll las muestra como marcas chicas
     bajo cada paso); **COMPS 2**: STEP, TRACK, esa pista ON / OFF y **MODE**: **POLY** (por defecto) el global

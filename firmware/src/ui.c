@@ -880,8 +880,8 @@ static void rate_name(const track_t *t, uint32_t n, char *b)
 /* (0.9.9-seq2d) SEQ > COMP / COMP 2: the step's C1 / C2 as ACTION LENGTH CONDITION VALUE (core.h CA_* CC_*) */
 /* (gen3) the names short, each read whole on its card: the value's M where it fits with its unit (COMP's 49 px), else S
  * (ui_test test_comp_cards: every value of every knob, every page) */
-static const char *const CA_NAMES[CA_N] = {"OFF", "ARP", "SEQ", "OCT+", "OCT-", "RATCH", "STUT", "MUTE", "TRANS",
-                                           "RAND", "LOCK", "RAMP", "SOUND", "BEND", "SHIFT", "CHORD"};
+static const char *const CA_NAMES[CA_N + 1u] = {"OFF", "ARP", "SEQ", "OCT+", "OCT-", "RATCH", "STUT", "MUTE", "TRANS",
+                                                "RAND", "LOCK", "RAMP", "SOUND", "BEND", "SHIFT", "CHORD", "TRIG"};
 static const char *const CC_NAMES[CC_NM] = {"ALWAYS", "25%", "50%", "75%", "1ST", "!1ST", "FILL", "!FILL", "PRE",
                                             "!PRE", "NEI", "!NEI", "ELSE"};
 #define CCL_NM 135u                                     /* N:M, M 2..16, N 1..M */
@@ -896,9 +896,10 @@ static uint32_t comp_slot(void)
 }
 static uint32_t comp_type(const step_t *s) { return CO_ACT(comp_slot() == 1u ? s->comp2 : s->comp); }   /* (the page's) */
 static uint32_t comp_arg(const step_t *s) { return comp_slot() == 1u ? s->carg2 : s->carg; }
-static uint32_t comp_view(void)                         /* the ACTION shown for the cursor step */
+static uint32_t comp_view(void)                         /* the ACTION shown for the cursor step (TRIG: CA_TRIG) */
 {
-    return comp_type(&TSEL->step[ui.cursor]) % CA_N;
+    const step_t *s = &TSEL->step[ui.cursor];
+    return CA_VIEW(comp_type(s), comp_arg(s));
 }
 /* a CONDITION (and its N:M) as KNOB 3's place in the list, and back */
 static uint32_t cond_idx(uint32_t c, uint32_t nm)
@@ -1015,7 +1016,8 @@ static void comp_vname(const track_t *t, const step_t *s, uint32_t a, uint32_t v
  * keys 1..6 turn the tracks it applies to on and off; COMPS' KNOB 1..4 ACTION LENGTH CONDITION VALUE as COMP's (the
  * actions that mean something for all: GA_LIST; no ELSE, no NEI), COMPS 2's STEP, TRACK, its ON / OFF, MONO / POLY */
 static uint8_t gl_cur, gl_trk;
-static const uint8_t GA_LIST[] = {CA_NONE, CA_MUTE, CA_STUT, CA_OCTU, CA_OCTD, CA_RATCH, CA_TRANS, CA_ARP, CA_RAND, CA_CHORD};
+static const uint8_t GA_LIST[] = {CA_NONE, CA_MUTE, CA_STUT, CA_OCTU, CA_OCTD, CA_RATCH, CA_TRANS, CA_ARP, CA_RAND, CA_CHORD,
+                                  CA_TRIG};
 static uint32_t gco_slot(void) { return ui.page > 0u && PAGES[ui.page - 1u].graph == GR_GCOMP; }
 static int keys_pg(uint32_t g) { return !ui.home && !ui.menu && !ui.confirm && !ui.layer && cur_page()->graph == g; }   /* (V10.6o) */
 static int gco_on(void) { return keys_pg(GR_GCOMP); }
@@ -1031,7 +1033,7 @@ static uint32_t ga_idx(uint32_t a)
 static __attribute__((noinline)) void gco_knob(uint32_t slot, int32_t steps)
 {
     gcomp_t *c = &glane[gl_cur % GL_N];
-    uint32_t a = CO_ACT(c->comp);
+    uint32_t a = CA_VIEW(CO_ACT(c->comp), c->val);
     int32_t d = clamp(steps, -4, 4);
     if (gco_slot()) {                                   /* COMPS 2 */
         if (slot == 0u) gl_cur = (uint8_t)clamp((int32_t)gl_cur + d, 0, GL_N - 1);
@@ -1049,8 +1051,8 @@ static __attribute__((noinline)) void gco_knob(uint32_t slot, int32_t steps)
         if (na == a) return;
         if (!na) memset(c, 0, sizeof *c);
         else {
-            c->comp = CO_MAKE(na, a ? CO_COND(c->comp) : CC_ALWAYS);
-            c->val = CA_VDEF[na];
+            c->comp = CO_MAKE(na == CA_TRIG ? CA_MUTE : na, a ? CO_COND(c->comp) : CC_ALWAYS);
+            c->val = na == CA_TRIG ? CV_MUTE_TRIG : CA_VDEF[na];
             if (!a) { c->len = 0; c->nm = CNM_MAKE(1u, 2u); c->mask = (uint8_t)((1u << NTRK) - 1u); }
             if (na == CA_ARP || na == CA_STUT) c->len = 1;   /* (a STUTTER, an ARP: two steps to start with) */
         }
@@ -1065,9 +1067,9 @@ static __attribute__((noinline)) void gco_knob(uint32_t slot, int32_t steps)
         if (i >= CC_NEI && i <= CC_ELSE)               /* (no neighbour, no ELSE for the lane: NEI !NEI ELSE in a row) */
             i = steps > 0 ? CC_ELSE + 1 : CC_NEI - 1;
         cond_at((uint32_t)i, &k, &nm);
-        c->comp = CO_MAKE(a, k);
+        c->comp = CO_MAKE(c->comp, k);
         if (k >= CC_NM) c->nm = (uint8_t)nm;
-    } else {
+    } else if (a < CA_N) {                              /* (TRIG: no VALUE) */
         int32_t i = clamp((int32_t)comp_vidx(a, c->val) + steps, 0, CA_VMAX[a]);
         c->val = (uint8_t)comp_vat(a, (uint32_t)i);
     }
