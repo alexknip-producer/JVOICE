@@ -1,7 +1,13 @@
 {
-  "source": "4815517085a828e5261f8d4125292adb24962ee7",
-  "version": "V10.7.16",
-  "released_site_run": 42763727277,
-  "tested_beta_source": "4815517085a828e5261f8d4125292adb24962ee7",
-  "tested_beta_run": 42755914985
+  "source": "545a27523906ed423736b9deb6ea78856ff01005",
+  "version": "V10.7.17",
+  "released_site_run": 42764289783,
+  "previous_public_source": "4815517085a828e5261f8d4125292adb24962ee7",
+  "audit_source": "f3f4effcfddb6a5f363c40e331fcfe42bfe6f17e",
+  "regressions": [
+    "loop_song",
+    "song_generator",
+    "song_draft",
+    "gen"
+  ]
 }

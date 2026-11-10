@@ -6,6 +6,7 @@ Firmware personalizado para el M-VAVE FM-1, de Juan Jiant. Primero la versión m
 
 | Versión | Fecha | Estado |
 | --- | --- | --- |
+| **V10.7.17** | 2026-11-10 | **Pública** |
 | **V10.7.16** | 2026-11-10 | **Pública** |
 | V10.7.7 … V10.7.15 | 2026-11-09 … 11-10 | Beta |
 | **V10.7.6** | 2026-11-09 | **Pública** |
@@ -20,6 +21,14 @@ Antes de instalar, revisá los apartados **Compatibilidad**.
 > otra numeración: V10.6c, V10.6d … V10.6z, V10.6z2 … V10.6z10, después V10.7, V10.7.1 … V10.7.5. La **V10.6** y la
 > **V10.7** del 31 de octubre de 2026 son versiones mucho más viejas con el mismo nombre. Están en "Versiones anteriores",
 > al final.
+
+---
+
+## V10.7.17 — estabilidad de MY LOOP (2026-11-10)
+
+- MY LOOP ya no se bloquea cuando una pista melódica conserva golpes de DRUM-X sin notas.
+- TRACKS 4 excluye T5/T6 ocultas de la detección del loop, el análisis tonal y la asignación de roles. Cambiar la cantidad de pistas activas reinicia la reutilización del loop.
+- La publicación pública ejecuta las regresiones de MY LOOP, generación de canciones, borradores y GEN antes del despliegue.
 
 ---
 

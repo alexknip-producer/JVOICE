@@ -6,6 +6,7 @@ Custom firmware for the M-VAVE FM-1 by Juan Jiant. Newest version first.
 
 | Version | Date | Status |
 | --- | --- | --- |
+| **V10.7.17** | 2026-11-10 | **Public** |
 | **V10.7.16** | 2026-11-10 | **Public** |
 | V10.7.7 … V10.7.15 | 2026-11-09 … 11-10 | Beta |
 | **V10.7.6** | 2026-11-09 | **Public** |
@@ -19,6 +20,14 @@ The sections marked **Compatibility notes** are the ones to check before you ins
 > **A note on version numbers.** Before V10.6c the versions counted up as V10.1, V10.2 … V10.61. V10.6c started a new
 > scheme: V10.6c, V10.6d … V10.6z, V10.6z2 … V10.6z10, then V10.7, V10.7.1 … V10.7.5. The **V10.6** and **V10.7** of
 > 31 October 2026 are much older builds with the same names; they are covered under "Older versions" at the end.
+
+---
+
+## V10.7.17 — MY LOOP stability (2026-11-10)
+
+- MY LOOP no longer freezes when a melodic track retains DRUM-X hits with no notes.
+- TRACKS 4 excludes hidden T5/T6 from loop detection, key analysis and role assignment. Changing the active track count resets loop reuse.
+- Public firmware publication now runs MY LOOP, song generator, song draft and GEN regressions before deployment.
 
 ---
 

@@ -39,7 +39,7 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: github-pages
-          run-id: 42763727277
+          run-id: 42764289783
           github-token: ${{ github.token }}
           path: build/released
       - name: JieLi toolchain cache
@@ -74,6 +74,23 @@ jobs:
             "/tmp/uac-$CDC"
           done
           python3 tools/build.py
+      - name: MY LOOP and song regressions (publication gate)
+        run: |
+          set -euo pipefail
+          cd build/candidate
+          mkdir -p build/song-check
+          for suite in loop_song song_generator song_draft gen; do
+            cc -O1 -w -Wno-implicit-function-declaration -Ibuild/gen -Ifirmware/src "tests/${suite}_test.c" -lm -o "build/song-check/$suite"
+            timeout 120 "build/song-check/$suite" | tee "build/song-check/$suite.log"
+          done
+      - name: Regression and target build logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: public-firmware-checks
+          path: |
+            build/candidate/build/song-check/*.log
+            build/candidate/build/felucca.map
       - uses: actions/upload-artifact@v4
         with:
           name: public-firmware-candidate
@@ -118,7 +135,7 @@ jobs:
           prior=json.loads((fw/'versions.json').read_text())
           old={v['file']:digest(fw/v['file']) for v in prior}
           v=re.search(r'^#define FELUCCA_VERSION "([^"]+)"',Path('build/candidate/firmware/src/felucca.c').read_text(),re.M).group(1)
-          assert m['version']==v and v=='V10.7.16'
+          assert m['version']==v and v=='V10.7.17'
           make_site.main('build/candidate/build/felucca.fwsc',m['version'],'build/new-public',str(fw))
           for name in ('webapp','firmware'):
               shutil.rmtree(pages/name);shutil.copytree(Path('build/new-public')/name,pages/name)
