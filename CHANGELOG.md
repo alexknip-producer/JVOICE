@@ -6,6 +6,8 @@ Custom firmware for the M-VAVE FM-1 by Juan Jiant. Newest version first.
 
 | Version | Date | Status |
 | --- | --- | --- |
+| **V10.7.16** | 2026-11-10 | **Public** |
+| V10.7.7 … V10.7.15 | 2026-11-09 … 11-10 | Beta |
 | **V10.7.6** | 2026-11-09 | **Public** |
 | V10.6d … V10.7.5 (except V10.6z2) | 2026-11-06 … 11-09 | Beta |
 | **V10.6z2** | 2026-11-07 | **Public** |
@@ -20,7 +22,7 @@ The sections marked **Compatibility notes** are the ones to check before you ins
 
 ---
 
-## Known issues in V10.7.6
+## Known issues in V10.7.16
 
 - **Velocity on the top row.** The keys C#5..G5 have no pressure sensor, so they play at the average of your recent
   playing and have no aftertouch. Velocity and aftertouch work on F3..C5.
@@ -35,6 +37,33 @@ The sections marked **Compatibility notes** are the ones to check before you ins
   (MENU > BLUETOOTH).
 
 ---
+
+## V10.7.16 — 2026-11-10 — public
+
+Everything since V10.7.6 (the betas V10.7.7 … V10.7.15 included).
+
+- **GENE › FORM MY LOOP**: your loop made a whole song. It stays as it is (the drop); GEN hears its key and chords (six
+  modes, DRUM-X's tonal lanes too), reharmonizes every seed with chords that contain your notes, adds bass, chords and a
+  counter-melody on empty tracks only, and lets the genre shape the other sections (its drums on your kit, its bass and
+  parts). OCT+ again for another song, UNDO back to the loop. EXPLORE picks a genre per seed.
+- **No more stuck notes**: keys, SCENE keys, LATCH, the arp and MIDI-in notes always release what they started.
+  **PANIC**: hold PLAY ~0.7 s.
+- **VOICE** with words clearer and more fluid (consonants, open vowels, no level dips).
+- **Step components: TRIG** (Elektron-style trig condition: TRIG 4:4 plays only on the 4th pass).
+- **DRUM-X kits dry** (no default sends), the EXTENDED FX keys no longer force delay / reverb; reverb pre-delay without
+  aliasing (ROOM / SPRING with PRE > 0).
+- Power-on sounds: ACOUSTIC, ANALOG PLUCK, PHASE INIT SAW, FM BASS, CHANT, WHISTLE (dry).
+- Fixes from users: REC then PLAY records the loop after a GEN song; the master EQ and TAPE are saved in every section;
+  USB audio on macOS 13–15; the PRESETS knob says LIST <type> when filtered; KEY SPLIT's scope no longer freezes; the
+  velocity wait capped at 2.2 ms (none on DRUM tracks); BLUETOOTH reads MISSING (was NO SEG) with a reinstall message.
+- GENE: güiro and LATIN PERC kit, CUMBIA RKT, REGGAETON harder, BAILE FUNK minimal, EBM / MINIMAL TECHNO / PHONK after
+  reference tracks. EDIT › SOUND without the parameter list beside the creature; thermal PROX and SWARM bars.
+
+**Compatibility notes**
+- Projects in the oldest formats (JIANT 0.1–0.5, Felucca 1.0/1.1) are no longer read: open and save them again with
+  V10.7.15 or earlier first. Very old user presets load as stored; a retired engine on a track loads as ANALOG.
+- ADD shows the generic creature.
+- A project using TRIG opened on older firmware plays that step the other way round (harmless).
 
 ## V10.7.6 — 2026-11-09 — public
 

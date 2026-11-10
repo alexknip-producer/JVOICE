@@ -1,6 +1,6 @@
 # JIANT FM — Manual de usuario
 
-**JIANT FM V10.7.6 para el M-VAVE FM-1**
+**JIANT FM V10.7.16 para el M-VAVE FM-1**
 
 > *English version: [MANUAL.md](MANUAL.md).*
 
@@ -45,6 +45,14 @@ Todo lo que cambió desde la V10.6c, la última versión pública, en una lista;
 - **Proyectos muy viejos retirados** (V10.6s): los proyectos guardados por JIANT antes de la 1.0.3 (FUN1 a FUN6) se
   rechazan sin tocarlos, y un sonido DIGITAL carga como el init de FM6. Si todavía los necesitás, abrilos en una
   versión anterior (V10.6c) y guardalos de nuevo ahí.
+- **Proyectos más viejos retirados** (después de V10.7.13, lugar para FORM MY LOOP de GENE): los proyectos y backups
+  guardados en los formatos FUN7 a FUNB (Felucca 1.0 / 1.1 y JIANT hasta 0.5) ya no se leen; al encender, un proyecto
+  así muestra **OLD PROJECT: NOT READ** y su slot queda vacío (la flash lo conserva hasta que guardes encima). El editor
+  web no los convierte: abrilos en V10.7.13 o anterior y guardalos de nuevo ahí (así quedan en el formato de hoy).
+  También se fueron: las conversiones de presets de usuario viejos (SAMPLE PERC, TRIO, los chips de LOFI, valores de
+  0.3 / 0.4: un preset así carga como estaba guardado, y si es de un motor retirado suena como ANALOG), la pista de un
+  motor retirado en un proyecto ahora recibe el primer preset de ANALOG (no su sonido más parecido), y la criatura propia
+  de ADD (ADD dibuja el ser, como los otros motores antes de 0.9.6).
 - **FM-1 nuevos** (V10.6z): los FM-1 vendidos desde fines de 2026 (con el logo en el frente) traen otro chip de
   flash. Las versiones anteriores de JIANT andaban en esos equipos solo desde la RAM (sin guardar, sin GENE, sin
   actualizarse desde el equipo); esta versión guarda normalmente. Si el tuyo no conservaba tus canciones, actualizá.
@@ -111,8 +119,7 @@ Guardá tus archivos WAV.
 ### Tu primer sonido (1 minuto)
 
 1. Encendé el equipo. La firma se dibuja sola y después llegás a **HOME**: seis criaturas, una por pista. (V10.6e) Las
-   pistas arrancan como una banda afinada: **T1 DRUM-X** (ACOUSTIC), **T2 ANALOG** (FAT BASS), **T3 PHASE** (GLASS
-   PAD), **T4 FM6** (TINE EP), **T5 VOICE** (CHOIR AAH) y **T6 ANIMAL** (WHISTLE), cada una con el sonido de su
+   pistas arrancan como una banda afinada: **T1 DRUM-X** (ACOUSTIC), **T2 ANALOG** (PLUCK), **T3 PHASE** (INIT SAW), **T4 FM6** (FM BASS), **T5 VOICE** (CHANT) y **T6 ANIMAL** (WHISTLE), cada una con el sonido de su
    preset, seco.
 2. Girá **ALGORITHM** para elegir una pista (T1–T6). Con el valor por defecto, **TRACKS 4**, se detiene en T4: T5 y T6 aparecen solo con TRACKS 6 (ver
    [13](#13-sistema-tracks-load-y-el-menu)).
@@ -171,7 +178,7 @@ Los nombres de abajo son los que usa el firmware (la pantalla HARDWARE CALIBRATI
 | **SAVE** | La sección SAVE: desde otro lado, la última página mostrada, y USER o SECTIONS llegan con su **SAVE ya elegido** (SAVE, OCT+, OCT+ como antes); adentro **SONG → PROJECT → SOUND**, en ronda (V10.2: primero el tema; al prender TIMELINE). | Capa **SAVE**: tocar/guardar secciones en vivo; C5 NAME. |
 | **ARP** | La sección ARP (ARP · ARP 2, un grupo): desde otro lado, la última página mostrada; adentro, vuelve a ARP. Un acorde mantenido + ARP al grabar por pasos lo sigue arpegiando. | (sin capa) |
 | **SEQ** | La sección SEQ: desde otro lado, la última página mostrada (al encender STEP, el piano roll); adentro el grupo siguiente (V10.6): **STEP → LENGTH → EUCLID → PLAYHEADS → STRETCH → COMP → AUTO → GENERATE**, en ronda. | Capa **SEQ TOOLS** (en todas las páginas SEQ); G5 CLR STEP. |
-| **PLAY** | Arranca / para. | — |
+| **PLAY** | Arranca / para. Mantenido (~0,7 s): **PANIC**. | — |
 | **REC** | Arma / desarma la grabación en la pista seleccionada. | Capa **REC**: CLEAR, CLICK. (V10.7) Mantenido más que HOLD y soltado sin tocar nada más: **UNDO** (otra vez: rehacer). |
 | **OCT− / OCT+** | Octava del teclado (−3 a +3; los dos juntos: vuelve a 0; en una pista DRUM el kit queda en sus teclas: ratchets arriba, SHORT / GHOST / FLAM abajo, ver [5](#5-drum-x)). En páginas de acción y en diálogos: **OCT−** = atrás / NO, **OCT+** = hacerlo / YES. | — |
 
@@ -185,6 +192,7 @@ atajos de esa capa; en la grilla DRUM son pasos y carriles; en la pantalla NAME 
 | Combinación | Resultado |
 | --- | --- |
 | **GLO** mantenido + **PLAY** | Reinicia desde el principio sin parar (clock interno). |
+| **PLAY** mantenido (~0,7 s) | **PANIC: ALL NOTES OFF**. Para el transporte y corta todo el sonido de una: las voces de todas las pistas, los acordes en LATCH, los arpegios, las repeticiones del punch-in y las notas que tiene MIDI IN (una tecla o nota MIDI que soltás después no hace nada; la siguiente suena como siempre). MIDI OUT manda el note-off de cada nota que mandó y All Notes Off (CC123) en los canales 1–6 de las pistas (no con MIDI OUT en OFF). Usalo si te queda una nota colgada, por ejemplo de un controlador que perdió su note-off; el CC120 / CC123 de MIDI IN sigue haciendo lo mismo en su canal. |
 | **GLO** mantenido + **SELECT** | Tempo, desde cualquier página. |
 | **GLO** mantenido + **G4** | **UNDO** del último cambio grande (otra vez: rehacer). |
 | **REC** mantenido solo, soltado | (V10.7) También **UNDO**: mantenido más que HOLD (~0,5 s) sin tocar tecla, perilla, botón ni OCT; otra vez: rehacer. Si usás otra cosa mientras lo mantenés, es la capa REC; un toque sigue armando la grabación. |
@@ -211,7 +219,7 @@ de Charles Vestal, *Velo*, github.com/charlesvestal/fm1-velocity, GPL-3.0). JIAN
 
 - **Velocidad**: qué tan fuerte llega la tecla, en los primeros milisegundos después de tocar. Es continua (1..127:
   cada toque entre suave y fuerte da un valor intermedio), y después pasa por la curva de MENU > CONTROL >
-  **VELOCITY** y el piso de **VEL MIN**. Una nota espera como mucho una lectura de su tecla (2,2 ms), por debajo de lo que se nota. Llega a todo lo que toca una tecla: el sonido (los motores y el VEL de la matriz), los
+  **VELOCITY** y el piso de **VEL MIN**. En una pista de sintetizador una nota espera su golpe como mucho 2,2 ms (V10.7.10: un límite fijo, aunque se pierda una lectura de la tecla), por debajo de lo que se nota; en una pista **DRUM** (la elegida, o la mitad de KEY SPLIT que va a una) no espera nada: suena enseguida con el golpe leído hasta ahí, o el promedio reciente de la tecla. Llega a todo lo que toca una tecla: el sonido (los motores y el VEL de la matriz), los
   acordes y el strum, el arpegiador, la grabación (solo 127 se graba como acento) y el MIDI OUT. VELOCITY **OFF**:
   todas las teclas 100, como antes.
 - **La fila de arriba (C#5..G5)** no tiene sensor (el FM-1 no puede leer la presión de esas siete teclas), así que toca con el
@@ -1113,8 +1121,9 @@ demás motores: una recta, como antes).
 
 DRUM-X es un kit sintetizado de ocho sonidos, **BD SD CP CH OH TM RS CB**, generados en tiempo real.
 
-- (0.7.2) **Nueve kits como presets del motor DRUM**: DRUM-X (el kit de fábrica), 909 CLUB, 808 BOOM, LOFI DUST,
-  INDUSTRIAL, ACOUSTIC, DUB ROOTS, TECHNO RAW, BREAKS, HIP HOP (V10.34: boom bap, sugiere el patrón BOOM BAP). Recorrer uno (PRESETS en HOME, el editor, un PROGRAM CHANGE)
+- (0.7.2) **Once kits como presets del motor DRUM**: DRUM-X (el kit de fábrica), 909 CLUB, 808 BOOM, LOFI DUST,
+  INDUSTRIAL, ACOUSTIC, DUB ROOTS, TECHNO RAW, BREAKS, HIP HOP (V10.34: boom bap, sugiere el patrón BOOM BAP), LATIN
+  PERC (V10.7.8: bombo, timbal, llamador, un **GÜIRO** en el hi-hat cerrado, maracas, conga, clave, cencerro). Recorrer uno (PRESETS en HOME, el editor, un PROGRAM CHANGE)
   carga el kit completo en la sección: los lados A y B de los ocho sonidos, sus LAYER y SEND, y las perillas KIT de la
   pista. Cambiar de motor, INIT SOUND, cargar un proyecto y GEN dejan el kit de la sección como está; DRUM-X devuelve el
   de fábrica. Editá cualquiera en EDIT > SOUND; la sección guarda el resultado.
@@ -1144,15 +1153,21 @@ DRUM-X es un kit sintetizado de ocho sonidos, **BD SD CP CH OH TM RS CB**, gener
     S&H), **RAND** (cada golpe con su propio MORPH y un poco de afinación).
   - **FILTER**: el del kit.
   - **SOUND 1–4**, un sonido cada una: la KNOB 1 es siempre **SOUND** (cuál; tocar una tecla también lo elige).
-    - **SOUND**: SIDE (A / B), PITCH, PMOD (cuánto cae la afinación).
+    - **SOUND**: SIDE (A / B), PITCH, PMOD (cuánto cae la afinación; con el filtro GR, **SCRAPE**: abajo).
     - **SOUND 2**: DECAY, NOISE, COLOR, del lado elegido en SOUND (la KNOB 1 lo muestra: "SD B").
-    - **SOUND 3**: **MODE** (onda SIN / FM / MTL / BEL, filtro de ruido LP / BP / HP, "+" para snap), **PM.TYPE** (cómo
+    - **SOUND 3**: **MODE** (onda SIN / FM / MTL / BEL, filtro de ruido LP / BP / HP / GR, "+" para snap), **PM.TYPE** (cómo
       se mueve la afinación: DECAY, LONG, NOISE, SINE), **DRIVE** (ON / OFF).
+      (V10.7.8) **GR**, el güiro: un pasabanda cuyo golpe es una pasada por las estrías de un güiro, ticks a 24–64 Hz
+      (PITCH da la velocidad). El PMOD de SOUND pasa a ser **SCRAPE**, el largo de la pasada (0–173 ms), y la velocidad
+      del golpe elige larga o corta: un acento (127) toca la pasada entera, "rrrrip", un golpe suave solo su comienzo,
+      "chk" (el largo va con la cuarta potencia de la velocidad). Cualquier sonido puede tenerlo (un tom raspado, un
+      clap raspado); los kits de antes nunca lo tuvieron, así que suenan como sonaban.
     - **SOUND 4**: **LAYER** (OFF, 1–15): un segundo oscilador en un intervalo desafinado, modulado en frecuencia por el
       sonido, más cuanto más alto: de un filo metálico a un golpe sin nota, así el sonido se funde en el ritmo y no
       molesta a la armonía (el kit de fábrica lo tiene en redoblante, hi-hats y cowbell); **FEEDBK** (OFF, 1–15): el de
       ese sonido (se suma al de KIT 3); **SEND**: ese golpe solo hacia un efecto, OFF y después CHO, DLY, REV con 16
-      cantidades cada uno, en una sola perilla ("REV 75%"), además de los envíos de la pista. Los dados (DICE ALL; los
+      cantidades cada uno, en una sola perilla ("REV 75%"), además de los envíos de la pista (V10.7.10: todos los kits de fábrica vienen
+      con los SEND en OFF, secos; un proyecto guardado conserva los suyos). Los dados (DICE ALL; los
       dados de sonido) mueven fuerte LAYER y FEEDBK. Cada sonido con LAYER usa un poco de CPU (como FEEDBK).
   - **LEVELS / LEVELS 2**: el nivel de cada sonido (KICK, SNARE, CLAP, HATCL, HATOP, TOM, RIM, BELL).
   - **STEREO**: **IMAGE** (automatizable) barre el kit por sus ubicaciones en el estéreo. 0 (MONO): todos al medio; los
@@ -1217,7 +1232,7 @@ nombre en pantalla al cambiar OCT:
 | **+1** | **FILLS**: redobles de verdad, nueve clases (redobles de caja de corcheas a semicorcheas a fusas, bajadas de toms, flams, unísonos, 3-3-2…) en tres largos; un platillo en el tiempo fuerte siguiente |
 | **0** | **DRUM-X KIT**: el kit de siempre |
 | **−1** | **KICK / TOM**: el bombo (teclas de abajo) y el tom (teclas de arriba) **cromáticos**; o, con KEY MAP en un sonido (KICK … BELL), ese sonido cromático en las 27 teclas (**BELL** para melodías de cencerro) |
-| **−2** | **FX KIT**: los sonidos a través de sus efectos (al revés, con delay, realimentados, plegados) |
+| **−2** | **FX KIT**: los sonidos como variantes (más largos, realimentados, plegados, con más ruido); V10.7.10: ya sin delay ni reverb propios (los SENDs del kit y los FX de la pista, como cualquier golpe) |
 | **−3** | **FLAM** |
 
 Una nota grabada en EXTENDED vuelve a sonar en el mismo sonido y a la misma altura. El sonido en sí: la V10.6q reescribió
@@ -1349,6 +1364,13 @@ timing. Una nota tocada justo en el primer instante después de PLAY va al paso 
   - **RATCH**: cada paso de su LENGTH partido en x2 … x8; DECAY FLAT, FADE (cada parte más suave) o RISE.
   - **STUT** (stutter): este paso otra vez en lugar de los siguientes (EVERY 1 … 4 pasos; los del medio, en silencio).
   - **MUTE**: su LENGTH de pasos en silencio (CUT: además corta lo que suena en la pista).
+  - **TRIG** (el último de KNOB 1): una trig condition al estilo Elektron, un MUTE al revés: los pasos de su LENGTH
+    suenan sólo en las pasadas en que su CONDITION da, y en las otras callan (sin CUT, sin VALUE). La tarjeta muestra
+    la CONDITION como cualquiera: "4:4" suena en la pasada 4 de cada 4. Ejemplo: que suene sólo en la 4ª pasada:
+    **TRIG 4:4**. Después de él, PRE lee su condición (da en las pasadas en que sonó); un C2 ELSE sobre un C1 TRIG
+    actúa en las pasadas en que suena (no silenció), y un C2 TRIG ELSE suena en las pasadas en que C1 no actuó. Su
+    marca es la de MUTE (gris). También está en GLO > COMPS. Se guarda como un MUTE con un VALUE propio: el firmware
+    anterior a TRIG lo carga como un MUTE CUT con la condición tal cual (las pasadas opuestas).
   - **TRANS** (transponer): las notas se mueven MOVE grados (−7 … +7, en la escala). RANGE **FIX**: cada vez que su condición da;
     RANGE 2 … 16: suma un MOVE cada pasada en que su condición da, en una vuelta de RANGE lugares (vuelve a 0), y actúa
     en todas las pasadas.
@@ -1384,7 +1406,7 @@ timing. Una nota tocada justo en el primer instante después de PLAY va al paso 
   - **Componentes globales** (0.9.9-seq2f): **GLO > COMPS** (la tercera pestaña de GLO, después de MIX desde la V10.37) es un carril
     de 16 pasos sobre la 1/16 del transporte (un compás, en loop) cuyos componentes actúan sobre varias pistas a la
     vez. Las teclas blancas eligen su paso, **KNOB 1–4** son ACTION, LENGTH, CONDITION, VALUE como en COMP (acciones
-    MUTE, STUTTER, OCT+ / OCT−, RATCH, TRANSP, ARP sobre las notas de cada pista, RANDOM; condiciones como las de
+    MUTE, TRIG, STUTTER, OCT+ / OCT−, RATCH, TRANSP, ARP sobre las notas de cada pista, RANDOM; condiciones como las de
     las pistas, sin NEI ni ELSE; las pasadas son los compases desde PLAY, el carril tiene su propio PRE y sus propios
     dados). Las teclas negras 1–6 prenden y apagan las pistas a las que aplica (el roll las muestra como marcas chicas
     bajo cada paso); **COMPS 2**: STEP, TRACK, esa pista ON / OFF y **MODE**: **POLY** (por defecto) el global
@@ -1688,7 +1710,7 @@ las notas sonando después de soltarlas; el acorde siguiente las reemplaza.
 | --- | --- |
 | Los pasos y la automatización de la pista seleccionada | **REC mantenido + F3**, o SAVE > TOOLS > CLEAR SEQ, o SEQ TOOLS F3 |
 | Los pasos y la automatización de las seis pistas, y el carril de punch-in | **SEQ mantenido + REC**, después OCT+ |
-| **Todo** (NEW PROJECT): cada pista con su sonido de encendido (V10.6e: T1 DRUM-X ACOUSTIC, T2 ANALOG FAT BASS, T3 PHASE GLASS PAD, T4 FM6 TINE EP, T5 VOICE CHOIR AAH, T6 ANIMAL WHISTLE, seco), sin pasos ni automatización; mezcla, efectos, tempo y SLICER por defecto; el arreglo vacío, las macros en 0, el kit DRUM-X de fábrica. Quedan los proyectos guardados, los presets de usuario, el MENU, CLOCK, TUNE y MIDI | **MENU > SYSTEM > INIT SYSTEM** o **SAVE > TOOLS > 5 NEW PROJECT**, después OCT+ (UNDO devuelve la música) |
+| **Todo** (NEW PROJECT): cada pista con su sonido de encendido (V10.7.11: T1 DRUM-X ACOUSTIC, T2 ANALOG PLUCK, T3 PHASE INIT SAW, T4 FM6 FM BASS, T5 VOICE CHANT, T6 ANIMAL WHISTLE, seco), sin pasos ni automatización; mezcla, efectos, tempo y SLICER por defecto; el arreglo vacío, las macros en 0, el kit DRUM-X de fábrica. Quedan los proyectos guardados, los presets de usuario, el MENU, CLOCK, TUNE y MIDI | **MENU > SYSTEM > INIT SYSTEM** o **SAVE > TOOLS > 5 NEW PROJECT**, después OCT+ (UNDO devuelve la música) |
 | *(no borra)* Una canción de prueba pesada, para medir la CPU en el equipo y escuchar si hay clics (cada pista viva con acordes de cuatro notas, dos componentes por paso y glides largos, el kit con todos los carriles, todos los FX, 160 BPM) | **SAVE > TOOLS > 6 CPU TEST**, OCT+, después PLAY (UNDO devuelve tu música) |
 | Solo la automatización de una parte en la pista seleccionada | **REC mantenido + FX / EDIT / ENV / LFO / SCL / ARP / GLO** |
 | La automatización de la pista, conservando los pasos | SEQ TOOLS **F4 CLR AUTO**, o SEQ > AUTOMATION > CLEAR |
@@ -1769,8 +1791,8 @@ largo y su END (**120 BARS · LOOP**).
   perilla de sonido (EDIT, ENV, LFO, FX, MOD… todo lo que fija un preset), un parche FM6 o el kit de DRUM-X mientras
   suena un tema (o un tema de GENE, o una cadena rápida) y esa pista conserva tu sonido en todas las secciones que
   siguen: las secciones siguen trayendo sus pasos, el patrón (LEN, DIV, swing, gate), el arpegio, la escala, la mezcla
-  (nivel, paneo) y los mutes. Al parar se quedan tus sonidos (SONG END no los pisa) y PLAY de nuevo los sigue
-  manteniendo. Vuelven a seguir las secciones con una nueva tirada de GENE, al cargar un proyecto o una sección, con un
+  (nivel, paneo) y los mutes. Al parar vuelve la música de antes de PLAY (SONG END, también lo no guardado) con
+  tus sonidos encima (V10.7.6), y PLAY de nuevo los sigue manteniendo. Vuelven a seguir las secciones con una nueva tirada de GENE, al cargar un proyecto o una sección, con un
   salto de sección en vivo o un lanzamiento de CLIPS, o, para una pista, con **RECALL** de la capa EDIT (G3; ahora
   funciona con el tema sonando): el sonido guardado de la sección, y después el de las secciones siguientes.
 - END: **STOP** reproduce el tema una vez, **x2–x8** esa cantidad de veces, **LOOP** para siempre.
@@ -1899,7 +1921,7 @@ abrías GEN); al encender y con NEW PROJECT arranca en EXPLORE.
 
 | Página | KNOB 1 | KNOB 2 | KNOB 3 | KNOB 4 |
 |---|---|---|---|---|
-| 1/3 | **GENRE**: **EXPLORE** (al encender y con NEW PROJECT arranca ahí; V10.8: GEN conserva el que elegiste entre visitas; ningún género, todas las reglas rotas, ver abajo), RANDOM (la mitad de sus tiradas son mutantes de dos géneros, con nombre A+B) o uno de los géneros (abajo), en ese orden | **SEED** 0000–9999 | **ENERGY** 0–100 % | **FORM**: LOOP, PARTS, SONG |
+| 1/3 | **GENRE**: **EXPLORE** (al encender y con NEW PROJECT arranca ahí; V10.8: GEN conserva el que elegiste entre visitas; ningún género, todas las reglas rotas, ver abajo), RANDOM (la mitad de sus tiradas son mutantes de dos géneros, con nombre A+B) o uno de los géneros (abajo), en ese orden | **SEED** 0000–9999 | **ENERGY** 0–100 % | **FORM**: LOOP, PARTS, SONG, MY LOOP |
 | 2/3 | **DRUMS** | **BASS** | **CHORDS** | **ARP** — cada uno OFF, 10–100 %, o **AUTO** (lo que pide el género); OFF queda apagado (V10.8) |
 | 3/3 | **LEAD** (igual) | **COMPLEX** 0–100 % | **SWING** AUTO o 0–100 % | **HUMAN** 0–100 % |
 
@@ -1928,6 +1950,17 @@ lofi; la de TECHNO ROCK, techno rock, rock o synth 80s; JAZZ en corcheas swing, 
 tempo, sus escalas y progresiones, su mapa de batería y su kit, sus arquetipos de bajo y su registro, cómo hablan sus
 acordes, su arpegio y su lead, qué receta de sonido toma cada rol, qué tan humano toca y su espacio (tipo de reverb,
 tipo y tiempo del delay, cuánta humedad).
+
+(V10.7.8, pedido del dueño) El güiro de **CUMBIA** es un güiro: el filtro GR de DRUM-X en el hi-hat cerrado (el de
+LATIN PERC, con su llamador, maracas, conga y clave), una pasada larga en la "e" de cada tiempo y una corta en su "y",
+otra corta en la "a" del 2 y del 4 que lleva al tiempo siguiente (la digital lo mantiene en el tiempo), los acentos
+las pasadas largas; la villera es ahora **RKT** (la referencia del dueño, al estilo de MC Caco, ~92 BPM): un bombo corto
+y el clap en cada negra, la pasada del güiro en el tiempo y un "chk" en su "a" adelantado ~28 ms (MICRO: el tirón del
+tresillo), la conga en las "y", el bajo y los teclados bajos debajo de la batería. **REGGAETON** es más duro y tiene más aire: el kit y el 808 saturados (el romántico limpio),
+el 808 más corto, el arpegio punteado un riff menor al frente, el pad y el hook debajo, la conga y la clave de LATIN
+PERC. **BAILE FUNK** es ultra mínimo: el "tum tcha" del tamborzão en 3, 6 y 12 son dos tom shots (grave en el tom,
+agudo en el lane del clap), la respuesta del cencerro, sin redoblante, clap, hi-hats ni acordes, el 808 corto, seco y
+deslizándose hacia arriba al final del compás, los cortes del canto escasos.
 
 **Una base limpia** (0.9.9-gen1): cada pieza arranca del **estado de NEW PROJECT** — los parámetros, el sonido, los
 pasos, los componentes, los p-locks y la automatización de cada pista, MUTATE, los globales del tema (salvo el reloj,
@@ -2110,6 +2143,57 @@ De qué está hecha una pieza:
 Cada pieza reemplaza los pasos, sonidos, kit, mezcla y automatización de todas las pistas. Los mutes quedan como
 estaban. Los roles que suenan van en las primeras pistas (la batería en la pista DRUM), así que con TRACKS 4 escuchás
 los más importantes.
+
+#### FORM MY LOOP: tu loop hecho tema
+
+Poné **FORM** en **MY LOOP** y apretá **OCT+**: GEN convierte el loop que estás tocando en un tema entero, con las
+reglas del **GENRE** que elegiste. De tu loop no cambia nada: sus pistas, pasos, sonidos y mezcla quedan como están, y
+son la sección **A**, el pico del tema (su drop). Las demás secciones son del género, tocadas con tus sonidos. GEN:
+
+- **escucha tu loop**: su tonalidad y su modo (mayor, menor, dórico, mixolidio, frigio o menor armónico; cada nota pesa
+  por su duración, su velocity y si cae en el tiempo; el bajo, las notas más graves, dicen cuál es la tónica). Cuando
+  tu loop no define (un riff de quintas sin tercera, un 808 en la fundamental y la quinta), GEN toma el modo propio del
+  género, después el menor, y el más oscuro si tu loop está distorsionado (el DIST de una pista) o el género es pesado:
+  un loop oscuro sigue oscuro, un riff de E-F es E frigio. DRUM-X también cuenta cuando toca una altura: un carril con
+  poco ruido y que suena largo (un 808, un tom afinado) y las notas de la escala cromática de un kit EXTENDED (KICK / TOM
+  o el CHROM de un carril). Un loop de batería sola no tiene tonalidad: se usan la tonalidad y la progresión propias de
+  GEN para el género.
+- **lo rearmoniza con cada semilla**: un acorde por compás (medio compás en un loop de un compás) que **contiene las
+  notas de tu loop ahí** (su fundamental, tercera y quinta lo que más suena, la nota del bajo una de ellas, casi nada tuyo a
+  un semitono de ellas; una séptima donde tu loop la toca; acordes de quinta en los géneros que los usan). Un cuarto de
+  las semillas se queda con los acordes que escuchó en el loop; las demás eligen el acorde de cada compás según qué tan
+  bien calza, con más chances los acordes propios del género y, en un loop oscuro, los menores: otra progresión debajo
+  del mismo loop, siempre en su tonalidad y su modo.
+- **agrega las partes que le faltan a tu loop, solo en pistas vacías** (sin notas; nunca en las tuyas), según **BASS**,
+  **CHORDS** y **ARP** de GENE 2 (AUTO: las del género; OFF: ninguna): un bajo si tu loop no tiene, acordes sobre la
+  progresión de esa semilla si no tiene, y en la pista del arp una **contramelodía hecha con tu melodía**: las mismas
+  notas corridas una corchea o un tiempo, su primera mitad respondida, dada vuelta alrededor de su primera nota o solo
+  en los tiempos, a una octava, en tu tonalidad (si el loop no tiene melodía: un arpegio de los acordes). Sus sonidos y
+  su mezcla son los del género. Sin pistas vacías no se agrega nada y la pantalla dice **NO EMPTY TRACK: ARRANGED** (las
+  otras secciones igual son del género, con tus sonidos).
+- **mete el género en el tema** alrededor del drop: **B**, la estrofa, toca la batería del género (su propio patrón: el
+  dembow de REGGAETON, los bombos de HARD BASS, ...) con tu kit, y el bajo, los acordes, el arp y la melodía del género
+  con los sonidos de tus pistas, sobre la progresión propia del género en tu tonalidad (con sus acordes prestados y sus
+  colores); **C**, el build, las partes del género sobre los acordes del drop, su batería la de la estrofa o la de tu
+  loop (la mitad de las semillas) en cuatro compases con un redoble en el snare, clap o rim cada vez más rápido y más
+  fuerte, el bombo afuera al final, el pasaaltos del master abriéndose, el filtro de los acordes subiendo, un stutter
+  hacia el drop; **D**, el break, sin batería ni bajo, sobre los acordes del género o los del drop desde su
+  predominante, más húmedo, los synths una octava arriba en su último compás.
+- **lo arma** con las filas de SONG, cada semilla las suyas: el plan de club o un arco (más seguido un arco en los
+  géneros que lo usan), la estrofa en el groove y en algunas intros y outros, el largo de las filas, la energía de cada
+  sección (qué tan cargados van el arp, la melodía, el pulso de los acordes); la intro y el outro con la batería raleada
+  (afuera las semicorcheas a contratiempo) y pocas capas, las capas que entran según las prioridades del género,
+  rellenos al final de las frases (el FILL de ARRANGE), y cada fila de drop tu loop entero tal cual. **RANDOM** elige el
+  género según tu tempo y tu batería (cuatro bombos por compás desde 100 BPM HOUSE, pasando 138 BPM HARD TECHNO, si no
+  KRAUT desde 110 BPM, DREAM POP abajo de eso); **EXPLORE** elige otro género en cada semilla, uno con un tempo cerca
+  del de tu loop, y rearmoniza más libre. Las pistas tuyas que estaban muteadas siguen muteadas. El tempo y el swing
+  siguen siendo los de tu loop.
+
+Es un SONG como los de GEN: **PLAY** lo toca (TIMELINE y ARRANGE muestran sus filas), **SAVE** lo guarda (todas sus
+partes y sus filas, como cualquier tema de GEN: es un borrador hasta que lo guardás). **OCT+** otra vez tira otra
+semilla: otro tema con el mismo loop (las partes que agregó se hacen de nuevo). **UNDO** (GLO + G4) te devuelve tu loop
+como estaba, en modo LOOP, sin el tema (si venías de un tema guardado, abrilo de nuevo desde SAVE > PROJECT: sigue
+ahí). Con un loop vacío: **THE LOOP IS EMPTY**, no se hace nada.
 
 ### Dados de sonido (EDIT + SELECT)
 
@@ -3104,6 +3188,10 @@ La que dice **(la última)** es la versión estable aprobada. Las de abajo son a
 instalador *preview* (enlace al pie) tiene la próxima versión sin aprobar: solo para probar.
 
 ### El firmware
+
+**MENU › SYSTEM › BLUETOOTH dice MISSING (antes NO SEG), o "BLUETOOTH PART MISSING: REINSTALL: JIANT INSTALLER".** La
+parte Bluetooth de JIANT (que también tiene GEN, el guardado de canciones, USB HOST y más) no se instaló: reinstalá
+con el instalador web (arriba). Otras herramientas de flasheo escriben solo el firmware principal.
 
 **Mis canciones no quedan guardadas al apagar (un FM-1 nuevo).** Los FM-1 vendidos desde fines de 2026 (con el logo en
 el frente) traen otro chip de flash (JEDEC 0xB36014). JIANT antes de la V10.6z no lo conocía y andaba solo desde la RAM:

@@ -6,6 +6,8 @@ Firmware personalizado para el M-VAVE FM-1, de Juan Jiant. Primero la versión m
 
 | Versión | Fecha | Estado |
 | --- | --- | --- |
+| **V10.7.16** | 2026-11-10 | **Pública** |
+| V10.7.7 … V10.7.15 | 2026-11-09 … 11-10 | Beta |
 | **V10.7.6** | 2026-11-09 | **Pública** |
 | V10.6d … V10.7.5 (menos V10.6z2) | 2026-11-06 … 11-09 | Beta |
 | **V10.6z2** | 2026-11-07 | **Pública** |
@@ -21,7 +23,7 @@ Antes de instalar, revisá los apartados **Compatibilidad**.
 
 ---
 
-## Problemas conocidos en la V10.7.6
+## Problemas conocidos en la V10.7.16
 
 - **Velocity en la fila de arriba.** Las teclas C#5..G5 no tienen sensor de presión. Tocan con el promedio de lo que
   venís tocando y no tienen aftertouch. Velocity y aftertouch funcionan en F3..C5.
@@ -36,6 +38,35 @@ Antes de instalar, revisá los apartados **Compatibilidad**.
 - **GLO > SYSTEM 2 solo muestra valores.** No se editan ahí. La página te dice dónde se cambian (MENU > BLUETOOTH).
 
 ---
+
+## V10.7.16 — 2026-11-10 — pública
+
+Todo lo nuevo desde la V10.7.6 (incluye las betas V10.7.7 … V10.7.15).
+
+- **GENE › FORM MY LOOP**: tu loop hecho canción entera. Queda como está (el drop); GEN escucha su tonalidad y sus
+  acordes (seis modos, también los carriles con nota de DRUM-X), rearmoniza cada semilla con acordes que contienen tus
+  notas, agrega bajo, acordes y contramelodía solo en pistas vacías, y el género arma las otras secciones (su batería con
+  tu kit, su bajo y sus partes). OCT+ otra vez para otra canción, UNDO vuelve al loop. EXPLORE elige un género por semilla.
+- **Se acabaron las notas colgadas**: teclas, teclas de SCENE, LATCH, el arpegio y las notas MIDI entrantes apagan
+  siempre lo que encendieron. **PÁNICO**: mantené PLAY unos 0,7 s.
+- **VOICE** con palabras más claras y fluidas (consonantes, vocales abiertas, sin pozos de volumen).
+- **Step components: TRIG** (trig condition estilo Elektron: TRIG 4:4 suena solo en la 4.ª vuelta).
+- **Kits de DRUM-X secos** (sin envíos por defecto), las teclas FX de EXTENDED ya no fuerzan delay / reverb; pre-delay
+  del reverb sin aliasing (ROOM / SPRING con PRE > 0).
+- Sonidos al prender: ACOUSTIC, ANALOG PLUCK, PHASE INIT SAW, FM BASS, CHANT, WHISTLE (secos).
+- Arreglos pedidos por usuarios: REC y PLAY graban el loop después de una canción de GEN; el EQ y el TAPE del master se
+  guardan en todas las secciones; audio USB en macOS 13–15; la perilla PRESETS dice LIST <tipo> si hay filtro; el scope
+  de KEY SPLIT ya no se congela; la espera del velocity tope 2,2 ms (ninguna en baterías); BLUETOOTH dice MISSING (antes
+  NO SEG) con aviso para reinstalar.
+- GENE: güiro y kit LATIN PERC, CUMBIA RKT, REGGAETON más duro, BAILE FUNK minimal, EBM / MINIMAL TECHNO / PHONK según
+  temas de referencia. EDIT › SOUND sin la lista de parámetros al costado; barras térmicas en PROX y SWARM.
+
+**Compatibilidad**
+- Los proyectos en los formatos más viejos (JIANT 0.1–0.5, Felucca 1.0/1.1) ya no se leen: abrilos y guardalos de nuevo
+  con la V10.7.15 o anterior antes de actualizar. Los presets de usuario muy viejos cargan tal cual; un motor retirado en
+  una pista carga como ANALOG.
+- ADD muestra la criatura genérica.
+- Un proyecto con TRIG abierto en un firmware anterior toca ese paso al revés (no rompe nada).
 
 ## V10.7.6 — 2026-11-09 — pública
 

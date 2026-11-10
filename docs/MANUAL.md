@@ -1,6 +1,6 @@
 # JIANT FM — User Manual
 
-**JIANT FM V10.7.6 for the M-VAVE FM-1**
+**JIANT FM V10.7.16 for the M-VAVE FM-1**
 
 > *Versión en español: [MANUAL.es.md](MANUAL.es.md).*
 
@@ -44,6 +44,13 @@ Everything since V10.6c, the last public version, in one list; each item links t
   all eight, and a restore says which songs stayed only in the file.
 - **Very old projects retired** (V10.6s): projects saved by JIANT before 1.0.3 (FUN1 to FUN6) are refused and left
   untouched, and a DIGITAL sound loads as FM6's init. Open them in an earlier version (V10.6c) and save them again there if you still need them.
+- **Older projects retired** (after V10.7.13, room for GENE's FORM MY LOOP): projects and backups saved in the
+  formats FUN7 to FUNB (Felucca 1.0 / 1.1 and JIANT up to 0.5) are no longer read; at power-on such a project shows
+  **OLD PROJECT: NOT READ** and its slot is empty (the flash keeps it until you save over it). The web editor cannot
+  convert them: open them in V10.7.13 or earlier and save them again there (that saves today's format). Also gone: the
+  old user presets' conversions (SAMPLE PERC, TRIO, LOFI's chips, 0.3 / 0.4 values: such a preset loads as stored, a
+  retired engine's playing as ANALOG), a retired engine's track in a project now gets ANALOG's first preset (not its
+  nearest sound), and ADD's own creature (ADD draws the being, as the other engines did before 0.9.6).
 - **Newer FM-1 units** (V10.6z): the FM-1s sold from late 2026 (logo on the front) have another flash chip. Older
   JIANT versions ran on them from RAM only (no saving, no GENE, no updates from the device); this version saves
   normally. If yours did not keep your songs, update.
@@ -107,8 +114,8 @@ files.
 ### Your first sound (1 minute)
 
 1. Power on. The signature draws itself, then you land on **HOME**: six creatures, one per track. (V10.6e) The tracks
-   start as a band in tune: **T1 DRUM-X** (ACOUSTIC), **T2 ANALOG** (FAT BASS), **T3 PHASE** (GLASS PAD), **T4 FM6**
-   (TINE EP), **T5 VOICE** (CHOIR AAH) and **T6 ANIMAL** (WHISTLE), each its preset's sound, dry.
+   start as a band in tune: **T1 DRUM-X** (ACOUSTIC), **T2 ANALOG** (PLUCK), **T3 PHASE** (INIT SAW), **T4 FM6**
+   (FM BASS), **T5 VOICE** (CHANT) and **T6 ANIMAL** (WHISTLE), each its preset's sound, dry.
 2. Turn **ALGORITHM** to pick a track (T1–T6). With the default **TRACKS 4** it stops at T4: T5 and T6 appear only with TRACKS 6 (see
    [13](#13-system-tracks-load-and-the-menu)).
 3. Turn **PRESETS** to browse sounds. Play the keys.
@@ -164,7 +171,7 @@ The names below are the ones the firmware uses (the HARDWARE CALIBRATION screen 
 | **SAVE** | The SAVE section: from elsewhere the page last shown, and USER or SECTIONS come with their **SAVE already picked** (SAVE, OCT+, OCT+ as before); inside **SONG → PROJECT → SOUND**, round (V10.2: the song first; at power-on TIMELINE). | **SAVE** layer: play/store sections live; C5 NAME. |
 | **ARP** | The ARP section (ARP · ARP 2, one group): from elsewhere the page last shown; inside, back to ARP. A chord held + ARP during step recording still arpeggiates it. | (no layer) |
 | **SEQ** | The SEQ section: from elsewhere the page last shown (at power-on STEP, the piano roll); inside the next group (V10.6): **STEP → LENGTH → EUCLID → PLAYHEADS → STRETCH → COMP → AUTO → GENERATE**, round. | **SEQ TOOLS** layer (on every SEQ page); G5 CLR STEP. |
-| **PLAY** | Start / stop. | — |
+| **PLAY** | Start / stop. Held (~0.7 s): **PANIC**. | — |
 | **REC** | Arms / disarms recording on the selected track. | **REC** layer: CLEAR, CLICK. (V10.7) Held past HOLD and let go with nothing else touched: **UNDO** (again: redo). |
 | **OCT− / OCT+** | Keyboard octave (−3 to +3; both together: back to 0; on a DRUM track the kit stays on its keys: ratchets above, SHORT / GHOST / FLAM below, see [5](#5-drum-x)). On action pages and in dialogs: **OCT−** = back / NO, **OCT+** = do it / YES. | — |
 
@@ -178,6 +185,7 @@ layer's shortcuts; on the DRUM grid they are steps and lanes; on the NAME screen
 | Combination | Result |
 | --- | --- |
 | **GLO** held + **PLAY** | Restart from the top without stopping (internal clock). |
+| **PLAY** held (~0.7 s) | **PANIC: ALL NOTES OFF**. The transport stops and every sound ends at once: every track's voices, latched chords, arpeggios, punch-in repeats and the notes MIDI IN holds (a key or MIDI note let go afterwards does nothing; the next one plays as usual). MIDI OUT sends the note-off of every note it sent and All Notes Off (CC123) on the tracks' channels 1–6 (not with MIDI OUT OFF). For a note left hanging by a controller that lost its note-off; MIDI IN's CC120 / CC123 still do the same for their channel. |
 | **GLO** held + **SELECT** | Tempo, from any page. |
 | **GLO** held + **G4** | **UNDO** the last big change (again: redo). |
 | **REC** held alone, let go | (V10.7) **UNDO** too: held past HOLD (~0.5 s) with no key, knob, button or OCT touched; again: redo. Anything used while held keeps it the REC layer; a tap still arms recording. |
@@ -204,7 +212,9 @@ Vestal's, *Velo*, github.com/charlesvestal/fm1-velocity, GPL-3.0). JIANT reads i
 
 - **Velocity**: how hard the key lands, in the first milliseconds after it touches. It is continuous (1..127: every
   strike between soft and hard gives a value between), then MENU > CONTROL > **VELOCITY**'s curve and **VEL MIN**'s
-  floor. A note waits at most one reading of its key (2.2 ms) for its strike, under what you can feel. It reaches
+  floor. On a synth track a note waits for its strike at most 2.2 ms (V10.7.10: a hard limit, even when a reading of
+  the key is lost), under what you can feel; on a **DRUM** track (the selected one, or KEY SPLIT's half that goes to
+  one) it never waits: it plays at once with the strike as read so far, or the key's recent average. It reaches
   everything a key plays: the sound (the engines and the matrix's VEL), chords and strums, the arpeggiator, recording
   (only 127 records as an accent) and MIDI OUT. VELOCITY **OFF**: every key 100, as before.
 - **The top row (C#5..G5)** has no sensor (the FM-1 cannot read those seven keys' pressure), so it plays the **average of
@@ -1068,8 +1078,9 @@ pitch over the same time (the other engines: a straight line, as before).
 
 DRUM-X is a synthesized kit of eight sounds, **BD SD CP CH OH TM RS CB**, generated in real time.
 
-- (0.7.2) **Nine kits as the DRUM engine's presets**: DRUM-X (the factory kit), 909 CLUB, 808 BOOM, LOFI DUST,
-  INDUSTRIAL, ACOUSTIC, DUB ROOTS, TECHNO RAW, BREAKS, HIP HOP (V10.34: boom bap, suggests the pattern BOOM BAP). Browsing one (PRESETS on HOME, the editor, a PROGRAM CHANGE)
+- (0.7.2) **Eleven kits as the DRUM engine's presets**: DRUM-X (the factory kit), 909 CLUB, 808 BOOM, LOFI DUST,
+  INDUSTRIAL, ACOUSTIC, DUB ROOTS, TECHNO RAW, BREAKS, HIP HOP (V10.34: boom bap, suggests the pattern BOOM BAP), LATIN
+  PERC (V10.7.8: bombo, timbal, llamador, a **GUIRO** on the closed hat, maracas, conga, clave, cowbell). Browsing one (PRESETS on HOME, the editor, a PROGRAM CHANGE)
   loads the whole kit into the section: the eight sounds' A and B sides, their LAYERs and SENDs, and the track's KIT
   knobs. Switching engines, INIT SOUND, a project load and GEN leave the section's kit as it is; DRUM-X brings the
   factory kit back. Edit any of them in EDIT > SOUND; the section saves the result.
@@ -1097,15 +1108,21 @@ DRUM-X is a synthesized kit of eight sounds, **BD SD CP CH OH TM RS CB**, genera
     S&H), **RAND** (each hit gets its own MORPH and a little tune).
   - **FILTER**: the kit's.
   - **SOUND 1–4**, one sound each: KNOB 1 is always **SOUND** (which one; striking a key also picks it).
-    - **SOUND**: SIDE (A / B), PITCH, PMOD (how far the pitch falls).
+    - **SOUND**: SIDE (A / B), PITCH, PMOD (how far the pitch falls; with the filter GR, **SCRAPE**: below).
     - **SOUND 2**: DECAY, NOISE, COLOR, of the side picked on SOUND (KNOB 1 shows it: "SD B").
-    - **SOUND 3**: **MODE** (wave SIN / FM / MTL / BEL, noise filter LP / BP / HP, "+" for snap), **PM.TYPE** (how the
+    - **SOUND 3**: **MODE** (wave SIN / FM / MTL / BEL, noise filter LP / BP / HP / GR, "+" for snap), **PM.TYPE** (how the
       pitch moves: DECAY, LONG, NOISE, SINE), **DRIVE** (ON / OFF).
+      (V10.7.8) **GR**, the guiro: a band-pass whose hit is a stroke over a guiro's ridges, ticks at 24–64 Hz (PITCH sets
+      the rate). SOUND's PMOD becomes **SCRAPE**, the stroke's length (0–173 ms), and the hit's velocity picks long or
+      short: an accent (127) plays the whole stroke, "rrrrip", a soft hit only its start, "chk" (the length goes with the
+      velocity's fourth power). Any sound can take it (a scraped tom, a scraped clap); the kits of before never had it,
+      so they sound as they did.
     - **SOUND 4**: **LAYER** (OFF, 1–15): a second oscillator at an out-of-tune interval, frequency modulated by the
       sound, more as it goes up: from a metal edge to a clang with no note, so the sound melts into the rhythm and stays
       out of the harmony (the factory kit has it on the snare, the hats and the cowbell); **FEEDBK** (OFF, 1–15): that
       sound's own (added to KIT 3's); **SEND**: that hit alone into one effect, OFF then CHO, DLY, REV with 16 amounts
-      each, on one knob ("REV 75%"), on top of the track's own sends. The dice (DICE ALL; the sound dice) set
+      each, on one knob ("REV 75%"), on top of the track's own sends (V10.7.10: every factory kit comes with all
+      SENDs OFF, dry; a saved project keeps its own). The dice (DICE ALL; the sound dice) set
       LAYER and FEEDBK boldly. Each sound with a LAYER costs a little CPU (about as FEEDBK).
   - **LEVELS / LEVELS 2**: the level of each sound (KICK, SNARE, CLAP, HATCL, HATOP, TOM, RIM, BELL).
   - **STEREO**: **IMAGE** (automatable) sweeps the kit through its placings in the stereo field. 0 (MONO): every sound
@@ -1170,7 +1187,7 @@ when OCT changes:
 | **+1** | **FILLS**: real fills, nine kinds (snare rolls from 8ths to 16ths to 32nds, tom descents, flams, unisons, 3-3-2…) in three lengths; a crash on the next downbeat |
 | **0** | **DRUM-X KIT**: the kit as always |
 | **−1** | **KICK / TOM**: the kick (lower keys) and the tom (upper keys) played **chromatically**; or, with KEY MAP on one sound (KICK … BELL), that sound chromatic over the 27 keys (**BELL** for cowbell melodies) |
-| **−2** | **FX KIT**: the sounds through their effects (reversed, delayed, fed back, folded) |
+| **−2** | **FX KIT**: the sounds as variants (longer, fed back, folded, noisier); V10.7.10: no delay or reverb of their own any more (the kit's SENDs and the track's FX as any hit) |
 | **−3** | **FLAM** |
 
 A note recorded in EXTENDED plays back on the same sound at the same pitch. The sound itself: V10.6q rewrote the
@@ -1297,6 +1314,13 @@ to the last step).
   - **RATCH**: every step of its LENGTH split into x2 … x8 parts; DECAY FLAT, FADE (each softer) or RISE.
   - **STUT** (stutter): this step again in place of the next ones (EVERY 1 … 4 steps; the steps between silent).
   - **MUTE**: its LENGTH of steps silent (CUT: what the track sounds is cut first).
+  - **TRIG** (KNOB 1's last): an Elektron-style trig condition, MUTE the other way round: its LENGTH of steps play
+    only on the passes its CONDITION holds, and are silent on the others (no CUT, no VALUE). The card shows the
+    CONDITION as any: "4:4" plays on pass 4 of every 4. Example: play only on the 4th pass: **TRIG 4:4**. After it,
+    PRE reads its condition (true on the passes it played); C2 ELSE over a C1 TRIG acts on the passes it plays (it
+    did not mute), a C2 TRIG ELSE plays the passes C1 did not act. Its mark is MUTE's (grey). Also on GLO > COMPS.
+    It is saved as a MUTE with a VALUE of its own: firmware before TRIG loads it as a MUTE CUT with the condition as
+    it is (the opposite passes).
   - **TRANS** (transpose): the notes moved MOVE degrees (−7 … +7, in the scale). RANGE **FIX**: whenever its condition holds;
     RANGE 2 … 16: it adds a MOVE each pass its condition holds, round RANGE places (back to 0), acting every pass.
   - **RAND**: each note up or down the scale at random, up to 1–7 degrees.
@@ -1327,7 +1351,7 @@ to the last step).
     (firmware before seq2d refuses it). The step's own **CHANCE** and **RATCH** stay on the CHANCE page.
   - **Global components** (0.9.9-seq2f): **GLO > COMPS** (GLO's third tab, after MIX since V10.37) is a lane of 16 steps on the
     transport's 1/16 (one bar, looping) whose components act on several tracks at once. The white keys pick its step,
-    **KNOB 1–4** are ACTION, LENGTH, CONDITION, VALUE as on COMP (actions MUTE, STUTTER, OCT+ / OCT−, RATCH, TRANSP,
+    **KNOB 1–4** are ACTION, LENGTH, CONDITION, VALUE as on COMP (actions MUTE, TRIG, STUTTER, OCT+ / OCT−, RATCH, TRANSP,
     ARP on each track's own notes, RANDOM; conditions as the tracks', without NEI and ELSE; the passes are the
     bars since PLAY, the lane has its own PRE and its own dice). Black keys 1–6 turn the tracks it applies to on and
     off (the roll shows them as small marks under each step); **COMPS 2**: STEP, TRACK, that track ON / OFF, and
@@ -1617,7 +1641,7 @@ sounding after you let go; the next chord replaces them.
 | --- | --- |
 | The selected track's steps and automation | **REC held + F3**, or SAVE > TOOLS > CLEAR SEQ, or SEQ TOOLS F3 |
 | All six tracks' steps, automation and the punch-in lane | **SEQ held + REC**, then OCT+ |
-| **Everything** (NEW PROJECT): every track its power-on sound (V10.6e: T1 DRUM-X ACOUSTIC, T2 ANALOG FAT BASS, T3 PHASE GLASS PAD, T4 FM6 TINE EP, T5 VOICE CHOIR AAH, T6 ANIMAL WHISTLE, dry), no steps or automation, the mix, effects, tempo and SLICER at their defaults, the song empty, macros at 0, the factory DRUM-X kit. Saved projects, user presets, MENU, CLOCK, TUNE and MIDI stay | **MENU > SYSTEM > INIT SYSTEM** or **SAVE > TOOLS > 5 NEW PROJECT**, then OCT+ (UNDO brings the music back) |
+| **Everything** (NEW PROJECT): every track its power-on sound (V10.7.11: T1 DRUM-X ACOUSTIC, T2 ANALOG PLUCK, T3 PHASE INIT SAW, T4 FM6 FM BASS, T5 VOICE CHANT, T6 ANIMAL WHISTLE, dry), no steps or automation, the mix, effects, tempo and SLICER at their defaults, the song empty, macros at 0, the factory DRUM-X kit. Saved projects, user presets, MENU, CLOCK, TUNE and MIDI stay | **MENU > SYSTEM > INIT SYSTEM** or **SAVE > TOOLS > 5 NEW PROJECT**, then OCT+ (UNDO brings the music back) |
 | Only one part's automation on the selected track | **REC held + FX / EDIT / ENV / LFO / SCL / ARP / GLO** |
 | *(not a clear)* A heavy test song, to measure the CPU on the device and listen for clicks (every live track chords of four with two step components a step and long glides, the kit on every lane, every FX on, 160 BPM) | **SAVE > TOOLS > 6 CPU TEST**, OCT+, then PLAY (UNDO brings your music back) |
 | The track's automation, keeping the steps | SEQ TOOLS **F4 CLR AUTO**, or SEQ > AUTOMATION > CLEAR |
@@ -1695,8 +1719,8 @@ strip (its rows by their length, a white line where it plays) with its length an
 - (V10.6z8) **A sound you change while a song plays stays.** Change a track's preset, its engine, a sound knob (EDIT,
   ENV, LFO, FX, MOD… anything a preset sets), an FM6 patch or the DRUM-X kit while a song (or a GENE song, or a quick
   chain) plays, and that track keeps your sound over every section after it: the sections still bring their steps,
-  pattern (LEN, DIV, swing, gate), arpeggio, scale, mix (level, pan) and mutes. Stopping then keeps your sounds (no SONG
-  END restore over them) and PLAY again keeps holding them. They follow the sections again after a new GENE throw,
+  pattern (LEN, DIV, swing, gate), arpeggio, scale, mix (level, pan) and mutes. Stopping brings the music you had before PLAY
+  back (SONG END, your unsaved edits too) with your sounds over it (V10.7.6), and PLAY again keeps holding them. They follow the sections again after a new GENE throw,
   a project or section loaded, a live section jump or a CLIPS launch, or, for one track, EDIT layer **RECALL** (G3; it
   works while a song plays now): the section's stored sound back, and the next sections' after it.
 - END: **STOP** plays the song once, **x2–x8** that many times, **LOOP** forever.
@@ -1816,7 +1840,7 @@ NEW PROJECT start on EXPLORE.
 
 | Page | KNOB 1 | KNOB 2 | KNOB 3 | KNOB 4 |
 |---|---|---|---|---|
-| 1/3 | **GENRE**: **EXPLORE** (power-on and NEW PROJECT start on it; V10.8: GEN keeps the one you picked between visits; no genre, every rule broken, below), RANDOM (half its throws are mutants of two genres, named A+B) or one of the genres (below), in that order | **SEED** 0000–9999 | **ENERGY** 0–100 % | **FORM**: LOOP, PARTS, SONG |
+| 1/3 | **GENRE**: **EXPLORE** (power-on and NEW PROJECT start on it; V10.8: GEN keeps the one you picked between visits; no genre, every rule broken, below), RANDOM (half its throws are mutants of two genres, named A+B) or one of the genres (below), in that order | **SEED** 0000–9999 | **ENERGY** 0–100 % | **FORM**: LOOP, PARTS, SONG, MY LOOP |
 | 2/3 | **DRUMS** | **BASS** | **CHORDS** | **ARP** — each OFF, 10–100 %, or **AUTO** (the genre's); OFF stays off (V10.8) |
 | 3/3 | **LEAD** (as above) | **COMPLEX** 0–100 % | **SWING** AUTO or 0–100 % | **HUMAN** 0–100 % |
 
@@ -1843,6 +1867,17 @@ or lofi; TECHNO ROCK's techno rock, rock or synth 80s; JAZZ in swung eighths, it
 range, its scales and chord progressions, its drum map and kit, its bass archetypes and register, how its chords, arp
 and lead speak, which sound recipe each role takes, how human it plays and its space (reverb type, delay type and
 time, how wet).
+
+(V10.7.8, the owner's ask) **CUMBIA**'s güiro is a güiro: DRUM-X's filter GR on the closed hat (LATIN PERC's, with its
+llamador, maracas, conga and clave), a long stroke on each beat's "e" and a short one on its "and", another short one
+on 2's and 4's "a" leading into the next beat (digital keeps its on the beat), the accents the long strokes; villera
+is now **RKT** (the owner's reference, MC Caco's, ~92 BPM): a short kick and the clap on every quarter, the güiro's
+stroke on the beat and a "chk" on its "a" pulled ~28 ms early (MICRO: the triplet's pull), the conga on the "and"s, the
+bass and the keys low under the drums. **REGGAETON** is harder and has more room: the kit and the 808 driven (romántico's clean), the 808 shorter,
+the plucked arp a minor riff up front, the pad and the hook under it, LATIN PERC's conga and clave. **BAILE FUNK** is
+ultra-minimal: the tamborzão's "tum tcha" on 3, 6 and 12 two tom shots (low on the tom, high on the clap's lane), the
+cowbell's answer, no snare, clap, hats or chords, the 808 short, punchy and gliding up at the bar's end, the chant's
+chops sparse.
 
 **A clean base** (0.9.9-gen1): every piece starts from **NEW PROJECT's state** — every track's parameters, sound,
 steps, step components, p-locks and automation, MUTATE, the song's globals (but the clock, tune, MIDI and routing),
@@ -2008,6 +2043,52 @@ What a piece is made of:
 
 Every piece replaces every track's steps, sounds, kit, mix and automation. Mutes are left as they are. The roles that
 play go on the first tracks (drums on the DRUM track), so with TRACKS 4 you hear the most important ones.
+
+#### FORM MY LOOP: your loop made a song
+
+Set **FORM** to **MY LOOP** and press **OCT+**: GEN turns the loop you are playing into a whole song, by the rules of
+the **GENRE** you picked. Nothing of your loop changes: its tracks, steps, sounds and mix stay as they are, and they are
+section **A**, the song's peak (its drop). Every other section is the genre's, played on your sounds. GEN:
+
+- **listens to your loop**: its key and mode (major, minor, dorian, mixolydian, phrygian or harmonic minor; each note
+  weighed by its length, its velocity and whether it falls on the beat; the bass, the lowest notes, tell the tonic).
+  Where your loop does not decide (a power riff with no third, an 808 on its root and fifth), GEN takes the genre's own
+  mode, then the minor one, and the darker one when your loop is distorted (a track's DIST) or the genre is a heavy one:
+  a dark loop stays dark, an E-F riff is E phrygian. DRUM-X counts too where it plays a pitch: a lane with little noise
+  and a long ring (an 808, a tuned tom) and the notes of an EXTENDED kit's chromatic run (KICK / TOM or a lane's CHROM).
+  A loop of drums alone has no key: GEN's own key and progression for the genre are used.
+- **harmonises it again with every seed**: a chord a bar (a half bar in a one-bar loop) that **contains your loop's
+  notes there** (its root, third and fifth what sounds most, the bass note one of them, little of yours a semitone off
+  them; a seventh where your loop plays it; power chords in the genres that play them). A quarter of the seeds keep the
+  chords heard in the loop; the others draw each bar's chord by how well it fits, the genre's own chords and, in a dark
+  loop, the minor ones more likely: another progression under the same loop, still in its key and mode.
+- **adds the parts your loop lacks, only on empty tracks** (no note; never on yours), by **BASS**, **CHORDS** and **ARP**
+  on GENE 2 (AUTO: the genre's; OFF: none): a bass where your loop has none, chords on that seed's progression where it
+  has none, and on the arp's track a **counter-melody made of your melody**: the same notes moved an eighth or a beat,
+  its first half answered, turned upside down round its first note or kept to the beats, an octave away, in your key
+  (no melody in the loop: an arp of the chords). Their sounds and mix are the genre's. No empty track: nothing is added
+  and the screen says **NO EMPTY TRACK: ARRANGED** (the other sections are still the genre's, on your sounds).
+- **brings the genre into the song** around the drop: **B**, the verse, plays the genre's drums (its own pattern:
+  REGGAETON's dembow, HARD BASS's kicks, ...) on your kit, and the genre's bass, chords, arp and lead on your tracks'
+  sounds, over the genre's own progression in your key (its borrowed chords and colours included); **C**, the build,
+  the genre's parts on the drop's chords, its drums the verse's or your loop's (half the seeds) over four bars with a
+  roll on the snare, clap or rim getting faster and louder, the kick out at the end, the master's high-pass opening,
+  the chords' filter rising, a stutter into the drop; **D**, the break, no drums and no bass, on the genre's chords or
+  the drop's from its predominant, wetter, the synths an octave up on its last bar.
+- **arranges it** with SONG's rows, each seed its own: the club's plan or an arc (an arc more often in the genres that
+  play one), the verse in the groove and in some of the intros and outros, the rows' lengths, each section's energy (how
+  busy the arp, the lead, the chords' pulse); the intro and the outro with the drums thinned (the off-beat sixteenths
+  out) and few layers, the layers coming in by the genre's priorities, fills at the phrases' ends (ARRANGE's FILL), and
+  every drop row your whole loop as it is. **RANDOM** picks the genre by your tempo and drums (four kicks a bar from
+  100 BPM HOUSE, over 138 BPM HARD TECHNO, else KRAUT from 110 BPM, DREAM POP below); **EXPLORE** picks a different
+  genre each seed, one whose tempo is near your loop's, and harmonises more freely. Muted tracks of yours stay muted.
+  The tempo and the swing stay your loop's.
+
+It is a SONG as GEN's are: **PLAY** plays it (TIMELINE and ARRANGE show its rows), **SAVE** keeps it (all its parts and
+its rows, as any GEN song: a draft until you save it). **OCT+** again throws another seed: another song from the same
+loop (the parts it added are made again). **UNDO** (GLO + G4) brings your loop back as it was, in LOOP mode, the song
+gone (from a song you had saved, open it again from SAVE > PROJECT: it is still there). An empty loop: **THE LOOP IS
+EMPTY**, nothing made.
 
 ### Sound dice (EDIT + SELECT)
 
@@ -2908,6 +2989,10 @@ browser, the MIDI ports it saw, the FM-1's firmware, the step it stopped at).
   `:1:1` stuck to it) now redirect by themselves.
 
 ### The firmware
+
+**MENU › SYSTEM › BLUETOOTH says MISSING (was NO SEG), or "BLUETOOTH PART MISSING: REINSTALL: JIANT INSTALLER".** The
+Bluetooth part of JIANT (it also holds GEN, the songs' saving, USB HOST and more) was not installed: reinstall with the
+web installer (above). Other flashing tools write only the main firmware.
 
 **My songs are not kept after power-off (a newer FM-1).** FM-1s sold from late 2026 (the logo on the front) have a
 different flash chip (JEDEC 0xB36014). JIANT before V10.6z did not know it and ran from RAM only: nothing was saved,

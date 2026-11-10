@@ -17,7 +17,7 @@ a generator and effects, all inside the little keyboard. It is a fork of [Felucc
 The emulator runs the same code as the FM-1, with sound, played with the computer keyboard or the mouse. The installer
 always offers the current public version first, and the earlier ones under it.
 
-## This release: V10.7.6
+## This release: V10.7.16
 
 What each version changed: [CHANGELOG.md](CHANGELOG.md) · en castellano: [CHANGELOG.es.md](CHANGELOG.es.md).
 
@@ -471,7 +471,56 @@ JIANT's modifications are distributed under the same license.
 
 Every update is listed here, newest first. (Since 0.6.80 at the end of the page: what the synth does comes first.)
 
-### V10.7.6 — public (2026-11-08)
+### V10.7.16 — public (2026-11-10)
+
+- MY LOOP: a dark loop stays dark (phrygian, minor, harmonic minor, dorian, mixolydian, major); every seed reharmonizes the song with chords that contain your loop's notes; the genre now shapes every section but the drop (its drums on your kit, its bass, chords and parts); EXPLORE picks a genre per seed near your tempo.
+- Reverb: ROOM and SPRING with PRE above 0 no longer alias (the "digital" fizz in the tails); with PRE 0 nothing changes. The factory kits stay dry since V10.7.10.
+
+### V10.7.15 — public (2026-11-10)
+
+- No more stuck notes: a key, a SCENE key, a latched chord, the arp and a MIDI-in note now always release exactly what they started, whatever you change while holding them (octave, SCENE OCT+, chord, scale, LATCH, engine, preset, MIDI OUT). **PANIC:** hold PLAY ~0.7 s to stop everything and silence every voice (also sends all-notes-off over MIDI).
+- Step components: **TRIG**, an Elektron-style trig condition: the step plays only when its CONDITION holds (TRIG 4:4: only on the 4th pass). Also on GLO › COMPS.
+- EDIT › SOUND: no more parameter list beside the creature (the knob cards above already show it).
+
+### V10.7.14 — public (2026-11-09)
+
+- GENE 1 › FORM **MY LOOP**: turns your loop into a whole song. The loop stays as it is (the drop); GEN hears its key and chords (DRUM-X's tonal lanes too), adds a bass, chords and a counter-melody made from your melody on empty tracks only, and arranges intro, build (your own snare roll), break, fills and outro by the genre's rules. OCT+ again for another song, UNDO back to the loop.
+- To make room: projects in the oldest formats (JIANT 0.1–0.5, Felucca 1.0/1.1) are no longer read (open and save them again with V10.7.13 or earlier first); very old user presets load as stored; ADD shows the generic creature.
+
+### V10.7.13 — public (2026-11-09)
+
+- VOICE with words is clearer and more fluid: consonants no longer stall fast notes, vowels are opener and brighter, m n l d b join without dips, p t k stop cleanly, and each syllable moves the formants a little. VOICE without words (LANG OFF) sounds as before.
+
+### V10.7.12 — public (2026-11-09)
+
+- REC then PLAY records the loop even when PLAY was set to the song (after a GEN song); NEW PROJECT plays the loop again.
+- The master EQ and TAPE are saved in every section of a project and by the autosave (they could come back flat).
+- macOS 13–15: the FM-1 shows up as a USB audio device (the audio interfaces now come before MIDI).
+- The PRESETS knob says LIST VOX (or the type) when SAVE › PRESETS' LIST filter limits it; set LIST ALL to step through every sound.
+
+### V10.7.11 — public (2026-11-09)
+
+- New power-on sounds (also INIT SYSTEM and NEW PROJECT): T1 DRUM-X ACOUSTIC, T2 ANALOG PLUCK, T3 PHASE INIT SAW, T4 FM6 FM BASS, T5 VOICE CHANT, T6 ANIMAL WHISTLE, all dry. Saved projects are unchanged.
+
+### V10.7.10 — public (2026-11-09)
+
+- DRUM-X kits come dry: no factory kit sends anything to DELAY, REVERB or CHORUS any more; add your own per sound in EDIT. Saved projects keep their sends.
+- EXTENDED key map: the FX keys no longer force the hit into the delay or reverb (they stay timbre variants).
+- Key velocity: the wait for the strike is never longer than 2.2 ms, and there is none on DRUM tracks.
+- MENU › SYSTEM › BLUETOOTH reads MISSING (was NO SEG) when the Bluetooth part is not installed, with a message to reinstall with the JIANT installer.
+- GENE: EBM dark techno, MINIMAL TECHNO's sub and swing, PHONK's cowbell sixteenths, after reference tracks.
+
+### V10.7.9 — public (2026-11-09)
+
+- DRUM-X: a güiro (MODE GR: band-passed noise in ticks; SCRAPE the stroke, a strong hit long, a soft one short) on any lane; the factory kit LATIN PERC.
+- GENE CUMBIA: a real güiro and Latin percussion; villera as cumbia RKT. REGGAETON: harder, drier, plucked minor arps. BAILE FUNK: ultra minimal (tom shots and cowbell, short gliding 808).
+
+### V10.7.8 — public (2026-11-08)
+
+- Old projects and presets (saved before this version) load each sound's VEL at 100 %.
+- STOP after a song brings back the music from before PLAY, keeping the sounds you changed while it played.
+- FM6 BELL, BELL CLOUD, GLASS RAIN: the ring after the key is short again (it went on for about ten seconds).
+- The sequencer uses less CPU when nothing is held.
 
 Everything since V10.6c, the last public version (V10.6o … V10.6z9 were betas; V10.7 adds the GENE mix pass and steadier velocity):
 
@@ -496,6 +545,8 @@ Everything since V10.6c, the last public version (V10.6o … V10.6z9 were betas;
   automatable parameter (V10.6z3); protocol 1.2 (V10.6z7). GLO › SYSTEM 2 points to MENU › SYSTEM › BLUETOOTH (V10.6z8).
 - **Hardware**: the newer FM-1s' flash (JEDEC 0xB36014) accepted (V10.6z: those units ran from RAM only); the second
   core only on the stock power settings (V10.6z2).
+- GLO › KEY SPLIT, KEY SPLIT 2: the scope no longer freezes (V10.7.7).
+- The PROX/AIR bar and SWARM's FAR … NEAR bar are drawn in the thermal palette (V10.7.7)
 
 ### V10.6c — public (2026-11-04)
 
@@ -817,7 +868,7 @@ included, stay selectable.
 ### V10.12 (beta: the first radio test)
 - **MENU › SYSTEM › BLUETOOTH** (OFF by default): ON, with the music stopped, calibrates the radio by itself and
   advertises **JIANT FM-1** as a Bluetooth MIDI device. The row shows ADV (advertising) or CONN (connected) and the
-  connections since power-on; NO SEG if the Bluetooth code did not install, FAILED if the start failed. No MIDI goes
+  connections since power-on; MISSING (was NO SEG) if the Bluetooth part did not install (reinstall with the web installer), FAILED if the start failed. No MIDI goes
   through it yet: this beta tests the radio. If a start hangs, the next boot turns BLUETOOTH OFF by itself.
 - The Bluetooth stack (Optimist's, open source) lives in its own flash area at 0xEA000, written by the installer with
   the rest of the package and checked before use.
