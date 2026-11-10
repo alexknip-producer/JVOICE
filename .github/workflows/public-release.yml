@@ -136,6 +136,7 @@ jobs:
           old={v['file']:digest(fw/v['file']) for v in prior}
           v=re.search(r'^#define FELUCCA_VERSION "([^"]+)"',Path('build/candidate/firmware/src/felucca.c').read_text(),re.M).group(1)
           assert m['version']==v and v=='V10.7.17'
+          make_site.KEEP_OLD=max(make_site.KEEP_OLD,len(prior))   # retain the entire public rollback history
           make_site.main('build/candidate/build/felucca.fwsc',m['version'],'build/new-public',str(fw))
           for name in ('webapp','firmware'):
               shutil.rmtree(pages/name);shutil.copytree(Path('build/new-public')/name,pages/name)
