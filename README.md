@@ -17,7 +17,7 @@ a generator and effects, all inside the little keyboard. It is a fork of [Felucc
 The emulator runs the same code as the FM-1, with sound, played with the computer keyboard or the mouse. The installer
 always offers the current public version first, and the earlier ones under it.
 
-## This release: V10.7.15
+## This release: V10.7.16
 
 ### Installing
 
@@ -468,6 +468,11 @@ JIANT's modifications are distributed under the same license.
 ## Changelog
 
 Every update is listed here, newest first. (Since 0.6.80 at the end of the page: what the synth does comes first.)
+
+### V10.7.16 — public (2026-11-10)
+
+- MY LOOP: a dark loop stays dark (phrygian, minor, harmonic minor, dorian, mixolydian, major); every seed reharmonizes the song with chords that contain your loop's notes; the genre now shapes every section but the drop (its drums on your kit, its bass, chords and parts); EXPLORE picks a genre per seed near your tempo.
+- Reverb: ROOM and SPRING with PRE above 0 no longer alias (the "digital" fizz in the tails); with PRE 0 nothing changes. The factory kits stay dry since V10.7.10.
 
 ### V10.7.15 — public (2026-11-10)
 
