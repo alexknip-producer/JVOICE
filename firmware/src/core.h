@@ -667,7 +667,13 @@ static int cp_isarp(uint32_t c) { return c >= CP_ARPN && c <= CP_ARPS; }
  * plays them), cnm[] N:M. Two a step: C1 first, then C2; C2's condition ELSE is MONO (it acts only when C1 did not),
  * any other POLY (both stack: C1 on the step, C2 over the result). seq.c comp_run */
 enum { CA_NONE, CA_ARP, CA_SEQ, CA_OCTU, CA_OCTD, CA_RATCH, CA_STUT, CA_MUTE, CA_TRANS, CA_RAND, CA_LOCK, CA_RAMP,
-       CA_SOUND, CA_BEND, CA_SHIFT, CA_CHORD, CA_N };   /* (V10.6v: RAMP took JUMP's code, 11) */
+       CA_SOUND, CA_BEND, CA_SHIFT, CA_CHORD, CA_N, CA_TRIG = CA_N };   /* (V10.6v: RAMP took JUMP's code, 11) */
+/* (TRIG) the ACTION nibble is full (0..15): TRIG is stored as MUTE with VALUE CV_MUTE_TRIG (a MUTE of the inverted
+ * CONDITION: the step plays only when it holds; LENGTH the same, no CUT); CA_TRIG its place on KNOB 1 alone, the last.
+ * (Firmware before it reads it as MUTE CUT, its condition as it is) */
+#define CV_MUTE_CUT 1u
+#define CV_MUTE_TRIG 2u
+#define CA_VIEW(a, v) ((a) == CA_MUTE && ((v) & CV_MUTE_TRIG) ? (uint32_t)CA_TRIG : (uint32_t)(a))
 enum { CC_ALWAYS, CC_P25, CC_P50, CC_P75, CC_FIRST, CC_NFIRST, CC_FILL, CC_NFILL, CC_PRE, CC_NPRE, CC_NEI, CC_NNEI,
        CC_ELSE, CC_NM, CC_NNM, CC_N };
 #define CO_ACT(c) ((uint32_t)(c) & 15u)
@@ -680,7 +686,7 @@ enum { CC_ALWAYS, CC_P25, CC_P50, CC_P75, CC_FIRST, CC_NFIRST, CC_FILL, CC_NFILL
 #define CNM_MAKE(n, m) ((uint8_t)((((n) - 1u) & 15u) | (((m) - 1u) & 15u) << 4))
 /* VALUE: ARP CP_ARG's ORDER RATE RANGE, bit 7 SCALE (else the step's NOTES); SEQ bits 0-5 the note it starts from, bit 6
  * BOUNCE; OCT+ / OCT- 0..2: 1..3 octaves; RATCHET bits 0-2 x2..x8, bits 3-4 DECAY (0 flat, 1 down, 2 up); STUTTER 0..3: again
- * every 1..4 steps; MUTE 0 MUTE, 1 CUT; TRANSPOSE bits 0-3 the move -7..+7 (7: 0), bits 4-7 RANGE - 1 (RANGE 1: FIX, the
+ * every 1..4 steps; MUTE 0 MUTE, 1 CUT, 2 TRIG; TRANSPOSE bits 0-3 the move -7..+7 (7: 0), bits 4-7 RANGE - 1 (RANGE 1: FIX, the
  * move whenever the condition holds; 2..16: it adds up each pass the condition holds, round RANGE places, acting every
  * pass); RANDOM 0..6: 1..7 degrees; RAMP CV_RAMP_*; SOUND 0..2 SHORT GHOST FLAM (a kit); BEND 0..24 -12..+12 */
 #define CV_ARP_SCALE 0x80u

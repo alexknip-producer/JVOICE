@@ -1284,7 +1284,7 @@ static __attribute__((noinline)) void comp_columns(void)
     char val[12];
     if (cur_page()->graph == GR_GCOMP) {               /* (0.9.9-seq2f) GLO > COMPS: the lane's step; COMPS 2 its tracks */
         const gcomp_t *gc = &glane[gl_cur % GL_N];
-        uint32_t a = CO_ACT(gc->comp) % CA_N;
+        uint32_t a = CA_VIEW(CO_ACT(gc->comp), gc->val);
         char lb[10], un[8];
         if (gco_slot()) {
             fmt_int(val, (int32_t)gl_cur + 1);

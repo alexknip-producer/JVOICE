@@ -1314,6 +1314,13 @@ to the last step).
   - **RATCH**: every step of its LENGTH split into x2 … x8 parts; DECAY FLAT, FADE (each softer) or RISE.
   - **STUT** (stutter): this step again in place of the next ones (EVERY 1 … 4 steps; the steps between silent).
   - **MUTE**: its LENGTH of steps silent (CUT: what the track sounds is cut first).
+  - **TRIG** (KNOB 1's last): an Elektron-style trig condition, MUTE the other way round: its LENGTH of steps play
+    only on the passes its CONDITION holds, and are silent on the others (no CUT, no VALUE). The card shows the
+    CONDITION as any: "4:4" plays on pass 4 of every 4. Example: play only on the 4th pass: **TRIG 4:4**. After it,
+    PRE reads its condition (true on the passes it played); C2 ELSE over a C1 TRIG acts on the passes it plays (it
+    did not mute), a C2 TRIG ELSE plays the passes C1 did not act. Its mark is MUTE's (grey). Also on GLO > COMPS.
+    It is saved as a MUTE with a VALUE of its own: firmware before TRIG loads it as a MUTE CUT with the condition as
+    it is (the opposite passes).
   - **TRANS** (transpose): the notes moved MOVE degrees (−7 … +7, in the scale). RANGE **FIX**: whenever its condition holds;
     RANGE 2 … 16: it adds a MOVE each pass its condition holds, round RANGE places (back to 0), acting every pass.
   - **RAND**: each note up or down the scale at random, up to 1–7 degrees.
@@ -1344,7 +1351,7 @@ to the last step).
     (firmware before seq2d refuses it). The step's own **CHANCE** and **RATCH** stay on the CHANCE page.
   - **Global components** (0.9.9-seq2f): **GLO > COMPS** (GLO's third tab, after MIX since V10.37) is a lane of 16 steps on the
     transport's 1/16 (one bar, looping) whose components act on several tracks at once. The white keys pick its step,
-    **KNOB 1–4** are ACTION, LENGTH, CONDITION, VALUE as on COMP (actions MUTE, STUTTER, OCT+ / OCT−, RATCH, TRANSP,
+    **KNOB 1–4** are ACTION, LENGTH, CONDITION, VALUE as on COMP (actions MUTE, TRIG, STUTTER, OCT+ / OCT−, RATCH, TRANSP,
     ARP on each track's own notes, RANDOM; conditions as the tracks', without NEI and ELSE; the passes are the
     bars since PLAY, the lane has its own PRE and its own dice). Black keys 1–6 turn the tracks it applies to on and
     off (the roll shows them as small marks under each step); **COMPS 2**: STEP, TRACK, that track ON / OFF, and

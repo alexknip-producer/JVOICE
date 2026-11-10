@@ -13568,7 +13568,7 @@ static int test_comp_cards(void)
                 cursor_set(0);
                 frame();
                 for (a = 0; a < CA_N; a++) {
-                    uint32_t nv = (uint32_t)CA_VMAX[a] + 1u, nc = a ? CCL_N : 1u, nl = a ? CL_MAX : 1u, k;
+                    uint32_t nv = (uint32_t)CA_VMAX[a] + 1u + (a == CA_MUTE), nc = a ? CCL_N : 1u, nl = a ? CL_MAX : 1u, k;
                     if (pg == 2u && ga_idx(a) == 0u && a) continue;   /* (the lane's actions: GA_LIST) */
                     for (k = 0; k < nv + nc + nl; k++) {
                         uint32_t v = k < nv ? k : 0u, ci = k >= nv && k < nv + nc ? k - nv : 0u, l = k >= nv + nc ? k - nv - nc : 0u;
