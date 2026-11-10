@@ -212,8 +212,10 @@ static void midi_silence_track(uint32_t track)
     trk_all_off(t);
     if (track < NPART)
         dxo_n[track] = 0;                     /* (0.8.5) a held ratchet stops */
-    t->nheld = t->arp_phys = t->rh_n = 0;
-    arp_forget(t);
+    latch_release(t);                         /* (stuck notes: the latched notes' MIDI OUT note-offs; nheld 0) */
+    t->arp_phys = t->rh_n = 0;
+    if (t->arp_note)
+        arp_silence(t);                       /* (stuck notes: and its MIDI OUT note-off, not only forgotten) */
     t->seq_n = t->seq_hold = t->slide_glide = 0;
     for (i = 0; i < NVOICE; i++)
         if (t->v[i].active)
@@ -391,8 +393,10 @@ static void midi_control(uint32_t ch, uint32_t cc, uint32_t value)
         for (i = 0; i < NTRK; i++)
             if ((mask & (1u << i)) && !midi_track_held(i)) {
                 trk_all_off(&trk[i]);
-                trk[i].nheld = trk[i].arp_phys = trk[i].rh_n = 0;
-                arp_forget(&trk[i]);
+                latch_release(&trk[i]);
+                trk[i].arp_phys = trk[i].rh_n = 0;
+                if (trk[i].arp_note)
+                    arp_silence(&trk[i]);
             }
         break;
     case 121:                                      /* Reset All Controllers, keep bend sensitivity */
