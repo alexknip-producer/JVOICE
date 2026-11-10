@@ -296,7 +296,7 @@ LATE_SRC = ("gen.c", "favorites.c", "gen_track.c")   # movable main-loop generat
 
 def late_fns():
     # REC arming is UI-only; keep its undo checkpoint out of the pinned DSP gaps.
-    names = {"rec_tap", "ly_keyname", "ag", "text_w",
+    names = {"rec_tap", "ly_keyname", "ag", "text_w", "gls_prep",
              # Only the overflowing UI gaps move: keep all audio addresses pinned without wasting large holes.
              "fm1_irq_on", "large_kind", "draw_confirm", "vx_analog", "toast_clear", "draw_text_box", "as_mix",
              "ed_bk_r32", "set_engine", "step_lanes", "song_copy_section", "palette_from_stored",

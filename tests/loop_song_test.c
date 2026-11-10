@@ -232,6 +232,42 @@ int main(void)
     uint32_t h1, h2, n, k, r, transitions, last, bar;
     char msg[32];
 
+    /* Retained DRUM-X lane hits on a melodic engine have no pitches to hear. */
+    lt_clear(); lt_drums(16); set_engine_of(&trk[0], 0);
+    lt_go(4, 21);
+    bad += check("DRUM-X -> ANALOG retained hits: MY LOOP returns without inventing pitches",
+                 !gls.heard && chain_config.count >= 6);
+
+    /* Hidden tracks must not make an empty four-track loop audible. */
+    for (k = 4; k < NTRK; k++) {
+        uint8_t nn = 28;
+        lt_clear(); set_engine_of(&trk[k], 0); lt_note(&trk[k], 0, &nn, 1, 0);
+        ui_rec_prefs &= ~(PREF_SIX >> 8); rp_apply();
+        lt_go(4, 5);
+        bad += check("TRACKS 4 ignores a note only on hidden T5/T6",
+                     trk_live == 4 && !gls_any() && !chain_config.count && !song_draft && strstr(ui.msg, "EMPTY"));
+    }
+    {
+        uint32_t audible, sig;
+        uint8_t nn = 28;
+        lt_clear(); lt_drums(16);
+        ui_rec_prefs &= ~(PREF_SIX >> 8); rp_apply();
+        lt_go(4, 21); audible = lt_fh(lt_rows(), gs.pdeg, sizeof gs.pdeg) ^ gs.len ^ (gs.root << 8) ^ (gs.scale << 16);
+        lt_clear(); lt_drums(16);
+        for (k = 4; k < NTRK; k++) {
+            set_engine_of(&trk[k], 0); lt_note(&trk[k], 0, &nn, 1, 63);
+            trk[k].p[P_DIST] = 127;
+        }
+        ui_rec_prefs &= ~(PREF_SIX >> 8); rp_apply();
+        sig = gls_hash(); trk[4].step[0].note[0]++;
+        bad += check("MY LOOP fingerprint ignores hidden notes", sig == gls_hash());
+        lt_go(4, 21);
+        bad += check("hidden bass, length and distortion do not alter audible harmony or arrangement",
+                     audible == (lt_fh(lt_rows(), gs.pdeg, sizeof gs.pdeg) ^ gs.len ^ (gs.root << 8) ^ (gs.scale << 16)) && !(gls.add & 0x30u));
+        sig = gls_hash(); ui_rec_prefs |= PREF_SIX >> 8; rp_apply();
+        bad += check("changing active-track count invalidates the MY LOOP fingerprint", sig != gls_hash());
+    }
+
     /* ---- the key and the chords heard */
     for (r = 0; r < 2u; r++) {   /* (a seed a progression: the heard one some seed's, every one holding the loop's notes) */
         static const uint8_t HEARD[2][4] = {{0, 4, 5, 3}, {0, 5, 2, 6}};

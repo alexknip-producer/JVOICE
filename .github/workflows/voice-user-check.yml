@@ -104,6 +104,8 @@ jobs:
           build/song-check/generator | tee build/song-check/generator.log
           cc -O1 -w -Wno-implicit-function-declaration -Ibuild/gen -Ifirmware/src tests/song_draft_test.c -lm -o build/song-check/draft
           build/song-check/draft | tee build/song-check/draft.log
+          cc -O1 -w -Wno-implicit-function-declaration -Ibuild/gen -Ifirmware/src tests/loop_song_test.c -lm -o build/song-check/loop
+          timeout 120 build/song-check/loop | tee build/song-check/loop.log
       - name: Matrix and track follower regression
         run: |
           set -euo pipefail

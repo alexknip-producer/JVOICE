@@ -30,8 +30,8 @@
 static uint32_t gls_sig __attribute__((section(".bss.gls")));   /* the music the last FROM LOOP left (its parts: gls.add) */
 static uint32_t gls_hash(void)
 {
-    uint32_t k, h = 2166136261u;
-    for (k = 0; k < NTRK; k++) h = (h ^ steps_sig(&trk[k])) * 16777619u;
+    uint32_t k, h = 2166136261u ^ trk_live;
+    for (k = 0; k < trk_live && k < NTRK; k++) h = (h ^ steps_sig(&trk[k])) * 16777619u;
     return h;
 }
 /* a track's role by its steps (RL_N: no note) */
@@ -59,7 +59,7 @@ BTAPP_FN static uint32_t gls_hear(uint32_t span, uint16_t (*w)[12], uint16_t (*b
     memset(w, 0, 4u * sizeof *w); memset(b, 0, 4u * sizeof *b); memset(tot, 0, sizeof tot);
     if (!ns) ns = 1;
     if (ns > 4u) ns = 4;
-    for (k = 0; k < NTRK; k++) {
+    for (k = 0; k < trk_live && k < NTRK; k++) {
         const track_t *t = &trk[k];
         uint32_t len = dlen(t), kit = drum_track(t), bass = gs.role[k] == RL_BASS;
         if (gs.role[k] >= RL_N || (gls.add >> k) & 1u) continue;
@@ -69,7 +69,7 @@ BTAPP_FN static uint32_t gls_hear(uint32_t span, uint16_t (*w)[12], uint16_t (*b
             if (s->time != ST_NOTE) continue;
             while (d < len && t->step[(i + d) % len].time == ST_TIE) d++;
             v = (d + (i % 4u == 0u)) * (s->vel / 32u + 1u);
-            for (j = 0; j <= (kit ? NLANE : s->n - 1u); j++) {
+            for (j = 0; j < (kit ? NLANE + 1u : s->n); j++) {
                 int32_t nt = s->note[j & 3u];
                 if (kit) {                              /* (DRUM-X: a lane's hit, or the note of its chromatic run, on a
                                                          * lane of little noise, not METAL; a hit only where it rings:
@@ -197,7 +197,7 @@ static uint32_t gls_genre(void)
 BTAPP_FN static uint32_t gls_any(void)                  /* the music has a note */
 {
     uint32_t k, n = 0;
-    for (k = 0; k < NTRK; k++) n |= gls_role(&trk[k]) < RL_N;
+    for (k = 0; k < trk_live && k < NTRK; k++) n |= gls_role(&trk[k]) < RL_N;
     return n;
 }
 /* gen_go's first step: the UNDO point (FROM LOOP again on its own song: still the project before the first); 1: an
@@ -216,13 +216,14 @@ static __attribute__((noinline)) void gls_prep(void)
     uint16_t w[4][12], b[4][12];
     uint32_t k, r, j, span = 1, room = 1, ld = NTRK, ml = NTRK, fm6 = 0, dk = 0;
     if (gls_sig != gls_hash()) gls.add = 0;             /* (OCT+ again: the parts it added made again) */
-    for (k = 0; k < NTRK; k++)
+    for (k = 0; k < trk_live && k < NTRK; k++)
         if ((gls.add >> k) & 1u) { load_begin(&trk[k], LOAD_PAT); gclear_all(&trk[k]); motion_clear(&trk[k]); load_end(&trk[k]); }
     memset(&gs, 0, sizeof gs);
+    memset(gs.role, RL_TEX, sizeof gs.role);   /* inactive tracks have no musical role */
     gx.on = 0; gx.odd = 0; gx.eng = -1;
     gls.on = 1; gls.mute = 0;
     for (k = 0; k < RL_N; k++) gs.trk_of[k] = NTRK;
-    for (k = 0; k < NTRK; k++) {                        /* the roles the loop's tracks play */
+    for (k = 0; k < trk_live && k < NTRK; k++) {                        /* the roles the loop's tracks play */
         track_t *t = &trk[k];
         r = gls_role(t);
         gs.role[k] = (uint8_t)(r < RL_N ? r : RL_TEX);
