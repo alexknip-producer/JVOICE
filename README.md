@@ -17,7 +17,7 @@ a generator and effects, all inside the little keyboard. It is a fork of [Felucc
 The emulator runs the same code as the FM-1, with sound, played with the computer keyboard or the mouse. The installer
 always offers the current public version first, and the earlier ones under it.
 
-## This release: V10.7.14
+## This release: V10.7.15
 
 ### Installing
 
@@ -468,6 +468,12 @@ JIANT's modifications are distributed under the same license.
 ## Changelog
 
 Every update is listed here, newest first. (Since 0.6.80 at the end of the page: what the synth does comes first.)
+
+### V10.7.15 — public (2026-11-10)
+
+- No more stuck notes: a key, a SCENE key, a latched chord, the arp and a MIDI-in note now always release exactly what they started, whatever you change while holding them (octave, SCENE OCT+, chord, scale, LATCH, engine, preset, MIDI OUT). **PANIC:** hold PLAY ~0.7 s to stop everything and silence every voice (also sends all-notes-off over MIDI).
+- Step components: **TRIG**, an Elektron-style trig condition: the step plays only when its CONDITION holds (TRIG 4:4: only on the 4th pass). Also on GLO › COMPS.
+- EDIT › SOUND: no more parameter list beside the creature (the knob cards above already show it).
 
 ### V10.7.14 — public (2026-11-09)
 
