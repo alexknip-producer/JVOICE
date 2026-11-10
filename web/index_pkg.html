@@ -44,6 +44,7 @@
 </head>
 <body class="jiant-installer">
 <main>
+  <p id="beta-banner" hidden style="margin:0 0 20px;padding:14px;border:2px solid #ff8a00;color:#ff8a00;font:700 24px/1.2 monospace">BETA</p>
   <nav class="lang" id="lang" aria-label="Language"><button data-lang="es" lang="es">Español</button><button data-lang="en" lang="en">English</button><button data-lang="ja" lang="ja">日本語</button></nav>
   <h1 class="jiant-wordmark"><a href="https://juanjiant-bit.github.io/JIANT/" aria-label="JIANT FM home">JIANT<span class="fm">FM</span></a><span class="jiant-tool">INSTALLER</span></h1>
   <p data-t="intro"></p>
@@ -576,6 +577,7 @@ log(`installer ${meta.version} ${meta.product} | ${env.browser} ${env.os} | webm
 /* (0.9.11) the channel: web/STABLE's approved version (webapp/installer) or main's preview (preview/webapp/installer) */
 const preview = meta.channel ? meta.channel === "preview" : /-preview$/.test(meta.version);
 function showChannel() {
+  $("beta-banner").hidden = !preview;
   const p = $("channel"); p.textContent = t(preview ? "chPreview" : "chStable") + " ";
   const a = document.createElement("a");
   a.href = preview ? "../../../webapp/installer/" : "../../preview/webapp/installer/";
