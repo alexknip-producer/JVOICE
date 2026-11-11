@@ -29,14 +29,14 @@ jobs:
         shell: pwsh
         run: |
           ctest --test-dir vst3/build -C Release --output-on-failure
-          & vst3/build/bin/Release/validator.exe vst3/build/JiantVoice.vst3
+          & vst3/build/bin/Release/validator.exe vst3/build/JVoice.vst3
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
       - name: Upload VST3 and instructions
         uses: actions/upload-artifact@v4
         with:
-          name: JVOICE-0.1.0-win-x64
+          name: JVoice-0.2.0-win-x64
           path: |
-            vst3/build/JiantVoice.vst3
+            vst3/build/JVoice.vst3
             vst3/USAGE.ru.md
             vst3/UPSTREAM.md
             vst3/src/TransliterationTable.h

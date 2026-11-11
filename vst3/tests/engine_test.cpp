@@ -1,6 +1,7 @@
 /* SPDX-License-Identifier: GPL-3.0-only */
 #include "TextBank.h"
 #include "VoiceEngine.h"
+#include "VoiceParameters.h"
 #include <cassert>
 #include <cmath>
 #include <iostream>
@@ -57,6 +58,35 @@ int main() {
         for(int block=0;block<80;++block) {jv_render(a,x);for(float v:x) assert(std::isfinite(v));}
         jv_panic(a);
     }
+    // Every requested timbre control must affect the rendered signal.
+    for(int control=0;control<6;++control) {
+        jv_reset(a);jv_reset(b);
+        for(int i=0;i<voice::controlCount;++i){jv_control(a,i,voice::controlDefaults[i]);jv_control(b,i,voice::controlDefaults[i]);}
+        jv_control(b,control,control==voice::Buzz || control==voice::Artic ? 0:1);
+        jv_text(a,"shchuka zhizn",4);jv_text(b,"shchuka zhizn",4);
+        jv_note_on(a,0,60,100,0,1);jv_note_on(b,0,60,100,0,1);
+        double difference=0;
+        for(int block=0;block<300;++block){jv_render(a,x);jv_render(b,y);for(int i=0;i<JV_BLOCK;++i){assert(std::isfinite(y[i]));difference+=std::abs(x[i]-y[i]);}}
+        assert(difference>.001);
+    }
+    // A single MIDI note creates the configured unison stack; Note Off releases all layers.
+    for(int nv=1;nv<=8;++nv) {
+        jv_reset(a);jv_text(a,"la",2);jv_control(a,voice::Voices,(nv-1)/7.0);jv_control(a,voice::Unison,1);
+        jv_note_on(a,0,60,100,0,77);assert(jv_active(a)==nv);assert(jv_position(a)==1);
+        jv_note_off(a,0,60,77);for(int k=0;k<1000;++k)jv_render(a,x);assert(jv_active(a)==0);
+    }
+    jv_reset(a);jv_reset(b);jv_text(a,"la",2);jv_text(b,"la",2);
+    jv_note_on(a,0,60,100,0,1);jv_note_on(b,0,60,100,0,1);
+    jv_control(a,voice::Image,1);jv_control(b,voice::Detune,1);
+    float left[JV_BLOCK],right[JV_BLOCK];double stereo=0,detune=0;
+    for(int k=0;k<100;++k){jv_render_stereo(a,left,right);jv_render(b,y);for(int i=0;i<JV_BLOCK;++i){stereo+=std::abs(left[i]-right[i]);detune+=std::abs(left[i]-y[i]);}}
+    assert(stereo>.01);
+    jv_reset(a);jv_reset(b);jv_text(a,"la",2);jv_text(b,"la",2);
+    jv_note_on(a,0,60,100,0,1);jv_note_on(b,0,60,100,0,1);jv_control(b,voice::Detune,1);
+    detune=0;
+    for(int k=0;k<100;++k){jv_render(a,x);jv_render(b,y);for(int i=0;i<JV_BLOCK;++i)detune+=std::abs(x[i]-y[i]);}
+    assert(detune>.01);
+    jv_control(a,voice::Voices,0);jv_note_on(a,0,62,100,0,2);assert(jv_active(a)==1);
     jv_destroy(a); jv_destroy(b);
     std::cout << "PASS: text limits, RU/DE/FR, 9 languages, 8 voices, isolation, note IDs, release, panic\n";
 }

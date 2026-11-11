@@ -1,4 +1,4 @@
-# Build JVOICE
+# Build JVoice
 
 Requirements: CMake >= 3.25, Python >= 3.10, C/C++17 compiler, VST3 SDK.
 No JieLi firmware toolchain or hardware SDK is needed.
@@ -16,7 +16,7 @@ ctest --test-dir vst3/build -C Release --output-on-failure
 ```
 
 On Windows use a Visual Studio 2022 x64 developer shell; add `-A x64` when
-configuring. The bundle is `vst3/build/JiantVoice.vst3`. Run the SDK validator
+configuring. The bundle is `vst3/build/JVoice.vst3`. Run the SDK validator
 on that directory (its executable is under `vst3/build/bin`).
 
 For a Linux engine-only build, add `-DVOICE_BUILD_PLUGIN=OFF` and specify
@@ -34,4 +34,7 @@ Tests cover the text limit including 512-byte transliteration, UTF-8 validation,
 extended languages, polyphony, independent plugin instances, old notes surviving
 text edits, note ID pairing, state serialization, keyswitches, sound and release.
 On Windows plugin_test also attaches the real Win32 editor and enters Cyrillic.
-The SDK validator checks the VST3 ABI and lifecycle.
+The SDK validator checks the VST3 ABI and lifecycle. Version 0.2 also tests
+multiline editing, unrestricted language changes, transport restart, automation
+gestures and event points, timbre controls, stereo spread, polyphonic detune
+and 1–8-layer unison.

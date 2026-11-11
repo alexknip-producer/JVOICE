@@ -77,6 +77,8 @@ context += '''    uint8_t cache_ready;
     int32_t noise;
     uint32_t age;
     int ids[NTRK];
+    double controls[10];
+    float detune_position[NTRK], pan_position[NTRK], gain[NTRK], pan_current[NTRK];
 };
 static void jv_bind(struct jv_engine *e) {
     trk = e->tracks;

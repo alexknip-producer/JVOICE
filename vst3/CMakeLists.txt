@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.25)
-project(JiantVoice VERSION 0.1.0 LANGUAGES C CXX)
+project(JiantVoice VERSION 0.2.0 LANGUAGES C CXX)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_C_STANDARD 11)
 set(CMAKE_C_STANDARD_REQUIRED ON)
@@ -74,12 +74,12 @@ if(VOICE_BUILD_PLUGIN)
         target_link_options(JiantVoice PRIVATE -static -static-libgcc -static-libstdc++)
     endif()
     if(WIN32)
-        set(VOICE_BUNDLE ${CMAKE_CURRENT_BINARY_DIR}/JiantVoice.vst3/Contents/x86_64-win)
-        set_target_properties(JiantVoice PROPERTIES PREFIX "" SUFFIX ".vst3" LIBRARY_OUTPUT_DIRECTORY ${VOICE_BUNDLE}
+        set(VOICE_BUNDLE ${CMAKE_CURRENT_BINARY_DIR}/JVoice.vst3/Contents/x86_64-win)
+        set_target_properties(JiantVoice PROPERTIES OUTPUT_NAME JVoice PREFIX "" SUFFIX ".vst3" LIBRARY_OUTPUT_DIRECTORY ${VOICE_BUNDLE}
             LIBRARY_OUTPUT_DIRECTORY_RELEASE ${VOICE_BUNDLE}
             RUNTIME_OUTPUT_DIRECTORY ${VOICE_BUNDLE} RUNTIME_OUTPUT_DIRECTORY_RELEASE ${VOICE_BUNDLE})
     else()
-        set(VOICE_BUNDLE ${CMAKE_CURRENT_BINARY_DIR}/JiantVoice.vst3/Contents/x86_64-linux)
-        set_target_properties(JiantVoice PROPERTIES PREFIX "" LIBRARY_OUTPUT_DIRECTORY ${VOICE_BUNDLE})
+        set(VOICE_BUNDLE ${CMAKE_CURRENT_BINARY_DIR}/JVoice.vst3/Contents/x86_64-linux)
+        set_target_properties(JiantVoice PROPERTIES OUTPUT_NAME JVoice PREFIX "" LIBRARY_OUTPUT_DIRECTORY ${VOICE_BUNDLE})
     endif()
 endif()

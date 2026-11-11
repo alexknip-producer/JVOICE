@@ -9,13 +9,20 @@
 #include <string_view>
 
 namespace voice {
-inline constexpr int lineCount = 16, maxCharacters = 128, textBytes = 513;
+inline constexpr int lineCount = 13, storedLineCount = 16, maxCharacters = 128, textBytes = 513;
 struct Line { std::array<char, textBytes> original{}, sung{}; };
 struct Bank {
-    std::array<Line, lineCount> lines{};
+    std::array<Line, storedLineCount> lines{}; // retain old projects' extra rows in state
     int language = 4; // Russian (upstream enum)
     int selected = 0;
 };
+inline std::string document(const Bank& bank) {
+    int last=lineCount-1;
+    while(last>0 && !bank.lines[last].original[0])--last;
+    std::string text;
+    for(int i=0;i<=last;++i){if(i)text+='\n';text+=bank.lines[i].original.data();}
+    return text;
+}
 inline bool decode(std::string_view s, std::u32string& out) {
     out.clear();
     for (size_t i = 0; i < s.size();) {
@@ -48,7 +55,7 @@ inline bool makeLine(std::string_view utf8, int language, Line& line) {
     if (language < 1 || language > 9 || utf8.size() >= textBytes || !decode(utf8, chars)) return false;
     std::string latin;
     for (char32_t c : chars) {
-        if (language == 4) {
+        { // Transliteration is independent of the selected pronunciation language.
             if (c >= U'А' && c <= U'Я') c += 32;
             if (c == U'Ё') c = U'ё';
             if (c == U'ё') { latin += russianLatin[6]; continue; }
@@ -84,7 +91,7 @@ inline bool makeLine(std::string_view utf8, int language, Line& line) {
         if (c == U'ú' || c == U'ù' || c == U'û' || c == U'ü') c = 'u';
         if (c >= 0x300 && c <= 0x36F) continue;
         if (c == U'¡' || c == U'¿') continue;
-        if (c > 126) return false;
+        if (c > 126) { latin+=' ';continue; } // retain original Unicode; skip unsupported phonetics
         latin += c < 32 ? ' ' : char(c);
     }
     if (language == 6) {
