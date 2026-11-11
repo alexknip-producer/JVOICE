@@ -146,6 +146,14 @@ int main(void) {
     jv_note_on(e,0,64,100,0,2);
     assert(e->glide_from[1]==60 && e->glide_from[2]==60 && e->glide_from[3]==60);
     assert(e->glide_duration[1]==FS/4 && e->glide_duration[2]==FS && e->glide_duration[3]==FS*4);
+    // Direction is checked separately against each voice of a new chord.
+    for(int dir=0;dir<3;++dir){jv_reset(e);jv_control(e,24,sqrt(.1));jv_control(e,26,dir/2.0);jv_text(e,"aaaa",LG_RU);
+        jv_note_on(e,0,60,100,0,1);jv_note_on(e,0,67,100,1,2);for(int k=0;k<10;++k)jv_render(e,out);
+        jv_note_off(e,0,60,1);jv_note_off(e,0,67,2);
+        jv_note_on(e,0,62,100,0,3);jv_note_on(e,0,64,100,1,4);
+        assert(e->glide_from[3]==60 && e->glide_from[4]==67);
+        assert((e->glide_duration[3]>0)==(dir!=2));assert((e->glide_duration[4]>0)==(dir!=1));
+    }
     // Sustain is channel-specific, releases only lifted keys, and handles
     // repeated notes with no MIDI note ID independently.
     jv_reset(e);jv_text(e,"aaaa",LG_RU);jv_sustain(e,0,1);

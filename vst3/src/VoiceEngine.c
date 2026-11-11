@@ -158,6 +158,8 @@ void jv_note_on(jv_engine *e, int channel, int note, int vel, int chord, int not
         e->glide_from[slot]=e->glide_now[slot]=start_pitch;
         e->glide_elapsed[slot]=0;
         double seconds=e->controls[24]*e->controls[24]*10.0;
+        int direction=(int)(e->controls[26]*2+.5);
+        if((direction==1 && note<=start_pitch) || (direction==2 && note>=start_pitch))seconds=0;
         if(unison && nv>1 && e->controls[25]>0){
             double position=2.0*sub/(nv-1)-1.0;
             seconds=fmin(10.0,seconds*pow(4.0,position*e->controls[25]));

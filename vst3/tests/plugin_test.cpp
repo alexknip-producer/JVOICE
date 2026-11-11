@@ -116,7 +116,7 @@ int main(){
     SendMessageW(editor,WM_COMMAND,MAKEWPARAM(20,CBN_SELCHANGE),0);assert(p->snapshot().language==2);
     assert(std::string(p->snapshot().lines[0].original.data())==u8"Проверка русского текста");
     auto swarmKnob=GetDlgItem(editor,2000+Swarm);assert(swarmKnob && !IsWindowEnabled(swarmKnob));
-    for(int i=0;i<controlCount;++i)if(i!=Unison && i!=ExtInput && i!=Mono && i!=Newspeak && i!=PitchBendRange && i!=ReservedControl && i!=ReservedThickness){auto knob=GetDlgItem(editor,2000+i);assert(knob);SendMessageW(knob,WM_KEYDOWN,VK_RIGHT,0);}
+    for(int i=0;i<controlCount;++i)if(i!=Unison && i!=ExtInput && i!=Mono && i!=Newspeak && i!=PitchBendRange && i!=GlideDirection && i!=ReservedControl && i!=ReservedThickness){auto knob=GetDlgItem(editor,2000+i);assert(knob);SendMessageW(knob,WM_KEYDOWN,VK_RIGHT,0);}
     assert(!GetDlgItem(editor,2000+ReservedControl));
     auto toggle=GetDlgItem(editor,25);SendMessageW(toggle,BM_SETCHECK,BST_CHECKED,0);SendMessageW(editor,WM_COMMAND,MAKEWPARAM(25,BN_CLICKED),0);assert(p->control(Unison)==1);
     SendMessageW(editor,WM_TIMER,1,0);assert(IsWindowEnabled(swarmKnob));
@@ -128,6 +128,11 @@ int main(){
     assert(SendMessageW(bend,CB_GETCURSEL,0,0)==7);
     SendMessageW(editor,WM_COMMAND,MAKEWPARAM(27,CBN_SELCHANGE),0);assert(std::abs(p->control(PitchBendRange)-.7)<1e-9);
     SendMessageW(bend,CB_SHOWDROPDOWN,FALSE,0);
+    auto direction=GetDlgItem(editor,31);assert(direction && SendMessageW(direction,CB_GETCOUNT,0,0)==3);
+    SendMessageW(direction,CB_SHOWDROPDOWN,TRUE,0);SendMessageW(direction,CB_SETCURSEL,2,0);
+    SendMessageW(editor,WM_TIMER,1,0);assert(SendMessageW(direction,CB_GETCURSEL,0,0)==2);
+    SendMessageW(editor,WM_COMMAND,MAKEWPARAM(31,CBN_SELCHANGE),0);assert(p->control(GlideDirection)==1);
+    SendMessageW(direction,CB_SHOWDROPDOWN,FALSE,0);
     while(PeekMessageW(&msg,nullptr,0,0,PM_REMOVE)){TranslateMessage(&msg);DispatchMessageW(&msg);}Sleep(300);
     HDC dc=GetDC(editor),mem=CreateCompatibleDC(dc);HBITMAP bmp=CreateCompatibleBitmap(dc,900,720);auto oldBmp=SelectObject(mem,bmp);
     BitBlt(mem,0,0,900,720,dc,0,0,SRCCOPY);SelectObject(mem,oldBmp);
