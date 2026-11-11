@@ -186,6 +186,12 @@ sing = sing.replace('static int16_t sy_cx;', 'static JV_TLS int16_t sy_cx;')
 sing = sing.replace('static uint8_t lyb_ok __attribute__((section(".pool")));',
                     'static JV_TLS uint8_t *lyb_ok_ptr;\n#define lyb_ok (*lyb_ok_ptr)')
 formant = (root / 'firmware/src/eng_formant.c').read_text().replace('#include "sing.c"', sing)
+# The embedded renderer rounds each quiet sample twice to an integer before
+# applying the release. Retain 12 fractional output bits on the desktop;
+# the rest of the voice model and its nominal gain are unchanged.
+needle = 'out[i] += voice_amp(s, m, i) * 23 >> 3;'
+assert formant.count(needle)==2
+formant = formant.replace(needle, 'out[i] += (int32_t)(((int64_t)s * amp_at(m, i) * VOICE_FS * 23) >> 21);')
 formant = re.sub(r'static (int32_t) (fmt_f5)((?:\[[^\]]+\])+)(?: __attribute__\(\(section\("[^"]+"\)\)\))?;', replace_array, formant)
 formant = formant.replace('static int32_t formant_nz = 0x2545F491;',
     'static JV_TLS int32_t *formant_noise;\n#define formant_nz (*formant_noise)\n')

@@ -16,6 +16,15 @@ static void bare_sound(jv_engine *e,int lang,const char *word,int burst) {
     assert(early>1e-7);assert(burst ? late<early*.02:late>1e-7);
 }
 int main(void) {
+    // Quiet release samples keep their fractional precision after the voice gain.
+    vmod_t quiet={0};quiet.amp0=quiet.amp1=24;double oldError=0,newError=0;
+    for(int i=-25000;i<=25000;i+=137){
+        double ideal=(double)i*24*VOICE_FS*23/(1073741824.0*8);
+        double old=(voice_amp(i,&quiet,0)*23)>>3;
+        double precise=(double)(((int64_t)i*amp_at(&quiet,0)*VOICE_FS*23)>>21)/4096;
+        oldError+=(old-ideal)*(old-ideal);newError+=(precise-ideal)*(precise-ideal);
+    }
+    assert(newError<oldError*.001);
     uint8_t codes[SW_MAX],kinds[SW_MAX];
     assert(sy_ext(LG_RU,"y",1,codes,kinds)==1 && codes[0]==PH_UH && kinds[0]!=TK_C);
     assert(sy_ext(LG_RU,"e",1,codes,kinds)==1 && codes[0]==PH_E);

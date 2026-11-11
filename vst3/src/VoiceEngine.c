@@ -235,7 +235,7 @@ void jv_render_input(jv_engine *e,const float *input_l,const float *input_r,floa
         }
         float pan0=e->pan_current[k],pan1=e->pan_position[k]*(float)e->controls[6];
         for(int i=0;i<CTL;++i) {
-            float pan=pan0+(pan1-pan0)*(i+1)/CTL, gain=1.0f/65536.0f;
+            float pan=pan0+(pan1-pan0)*(i+1)/CTL, gain=1.0f/(65536.0f*4096.0f);
             mix_l[i]+=mono[i]*gain*(pan>0 ? 1-pan : 1);mix_r[i]+=mono_r[i]*gain*(pan<0 ? 1+pan : 1);
         }
         e->pan_current[k]=pan1;
