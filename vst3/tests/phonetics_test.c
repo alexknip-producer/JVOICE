@@ -16,6 +16,16 @@ static void bare_sound(jv_engine *e,int lang,const char *word,int burst) {
     assert(early>1e-7);assert(burst ? late<early*.02:late>1e-7);
 }
 int main(void) {
+    // Dust fades in over the original source and gets sparser at high Grain.
+    { double controls[JV_CONTROL_COUNT]={0};jv_grain_state dust={0};dust.bits=1;
+      jv_control_values=controls;jv_grain=&dust;
+      assert(jv_grain_noise(12345)==12345);
+      int hits[2]={0};for(int level=0;level<2;++level){
+          controls[23]=level ? .9:.1;dust.mix=(float)controls[23];dust.bits=1;
+          for(int n=0;n<32767;++n)if(jv_grain_noise(0))++hits[level];
+      }
+      assert(hits[0]>hits[1]*3 && hits[1]>0);
+    }
     // Quiet release samples keep their fractional precision after the voice gain.
     vmod_t quiet={0};quiet.amp0=quiet.amp1=24;double oldError=0,newError=0;
     for(int i=-25000;i<=25000;i+=137){
@@ -150,13 +160,14 @@ int main(void) {
     jv_note_on(e,0,64,100,0,2);
     assert(e->glide_from[1]==60 && e->glide_from[2]==60 && e->glide_from[3]==60);
     assert(e->glide_duration[1]==FS/4 && e->glide_duration[2]==FS && e->glide_duration[3]==FS*4);
-    // Direction is checked separately against each voice of a new chord.
+    // Both pairs chord voices; directional modes use the last played note.
     for(int dir=0;dir<3;++dir){jv_reset(e);jv_control(e,24,sqrt(.1));jv_control(e,26,dir/2.0);jv_text(e,"aaaa",LG_RU);
         jv_note_on(e,0,60,100,0,1);jv_note_on(e,0,67,100,1,2);for(int k=0;k<10;++k)jv_render(e,out);
         jv_note_off(e,0,60,1);jv_note_off(e,0,67,2);
         jv_note_on(e,0,62,100,0,3);jv_note_on(e,0,64,100,1,4);
-        assert(e->glide_from[3]==60 && e->glide_from[4]==67);
-        assert((e->glide_duration[3]>0)==(dir!=2));assert((e->glide_duration[4]>0)==(dir!=1));
+        if(!dir){assert(e->glide_from[3]==60 && e->glide_from[4]==67);}
+        else {assert(e->glide_from[3]==67 && e->glide_from[4]==62);}
+        assert((e->glide_duration[3]>0)==(dir!=1));assert((e->glide_duration[4]>0)==(dir!=2));
     }
     // Sustain is channel-specific, releases only lifted keys, and handles
     // repeated notes with no MIDI note ID independently.

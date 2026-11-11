@@ -229,7 +229,7 @@ static void str_cpy(char *d, const char *s, unsigned n) {
 static JV_TLS const float *jv_carrier;
 static JV_TLS const float *jv_carrier_gain;
 static JV_TLS const double *jv_control_values;
-typedef struct { uint32_t bits; float phase, mix, held; } jv_grain_state;
+typedef struct { uint32_t bits; float mix; } jv_grain_state;
 static JV_TLS jv_grain_state *jv_grain;
 /* Change texture smoothly; at zero the original noise remains bit-identical. */
 static inline int32_t jv_grain_noise(int32_t original) {
@@ -238,15 +238,11 @@ static inline int32_t jv_grain_noise(int32_t original) {
     m+=(target-m)*0.0025f;jv_grain->mix=m;
     uint32_t x=jv_grain->bits;
     x=((x<<1)&0x7fffu)|(((x>>14)^(x>>13))&1u);jv_grain->bits=x ? x:1u;
-    if(jv_grain->phase<=0){
-        /* Quantized random levels with irregular, short sample-and-hold steps. */
-        jv_grain->held=((float)((x>>10)&31u)-15.5f)*1600.0f;
-        jv_grain->phase=1.0f+((x>>4)&3u)*(0.3f+1.2f*m);
-    }
-    jv_grain->phase-=1.0f;
-    /* Sparse bipolar transients add crackle while retaining bright hiss. */
-    float pulse=((x&255u)<(uint32_t)(1.0f+7.0f*m)) ? ((x&256u) ? 18000.0f:-18000.0f):0;
-    return (int32_t)(original*(1.0f-0.65f*m)+m*(jv_grain->held*.95f+pulse*.8f));
+    /* Dust: denser impulses at low settings, sparse at high settings. The
+     * original full-band hiss stays present; only the impulse level fades in. */
+    uint32_t threshold=(uint32_t)(205.0f-193.0f*m);
+    float pulse=(x&1023u)<threshold ? ((x&1024u) ? 50000.0f:-50000.0f):0;
+    return (int32_t)(original+m*pulse);
 }
 /* +12 dB on external tonal excitation only. Keep headroom in the conversion:
  * a normal full-scale input must not clip at the old int16 carrier boundary. */

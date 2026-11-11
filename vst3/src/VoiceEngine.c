@@ -112,7 +112,13 @@ static double jv_glide_start(jv_engine *e,int channel,int note,int chord)
 void jv_note_on(jv_engine *e, int channel, int note, int vel, int chord, int note_id)
 {
     jv_bind(e);
+    int direction=(int)(e->controls[26]*2+.5);
+    int last_valid=channel>=0 && channel<16 && e->glide_last_valid[channel];
+    double last_pitch=last_valid ? e->glide_last[channel]:note;
     double start_pitch=jv_glide_start(e,channel,note,chord);
+    /* Directional glide follows the last played MIDI note, even if a nearer
+     * polyphonic voice is still sounding or its release tail is active. */
+    if(direction)start_pitch=last_pitch;
     if(e->controls[18]>=.5){
         /* Replace the old stack, then remove the output discontinuity over 3 ms. */
         if(jv_active(e) || e->declick_remaining)e->declick_pending=1;
@@ -159,7 +165,6 @@ void jv_note_on(jv_engine *e, int channel, int note, int vel, int chord, int not
         e->glide_from[slot]=e->glide_now[slot]=start_pitch;
         e->glide_elapsed[slot]=0;
         double seconds=e->controls[24]*e->controls[24]*10.0;
-        int direction=(int)(e->controls[26]*2+.5);
         if((direction==1 && note<=start_pitch) || (direction==2 && note>=start_pitch))seconds=0;
         if(unison && nv>1 && e->controls[25]>0){
             double position=2.0*sub/(nv-1)-1.0;
