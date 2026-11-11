@@ -67,8 +67,7 @@ public:
     static FUnknown* create(void*) { return static_cast<IComponent*>(new Plugin); }
     Plugin() : engine(jv_create()) {
         for(int i=0;i<controlCount;++i)controls[i].store(controlDefaults[i]);
-        makeLine(u8"Привет, мир",4,bank.lines[0]);
-        makeLine(u8"Пой со мной",4,bank.lines[1]);
+        makeLine("pulsare quasare die sonne der mond die sterne",5,bank.lines[0]);
     }
     ~Plugin() override { jv_destroy(engine); }
     tresult PLUGIN_API queryInterface(const TUID id,void** obj) override {
@@ -397,24 +396,24 @@ tresult PLUGIN_API View::attached(void* parent,FIDString type) {
     control(L"STATIC",L"Language",0,24,58,80,24,0);
     language=control(L"COMBOBOX",L"",CBS_DROPDOWNLIST|WS_TABSTOP,105,53,85,280,20);
     for(auto* name:languageNames)SendMessageW(language,CB_ADDSTRING,0,reinterpret_cast<LPARAM>(wide(name).c_str()));
-    control(L"STATIC",L"Строка",0,220,58,64,24,0);
+    control(L"STATIC",L"Line",0,220,58,64,24,0);
     linePick=control(L"COMBOBOX",L"",CBS_DROPDOWNLIST|WS_TABSTOP,285,53,140,420,21);
     for(int i=0;i<lineCount;++i)SendMessageW(linePick,CB_ADDSTRING,0,reinterpret_cast<LPARAM>(lineLabel(i).c_str()));
-    control(L"BUTTON",L"Предыдущая",WS_TABSTOP,442,52,110,29,23);
-    control(L"BUTTON",L"Следующая",WS_TABSTOP,560,52,110,29,24);
-    control(L"BUTTON",L"С начала",WS_TABSTOP,678,52,90,29,22);
+    control(L"BUTTON",L"Previous",WS_TABSTOP,442,52,110,29,23);
+    control(L"BUTTON",L"Next",WS_TABSTOP,560,52,110,29,24);
+    control(L"BUTTON",L"Restart",WS_TABSTOP,678,52,90,29,22);
     unison=control(L"BUTTON",L"Unison",BS_AUTOCHECKBOX|WS_TABSTOP,790,53,90,28,25);
-    control(L"STATIC",L"C-2…C-1 (MIDI 0–12): выбор строк 1–13. Play в DAW начинает выбранную строку заново.",0,24,94,852,24,0);
+    control(L"STATIC",L"C-2 to C-1 (MIDI 0-12): select lines 1-13. DAW Play restarts the selected line.",0,24,94,852,24,0);
     int column=0;
     for(int i=0;i<controlCount;++i)if(i!=Unison){
         knobs[i]=CreateWindowExW(0,knobClass,L"",WS_CHILD|WS_VISIBLE|WS_TABSTOP,24+column++*94,132,90,122,
             window,reinterpret_cast<HMENU>(INT_PTR(2000+i)),module,this);
     }
-    control(L"STATIC",L"Текст — одна строка на keyswitch. До 13 строк, по 128 символов.",0,24,273,852,24,0);
+    control(L"STATIC",L"Lyrics - one line per keyswitch. Up to 13 lines, 128 characters per line.",0,24,273,852,24,0);
     text=control(L"EDIT",L"",ES_MULTILINE|ES_WANTRETURN|ES_AUTOHSCROLL|ES_AUTOVSCROLL|WS_HSCROLL|WS_VSCROLL|WS_TABSTOP,24,305,852,300,1000);
     SendMessageW(text,EM_SETLIMITTEXT,lineCount*256+lineCount*2,0);
-    control(L"BUTTON",L"Выбрать строку под курсором",WS_TABSTOP,24,620,275,32,26);
-    control(L"STATIC",L"Пустые строки тоже имеют свой номер. Перенос — Enter.",0,320,626,556,24,0);
+    control(L"BUTTON",L"Select cursor line",WS_TABSTOP,24,620,275,32,26);
+    control(L"STATIC",L"Blank lines count too. Press Enter for a new line.",0,320,626,556,24,0);
     status=control(L"STATIC",L"",0,24,672,852,26,0);
     seenRevision=0;refresh();SetTimer(window,1,80,nullptr);return CPluginView::attached(parent,type);
 }
@@ -438,7 +437,7 @@ void View::refresh() {
 }
 void View::command(int id,int notification) {
     if(loading)return;
-    if(id==20 && notification==CBN_SELCHANGE){owner.setLanguage(int(SendMessageW(language,CB_GETCURSEL,0,0))+1);SetWindowTextW(status,L"Язык изменён. Исходный текст сохранён.");}
+    if(id==20 && notification==CBN_SELCHANGE){owner.setLanguage(int(SendMessageW(language,CB_GETCURSEL,0,0))+1);SetWindowTextW(status,L"Language changed. Original text preserved.");}
     else if(id==21 && notification==CBN_SELCHANGE)owner.pick(int(SendMessageW(linePick,CB_GETCURSEL,0,0)));
     else if(id==22)owner.pick(owner.currentLine());
     else if(id==23)owner.pick((owner.currentLine()+lineCount-1)%lineCount);
@@ -449,8 +448,8 @@ void View::command(int id,int notification) {
         int len=GetWindowTextLengthW(text);std::wstring input(size_t(len)+1,L'\0');GetWindowTextW(text,input.data(),len+1);
         int n=WideCharToMultiByte(CP_UTF8,WC_ERR_INVALID_CHARS,input.c_str(),-1,nullptr,0,nullptr,nullptr);std::string utf8(size_t(n>0 ? n:1),'\0');
         if(n)WideCharToMultiByte(CP_UTF8,WC_ERR_INVALID_CHARS,input.c_str(),-1,utf8.data(),n,nullptr,nullptr);
-        if(n && owner.setDocument(std::string_view(utf8.data(),size_t(n-1)))){SetWindowTextW(status,L"Текст сохранён в состоянии плагина.");seenRevision=owner.version();}
-        else SetWindowTextW(status,L"Текст пока не сохранён: максимум 13 строк по 128 символов. Сократите его.");
+        if(n && owner.setDocument(std::string_view(utf8.data(),size_t(n-1)))){SetWindowTextW(status,L"Lyrics saved in plugin state.");seenRevision=owner.version();}
+        else SetWindowTextW(status,L"Not saved yet: limit is 13 lines, 128 characters per line. Please shorten the text.");
     }
 }
 #endif
@@ -458,7 +457,7 @@ void View::command(int id,int notification) {
 
 bool InitModule(){return true;}
 bool DeinitModule(){return true;}
-BEGIN_FACTORY_DEF("Voice Fork", "https://github.com/juanjiant-bit/JIANT", "")
+BEGIN_FACTORY_DEF("", "https://github.com/alexknip-producer/JVOICE", "")
 DEF_CLASS2(INLINE_UID_FROM_FUID(voice::classID),PClassInfo::kManyInstances,kVstAudioEffectClass,
-    "JVoice",0,"Instrument|Synth", "0.2.0",kVstVersionString,voice::Plugin::create)
+    "JVoice",0,"Instrument|Synth", "0.2.1",kVstVersionString,voice::Plugin::create)
 END_FACTORY

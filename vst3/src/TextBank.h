@@ -13,7 +13,7 @@ inline constexpr int lineCount = 13, storedLineCount = 16, maxCharacters = 128, 
 struct Line { std::array<char, textBytes> original{}, sung{}; };
 struct Bank {
     std::array<Line, storedLineCount> lines{}; // retain old projects' extra rows in state
-    int language = 4; // Russian (upstream enum)
+    int language = 5; // German (upstream enum)
     int selected = 0;
 };
 inline std::string document(const Bank& bank) {

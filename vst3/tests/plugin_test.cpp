@@ -18,6 +18,10 @@ int main(){
     auto* p=new Plugin;assert(p->initialize(nullptr)==kResultOk);
     auto* spy=new EditSpy;p->setComponentHandler(spy);spy->release();
     ProcessSetup setup{kRealtime,kSample32,256,48000};assert(p->setupProcessing(setup)==kResultOk);
+    assert(p->snapshot().language==5);
+    assert(document(p->snapshot())=="pulsare quasare die sonne der mond die sterne");
+    assert(p->snapshot().lines[1].original[0]==0);
+    assert(p->setLanguage(4));
     assert(p->setDocument(u8"Привет, мир\r\n\r\nПой со мной"));
     assert(std::string(p->snapshot().lines[1].original.data()).empty());
     assert(document(p->snapshot())==u8"Привет, мир\n\nПой со мной");
