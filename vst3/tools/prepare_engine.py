@@ -236,14 +236,17 @@ static inline int32_t jv_grain_noise(int32_t original) {
     float target=(float)jv_control_values[23],m=jv_grain->mix;
     if(target<=0 && m<0.000001f){jv_grain->mix=0;return original;}
     m+=(target-m)*0.0025f;jv_grain->mix=m;
-    jv_grain->phase+=1.0f-0.85f*m*m;
-    if(jv_grain->phase>=1.0f){
-        jv_grain->phase-=1.0f;uint32_t x=jv_grain->bits;
-        x=((x<<1)&0x7fffu)|(((x>>14)^(x>>13))&1u);jv_grain->bits=x ? x:1u;
-        jv_grain->held=(x&1u) ? 18918.0f:-18918.0f;
+    uint32_t x=jv_grain->bits;
+    x=((x<<1)&0x7fffu)|(((x>>14)^(x>>13))&1u);jv_grain->bits=x ? x:1u;
+    if(jv_grain->phase<=0){
+        /* Quantized random levels with irregular, short sample-and-hold steps. */
+        jv_grain->held=((float)((x>>10)&31u)-15.5f)*1600.0f;
+        jv_grain->phase=1.0f+((x>>4)&3u)*(0.3f+1.2f*m);
     }
-    float a=1.0f-m,b=m,comp=1.0f+1.65685425f*m*(1.0f-m);
-    return (int32_t)((original*a+jv_grain->held*b)*comp);
+    jv_grain->phase-=1.0f;
+    /* Sparse bipolar transients add crackle while retaining bright hiss. */
+    float pulse=((x&255u)<(uint32_t)(1.0f+7.0f*m)) ? ((x&256u) ? 18000.0f:-18000.0f):0;
+    return (int32_t)(original*(1.0f-0.65f*m)+m*(jv_grain->held*.95f+pulse*.8f));
 }
 /* +12 dB on external tonal excitation only. Keep headroom in the conversion:
  * a normal full-scale input must not clip at the old int16 carrier boundary. */
