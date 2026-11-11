@@ -17,8 +17,8 @@ struct Spy:U::Implements<U::Directly<IComponentHandler>> {
 struct Run {
     Plugin* p;float l[256]{},r[256]{},inL[256]{},inR[256]{};float* out[2]{l,r};float* in[2]{inL,inR};
     AudioBusBuffers bus{},input{};EventList events;ProcessData data{};
-    explicit Run(uint32_t seed=123):p(new Plugin(seed)){
-        assert(p->initialize(nullptr)==kResultOk);ProcessSetup setup{kRealtime,kSample32,256,48000};assert(p->setupProcessing(setup)==kResultOk);
+    explicit Run(uint32_t seed=123,int mode=kRealtime,int sampleSize=kSample32):p(new Plugin(seed)){
+        assert(p->initialize(nullptr)==kResultOk);ProcessSetup setup{mode,sampleSize,256,48000};assert(p->setupProcessing(setup)==kResultOk);
         bus.numChannels=2;bus.channelBuffers32=out;input.numChannels=2;input.channelBuffers32=in;
         data.numSamples=256;data.numOutputs=1;data.outputs=&bus;data.symbolicSampleSize=kSample32;data.inputEvents=&events;
     }
@@ -94,9 +94,27 @@ int main(){
     // The host's optional stereo aux bus must reach the same carrier path.
     Run routed;routed.p->setDocument("aaaa");routed.p->setParamNormalized(firstControlID+ExtInput,1);routed.p->setParamNormalized(firstControlID+Breath,0);
     SpeakerArrangement stereo=SpeakerArr::kStereo;assert(routed.p->setBusArrangements(&stereo,1,&stereo,1)==kResultOk);
+    RoutingInfo routeIn{kAudio,0,-1},routeOut{};
+    assert(routed.p->getRoutingInfo(routeIn,routeOut)==kResultTrue && routeOut.mediaType==kAudio && routeOut.busIndex==0 && routeOut.channel==-1);
+    routeIn={kEvent,0,0};assert(routed.p->getRoutingInfo(routeIn,routeOut)==kResultTrue && routeOut.mediaType==kAudio);
+    routeIn={kAudio,1,0};assert(routed.p->getRoutingInfo(routeIn,routeOut)==kResultFalse);
     routed.data.numInputs=1;routed.data.inputs=&routed.input;routed.start();routed.note();double hostL=0,hostR=0;
     for(int k=0;k<80;++k){for(int i=0;i<256;++i)routed.inL[i]=float(.5*std::sin(2*3.141592653589793*220*(k*256+i)/48000));routed.render();for(int i=0;i<256;++i){hostL+=routed.l[i]*routed.l[i];hostR+=routed.r[i]*routed.r[i];}}
     assert(hostL>.001 && hostR<1e-9);
+    // A host supplying the same stereo carrier in offline 64-bit mode must
+    // obtain the same voice as a 32-bit real-time render, with irregular blocks.
+    Run live(321),offline(321,kOffline,kSample64);
+    double dl[256]{},dr[256]{},diL[256]{},diR[256]{};double* dout[]={dl,dr};double* din[]={diL,diR};
+    offline.bus.channelBuffers64=dout;offline.input.channelBuffers64=din;offline.data.symbolicSampleSize=kSample64;offline.data.processMode=kOffline;
+    for(auto* run:{&live,&offline}){run->p->setDocument("aaaa");run->p->setParamNormalized(firstControlID+ExtInput,1);run->p->setParamNormalized(firstControlID+Breath,0);
+        assert(run->p->setBusArrangements(&stereo,1,&stereo,1)==kResultOk);run->data.numInputs=1;run->data.inputs=&run->input;run->start();run->note();}
+    double eLive=0,eOffline=0,difference=0;int frame=0;
+    for(int block=0;block<160;++block){int n=block%4==0 ? 31:block%4==1 ? 127:block%4==2 ? 64:256;live.data.numSamples=offline.data.numSamples=n;
+        for(int i=0;i<n;++i){float l=float(.3*std::sin(2*3.141592653589793*220*(frame+i)/48000)),r=float(.2*std::sin(2*3.141592653589793*330*(frame+i)/48000));
+            live.inL[i]=diL[i]=l;live.inR[i]=diR[i]=r;}
+        frame+=n;live.render();offline.render();
+        for(int i=0;i<n;++i){eLive+=live.l[i]*live.l[i]+live.r[i]*live.r[i];eOffline+=dl[i]*dl[i]+dr[i]*dr[i];difference+=std::abs(live.l[i]-dl[i])+std::abs(live.r[i]-dr[i]);}}
+    assert(eLive>.001 && eOffline>.001 && difference<1e-6);
     jv_reset(e);jv_control(e,ExtInput,1);jv_control(e,Breath,0);jv_text(e,"sa",1);jv_note_on(e,0,60,100,0,1);double hiss=0;
     for(int k=0;k<100;++k){jv_render_input(e,ir,ir,ol,orr);for(float x:ol)hiss+=x*x;}assert(hiss>.001);
     // Release extremes and linear polyphony without automatic gain or saturation.

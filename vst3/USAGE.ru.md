@@ -1,4 +1,4 @@
-# JVoice 0.3.11 — construction demo
+# JVoice 0.3.12 — construction demo
 
 VST3-инструмент для Windows x64. Интерфейс полностью на английском.
 

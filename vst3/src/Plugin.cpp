@@ -104,6 +104,15 @@ public:
         if(bus!=0 || channel<0 || channel>=16 || (cc!=120 && cc!=123))return kResultFalse;
         id=100+channel*128+cc;return kResultOk;
     }
+    tresult PLUGIN_API getRoutingInfo(RoutingInfo& in,RoutingInfo& out) override {
+        if(in.busIndex!=0 || in.channel < -1)return kResultFalse;
+        if(in.mediaType==kEvent){if(in.channel>=16)return kResultFalse;}
+        else if(in.mediaType==kAudio){auto* bus=static_cast<AudioBus*>(audioInputs.at(0).get());
+            if(!bus || in.channel>=SpeakerArr::getChannelCount(bus->getArrangement()))return kResultFalse;}
+        else return kResultFalse;
+        out.mediaType=kAudio;out.busIndex=0;out.channel=-1;
+        return kResultTrue;
+    }
     tresult PLUGIN_API setBusArrangements(SpeakerArrangement* in,int32 ni,SpeakerArrangement* out,int32 no) override {
         if(no!=1 || !out || out[0]!=SpeakerArr::kStereo || ni<0 || ni>1)return kResultFalse;
         if(ni && (!in || (in[0]!=SpeakerArr::kStereo && in[0]!=SpeakerArr::kMono)))return kResultFalse;
@@ -506,5 +515,5 @@ bool InitModule(){return true;}
 bool DeinitModule(){return true;}
 BEGIN_FACTORY_DEF("", "https://github.com/alexknip-producer/JVOICE", "")
 DEF_CLASS2(INLINE_UID_FROM_FUID(voice::classID),PClassInfo::kManyInstances,kVstAudioEffectClass,
-    "JVoice",0,"Instrument|Synth", "0.3.11",kVstVersionString,voice::Plugin::create)
+    "JVoice",0,"Instrument|Synth", "0.3.12",kVstVersionString,voice::Plugin::create)
 END_FACTORY
