@@ -16,6 +16,7 @@ void jv_reset(jv_engine *e)
     jv_bind(e);
     formant_nz = (int32_t)seed;
     sing_init();
+    for(int k=0;k<NTRK;++k){e->grain[k].bits=(seed^(0x5a39u*(k+1)))&0x7fffu;if(!e->grain[k].bits)e->grain[k].bits=1;}
     e->controls[9]=1; /* eight poly voices until plugin parameters are applied */
     e->controls[12]=72.0/127;
     e->controls[14]=60.0/72; /* Master Volume: 0 dB. */
@@ -220,14 +221,17 @@ void jv_render_input(jv_engine *e,const float *input_l,const float *input_r,floa
         m.shape = 64 << 8;
         int32_t mono[CTL]={0},mono_r[CTL]={0};voice_t before=*v;
         int32_t noise_before=formant_nz;
+        jv_grain=&e->grain[k];jv_grain_state grain_before=*jv_grain;
         jv_carrier=external ? (input_l ? input_l:zero):NULL;
         formant_render(t, v, mono, CTL, &m);
         if(external){
             voice_t left_state=*v;int32_t left_f5[2];memcpy(left_f5,fmt_f5[k][0],sizeof left_f5);
-            int32_t noise_after=formant_nz;
+            int32_t noise_after=formant_nz;jv_grain_state grain_after=*jv_grain;
             *v=before;memcpy(v->ph,e->right_voice[k].ph,sizeof v->ph);memcpy(v->s,e->right_voice[k].s,sizeof v->s);v->vjit=e->right_voice[k].vjit;
             memcpy(fmt_f5[k][0],e->right_f5[k],sizeof e->right_f5[k]);formant_nz=noise_before;
+            *jv_grain=grain_before;
             jv_carrier=input_r ? input_r:zero;formant_render(t,v,mono_r,CTL,&m);
+            *jv_grain=grain_after;
             e->right_voice[k]=*v;memcpy(e->right_f5[k],fmt_f5[k][0],sizeof e->right_f5[k]);
             *v=left_state;memcpy(fmt_f5[k][0],left_f5,sizeof left_f5);formant_nz=noise_after;
         }else{
@@ -260,6 +264,7 @@ void jv_render_input(jv_engine *e,const float *input_l,const float *input_r,floa
     e->mix_gain=target_gain;
     jv_carrier=NULL;
     jv_carrier_gain=NULL;
+    jv_grain=NULL;
 }
 void jv_render_stereo(jv_engine *e,float *left,float *right){jv_render_input(e,NULL,NULL,left,right);}
 

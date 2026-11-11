@@ -5,10 +5,10 @@
 #include <cmath>
 namespace voice {
 // Slot 11 is retired; preserve subsequent parameter IDs and saved-state offsets.
-enum Control { SpeechRate, Shift, Resonance, Breath, Buzz, Artic, Image, Detune, Unison, Voices, ExtInput, ReservedControl, Release, PitchBendRange, MasterVolume, ExtGain, ModDepth, ModRate, Mono, Smear, Newspeak, PhonemeGlide, ReservedThickness, controlCount };
+enum Control { SpeechRate, Shift, Resonance, Breath, Buzz, Artic, Image, Detune, Unison, Voices, ExtInput, ReservedControl, Release, PitchBendRange, MasterVolume, ExtGain, ModDepth, ModRate, Mono, Smear, Newspeak, PhonemeGlide, ReservedThickness, Grain, controlCount };
 inline constexpr unsigned firstControlID = 10;
-inline constexpr const char* controlNames[] = {"Speech Rate", "Shift", "Q", "Breath", "Buzz", "Artic", "Image", "Detune", "Unison", "Voices", "Ext. input", "", "Release", "Pitch Bend Range", "Master Volume", "Ext. Input Gain", "Mod Depth", "Mod Rate", "Mono", "Smear", "Newspeak", "Phoneme Glide", ""};
-inline constexpr std::array<double,controlCount> controlDefaults = {32.0/127, .5, 72.0/127, .05, 1, 1, 0, 0, 0, 1, 0, 0, 72.0/127, 0, 60.0/72, .5, .5, 49.0/119, 0, .5, 0, .5, .5};
+inline constexpr const char* controlNames[] = {"Speech Rate", "Shift", "Q", "Breath", "Buzz", "Artic", "Image", "Detune", "Unison", "Voices", "Ext. input", "", "Release", "Pitch Bend Range", "Master Volume", "Ext. Input Gain", "Mod Depth", "Mod Rate", "Mono", "Smear", "Newspeak", "Phoneme Glide", "", "Grain"};
+inline constexpr std::array<double,controlCount> controlDefaults = {32.0/127, .5, 72.0/127, .05, 1, 1, 0, 0, 0, 1, 0, 0, 72.0/127, 0, 60.0/72, .5, .5, 49.0/119, 0, .5, 0, .5, .5, 0};
 inline double plainControl(int i,double n) {
     n=std::clamp(n,0.0,1.0);
     if(i==SpeechRate){double rank=n*127;return rank<32 ? 50+rank*50/32 : 100+(rank-32)*500/95;}

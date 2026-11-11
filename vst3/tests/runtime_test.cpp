@@ -91,6 +91,9 @@ int main(){
     float il[JV_BLOCK],ir[JV_BLOCK]{},ol[JV_BLOCK],orr[JV_BLOCK];double leftEnergy=0,rightEnergy=0;
     for(int k=0;k<200;++k){for(int i=0;i<JV_BLOCK;++i)il[i]=float(.4*std::sin(2*3.141592653589793*220*(k*JV_BLOCK+i)/JV_SAMPLE_RATE));jv_render_input(e,il,ir,ol,orr);for(int i=0;i<JV_BLOCK;++i){leftEnergy+=ol[i]*ol[i];rightEnergy+=orr[i]*orr[i];}}
     assert(leftEnergy>.001 && rightEnergy<1e-9);
+    // Stereo sidechain renders the same LFSR state on both channels.
+    jv_reset(e);jv_control(e,ExtInput,1);jv_control(e,Grain,1);jv_text(e,"sh",4);jv_note_on(e,0,60,100,0,1);
+    for(int k=0;k<60;++k){jv_render_input(e,ir,ir,ol,orr);for(int i=0;i<JV_BLOCK;++i)assert(ol[i]==orr[i]);}
     // The host's optional stereo aux bus must reach the same carrier path.
     Run routed;routed.p->setDocument("aaaa");routed.p->setParamNormalized(firstControlID+ExtInput,1);routed.p->setParamNormalized(firstControlID+Breath,0);
     SpeakerArrangement stereo=SpeakerArr::kStereo;assert(routed.p->setBusArrangements(&stereo,1,&stereo,1)==kResultOk);

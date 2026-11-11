@@ -62,7 +62,7 @@ int main(){
     // Projects saved by the removed Vtrx experiment retain their text and controls.
     ResizableMemoryIBStream v8;header[1]=8;v8.write(header,sizeof header,nullptr);
     for(int i=0;i<16;++i){const char* word=i==0 ? "hello":"la";uint32_t len=uint32_t(std::strlen(word));v8.write(&len,4,nullptr);v8.write(const_cast<char*>(word),len,nullptr);}
-    for(int i=0;i<controlCount+1;++i){double value=i==controlCount ? 1:controlDefaults[i];v8.write(&value,sizeof value,nullptr);}
+    for(int i=0;i<24;++i){double value=i==23 ? 1:controlDefaults[i];v8.write(&value,sizeof value,nullptr);}
     v8.rewind();assert(q->setState(&v8)==kResultOk);assert(std::string(q->snapshot().lines[0].original.data())=="hello");
     assert(q->control(Mono)==0 && q->control(Smear)==.5);
     // Version 4 gains survive; newly introduced modulation keeps its defaults.

@@ -286,7 +286,7 @@ public:
         Bank copy=snapshot();
         const uint32_t magic=0x31564A54;
         auto write=[&](const void* p,int n){int32 done=0;return stream->write(const_cast<void*>(p),n,&done)==kResultOk && done==n;};
-        uint32_t values[]={magic,7,uint32_t(copy.language),uint32_t(copy.selected)};
+        uint32_t values[]={magic,9,uint32_t(copy.language),uint32_t(copy.selected)};
         if(!write(values,sizeof values))return kResultFalse;
         for(auto& l:copy.lines) {
             uint32_t len=uint32_t(std::strlen(l.original.data()));
@@ -300,14 +300,14 @@ public:
         Bank copy;
         auto read=[&](void* p,int n){int32 done=0;return stream->read(p,n,&done)==kResultOk && done==n;};
         uint32_t values[4]{};
-        if(!read(values,sizeof values)||values[0]!=0x31564A54||(values[1]<1 || values[1]>8)||values[2]<1||values[2]>9||values[3]>15)return kResultFalse;
+        if(!read(values,sizeof values)||values[0]!=0x31564A54||(values[1]<1 || values[1]>9)||values[2]<1||values[2]>9||values[3]>15)return kResultFalse;
         copy.language=int(values[2]);copy.selected=std::min(int(values[3]),lineCount-1);
         for(auto& l:copy.lines) {
             uint32_t len=0;char text[textBytes]{};
             if(!read(&len,4)||len>=textBytes||!read(text,int(len))||!makeLine(std::string_view(text,len),copy.language,l))return kResultFalse;
         }
         auto restored=controlDefaults;
-        int nControls=values[1]==1 ? 0:values[1]==2 ? 10:values[1]==3 ? 14:values[1]==4 ? 16:values[1]==5 ? 20:values[1]==6 ? 22:controlCount;
+        int nControls=values[1]==1 ? 0:values[1]==2 ? 10:values[1]==3 ? 14:values[1]==4 ? 16:values[1]==5 ? 20:values[1]==6 ? 22:values[1]<=8 ? 23:controlCount;
         for(int i=0;i<nControls;++i){auto& v=restored[i];if(!read(&v,sizeof v)||!std::isfinite(v)||v<0||v>1)return kResultFalse;}
         if(values[1]==8){double retiredVtrx;if(!read(&retiredVtrx,sizeof retiredVtrx)||!std::isfinite(retiredVtrx)||retiredVtrx<0||retiredVtrx>1)return kResultFalse;}
         for(int i=0;i<controlCount;++i)setParamNormalized(firstControlID+i,restored[i]);
@@ -429,7 +429,7 @@ tresult PLUGIN_API View::attached(void* parent,FIDString type) {
     WNDCLASSW wc{};wc.lpfnWndProc=proc;wc.hInstance=module;wc.lpszClassName=editorClass;
     wc.hCursor=LoadCursor(nullptr,IDC_ARROW);wc.hbrBackground=GetSysColorBrush(COLOR_BTNFACE);RegisterClassW(&wc);
     wc.lpfnWndProc=knobProc;wc.lpszClassName=knobClass;wc.style=CS_DBLCLKS;RegisterClassW(&wc);
-    window=CreateWindowExW(0,editorClass,L"JVoice - construction demo",WS_CHILD|WS_VISIBLE|WS_CLIPCHILDREN,0,0,900,720,static_cast<HWND>(parent),nullptr,module,this);
+    window=CreateWindowExW(0,editorClass,L"JVoice - work in progress",WS_CHILD|WS_VISIBLE|WS_CLIPCHILDREN,0,0,900,720,static_cast<HWND>(parent),nullptr,module,this);
     if(!window)return kResultFalse;++attachedViews;
     font=CreateFontW(-16,0,0,0,FW_NORMAL,FALSE,FALSE,FALSE,DEFAULT_CHARSET,0,0,CLEARTYPE_QUALITY,0,L"Segoe UI");
     auto control=[&](const wchar_t* cls,const wchar_t* title,DWORD style,int x,int y,int width,int height,int id){
@@ -437,7 +437,7 @@ tresult PLUGIN_API View::attached(void* parent,FIDString type) {
             x,y,width,height,window,reinterpret_cast<HMENU>(INT_PTR(id)),module,nullptr);
         SendMessageW(h,WM_SETFONT,reinterpret_cast<WPARAM>(font),TRUE);return h;
     };
-    control(L"STATIC",L"JVoice - construction demo",0,24,16,340,26,0);
+    control(L"STATIC",L"JVoice - work in progress",0,24,16,340,26,0);
     newspeak=control(L"BUTTON",L"Newspeak",BS_AUTOCHECKBOX|WS_TABSTOP,384,12,138,28,30);
     external=control(L"BUTTON",L"Ext. input",BS_AUTOCHECKBOX|WS_TABSTOP,540,12,115,28,28);
     control(L"STATIC",L"Pitch bend",0,666,17,90,24,0);
@@ -455,11 +455,11 @@ tresult PLUGIN_API View::attached(void* parent,FIDString type) {
     unison=control(L"BUTTON",L"Unison",BS_AUTOCHECKBOX|WS_TABSTOP,732,53,80,28,25);
     mono=control(L"BUTTON",L"Mono",BS_AUTOCHECKBOX|WS_TABSTOP,816,53,70,28,29);
     control(L"STATIC",L"C-2 to C-1 (MIDI 0-12): select lines 1-13. DAW Play / seek restarts the selected line.",0,24,94,852,24,0);
-    const int firstRow[]={SpeechRate,Shift,Smear,Resonance,Breath,Buzz,Artic,Release};
+    const int firstRow[]={SpeechRate,Shift,Smear,Resonance,Breath,Buzz,Grain,Artic,Release};
     const int secondRow[]={Image,Detune,Voices,ModDepth,ModRate,PhonemeGlide,ExtGain,MasterVolume};
-    for(int row=0;row<2;++row){int n=8;const int* indices=row ? secondRow:firstRow;
+    for(int row=0;row<2;++row){int n=row ? 8:9;const int* indices=row ? secondRow:firstRow;
         for(int col=0;col<n;++col){int i=indices[col];knobs[i]=CreateWindowExW(0,knobClass,L"",WS_CHILD|WS_VISIBLE|WS_TABSTOP,
-            24+col*107,row ? 242:126,103,110,window,reinterpret_cast<HMENU>(INT_PTR(2000+i)),module,this);}}
+            24+col*(row ? 107:95),row ? 242:126,row ? 103:91,110,window,reinterpret_cast<HMENU>(INT_PTR(2000+i)),module,this);}}
     control(L"STATIC",L"Lyrics - one line per keyswitch. Up to 13 lines, 128 characters per line.",0,24,367,852,24,0);
     text=control(L"EDIT",L"",ES_MULTILINE|ES_WANTRETURN|ES_AUTOHSCROLL|ES_AUTOVSCROLL|WS_HSCROLL|WS_VSCROLL|WS_TABSTOP,24,395,852,225,1000);
     SendMessageW(text,EM_SETLIMITTEXT,lineCount*256+lineCount*2,0);
@@ -515,5 +515,5 @@ bool InitModule(){return true;}
 bool DeinitModule(){return true;}
 BEGIN_FACTORY_DEF("", "https://github.com/alexknip-producer/JVOICE", "")
 DEF_CLASS2(INLINE_UID_FROM_FUID(voice::classID),PClassInfo::kManyInstances,kVstAudioEffectClass,
-    "JVoice",0,"Instrument|Synth", "0.3.13",kVstVersionString,voice::Plugin::create)
+    "JVoice",0,"Instrument|Synth", "0.4.0",kVstVersionString,voice::Plugin::create)
 END_FACTORY

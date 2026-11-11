@@ -192,6 +192,13 @@ formant = (root / 'firmware/src/eng_formant.c').read_text().replace('#include "s
 needle = 'out[i] += voice_amp(s, m, i) * 23 >> 3;'
 assert formant.count(needle)==2
 formant = formant.replace(needle, 'out[i] += (int32_t)(((int64_t)s * amp_at(m, i) * VOICE_FS * 23) >> 21);')
+# Morph the fricative source only. Breath and the glottal carrier stay intact.
+needle = 'fz = ((nz - nzq) * gf) >> 15;'
+assert formant.count(needle)==1
+formant = formant.replace(needle, 'int32_t fric=jv_grain_noise(nz);\n        fz = (int32_t)(((int64_t)(fric - nzq) * gf) >> 15);')
+needle = '        nzp = nz;'
+assert formant.count(needle)==1
+formant = formant.replace(needle, '        nzp = fric;')
 formant = re.sub(r'static (int32_t) (fmt_f5)((?:\[[^\]]+\])+)(?: __attribute__\(\(section\("[^"]+"\)\)\))?;', replace_array, formant)
 formant = formant.replace('static int32_t formant_nz = 0x2545F491;',
     'static JV_TLS int32_t *formant_noise;\n#define formant_nz (*formant_noise)\n')
@@ -222,6 +229,22 @@ static void str_cpy(char *d, const char *s, unsigned n) {
 static JV_TLS const float *jv_carrier;
 static JV_TLS const float *jv_carrier_gain;
 static JV_TLS const double *jv_control_values;
+typedef struct { uint32_t bits; float phase, mix, held; } jv_grain_state;
+static JV_TLS jv_grain_state *jv_grain;
+/* Change texture smoothly; at zero the original noise remains bit-identical. */
+static inline int32_t jv_grain_noise(int32_t original) {
+    float target=(float)jv_control_values[23],m=jv_grain->mix;
+    if(target<=0 && m<0.000001f){jv_grain->mix=0;return original;}
+    m+=(target-m)*0.0025f;jv_grain->mix=m;
+    jv_grain->phase+=1.0f-0.85f*m*m;
+    if(jv_grain->phase>=1.0f){
+        jv_grain->phase-=1.0f;uint32_t x=jv_grain->bits;
+        x=((x<<1)&0x7fffu)|(((x>>14)^(x>>13))&1u);jv_grain->bits=x ? x:1u;
+        jv_grain->held=(x&1u) ? 18918.0f:-18918.0f;
+    }
+    float a=1.0f-m,b=m,comp=1.0f+1.65685425f*m*(1.0f-m);
+    return (int32_t)((original*a+jv_grain->held*b)*comp);
+}
 /* +12 dB on external tonal excitation only. Keep headroom in the conversion:
  * a normal full-scale input must not clip at the old int16 carrier boundary. */
 static inline int32_t jv_excitation(float sample, int32_t voicing, float gain) {
@@ -242,6 +265,7 @@ context += '''    uint8_t cache_ready;
     double bend[16], bend_target[16];
     double mod_wheel[16], mod_target[16], mod_phase;
     uint32_t noise_seed;
+    jv_grain_state grain[NTRK];
     voice_t right_voice[NTRK];
     int32_t right_f5[NTRK][2];
     float mix_gain;
