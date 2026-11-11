@@ -110,9 +110,7 @@ sing = sing.replace(needle, '#include "WordReaders.h"\nstatic uint32_t jv_word_b
 needle = '    if (lang == LG_JA)\n        return sy_ja(w, n, out, ns);'
 sing = sing.replace(needle, '    if(lang==LG_RU){m=jv_ru_tokens(w,n,tc,tk);uint32_t bare=jv_consonant_word(tc,m,out,ns);return bare ? bare:sy_syl(tc,tk,m,out,ns);}\n    m=jv_bare_tokens(lang,w,n,tc,tk);if(m)return jv_consonant_word(tc,m,out,ns);\n'+needle)
 needle = '/* --------------------------------------------------------------------------------------- the generator --- */'
-sing = sing.replace(needle, '''#include "VtrxPhonemes.h"
-static uint32_t sy_word(uint32_t lang,const char *w,uint32_t n,uint8_t *out,uint32_t *ns) {
-    if(jv_control_values && jv_control_values[23]>=.5)return jv_vtrx_word(lang,w,n,out,ns);
+sing = sing.replace(needle, '''static uint32_t sy_word(uint32_t lang,const char *w,uint32_t n,uint8_t *out,uint32_t *ns) {
     uint32_t count=jv_word_base(lang,w,n,out,ns);
     if(jv_control_values && jv_control_values[20]>=.5){for(uint32_t j=0;j<count;++j)out[j]|=SYB;*ns=count;}
     return count;
@@ -120,23 +118,7 @@ static uint32_t sy_word(uint32_t lang,const char *w,uint32_t n,uint8_t *out,uint
 ''' + needle)
 needle = '    for (i = 0; i < n; i++)\n        out[i] = e[2u + i];'
 assert sing.count(needle)==1
-sing = sing.replace(needle, needle+'\n    if(jv_control_values[20]>=.5 && jv_control_values[23]<.5){for(i=0;i<n;++i)out[i]|=SYB;*ns=n;}')
-# Vtrx reads explicit SC-02 symbols, including numbers and :vowel codes.
-needle = '    if(lang<LG_RU) return sy_norm(s,n,d,max);'
-assert sing.count(needle)==1
-sing = sing.replace(needle, '''    if(jv_control_values && jv_control_values[23]>=.5){
-        uint32_t i,m=0;for(i=0;i<n && s[i] && m+1<max;++i){char c=s[i];
-            if(c>='A' && c<='Z')c+=32;
-            if((c>='a' && c<='z') || (c>='0' && c<='9') || c=='-' || c=='_' || c==':')d[m++]=c;
-        }d[m]=0;return m;
-    }
-''' + needle)
-needle = "(txt[p] >= 'a' && txt[p] <= 'z') || (txt[p] >= 'A' && txt[p] <= 'Z')"
-assert sing.count(needle)==1
-sing = sing.replace(needle, "(jv_control_values && jv_control_values[23]>=.5 && ((txt[p]>='0' && txt[p]<='9') || txt[p]==':')) || " + needle)
-needle = "(txt[q] >= 'A' && txt[q] <= 'Z')))"
-assert sing.count(needle)==1
-sing = sing.replace(needle, "(txt[q] >= 'A' && txt[q] <= 'Z') || (jv_control_values && jv_control_values[23]>=.5 && ((txt[q]>='0' && txt[q]<='9') || txt[q]=='-' || txt[q]==':'))))")
+sing = sing.replace(needle, needle+'\n    if(jv_control_values[20]>=.5){for(i=0;i<n;++i)out[i]|=SYB;*ns=n;}')
 # Preserve Russian soft/hard separators during normalization.
 sing = sing.replace("(c=='\\''&&lang==LG_GN)", "(c=='\\''&&(lang==LG_GN||lang==LG_RU))")
 # The extension state is copied with each articulation track, never global.

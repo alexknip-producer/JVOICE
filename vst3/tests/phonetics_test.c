@@ -55,17 +55,6 @@ int main(void) {
     assert(PHON[PH_RU_L].f2>PHON[PH_L].f2 && PHON[PH_RU_S].ff>PHON[PH_S].ff);
     for(int lang=LG_ES;lang<LG_N;++lang){bare_sound(e,lang,"s",0);bare_sound(e,lang,"g",1);}
     bare_sound(e,LG_RU,"sh",0);bare_sound(e,LG_RU,"m",0);bare_sound(e,LG_RU,"l'",0);
-    // Vtrx accepts SC-02 symbols grouped into explicitly timed syllables.
-    jv_reset(e);jv_control(e,23,1);jv_control(e,20,1);jv_text(e,"K-R-AH-F-T V-EH-R-K",LG_DE);
-    jv_note_on(e,0,60,100,0,1);const sing_t *vp=sing_view(&trk[1]);
-    assert(vp->np==5 && vp->ph[0]==PH_K && vp->ph[1]==PH_RT && vp->ph[2]==PH_AA && vp->ph[3]==PH_F && vp->ph[4]==PH_T);
-    jv_note_on(e,0,62,100,0,2);vp=sing_view(&trk[2]);
-    assert(vp->np==4 && vp->ph[0]==PH_V && vp->ph[1]==PH_EH && vp->ph[2]==PH_RT && vp->ph[3]==PH_K);
-    uint8_t direct[SW_MAX];uint32_t dns=0;assert(jv_vtrx_word(LG_DE,"r2-:u",5,direct,&dns)==2 && dns==1 && (direct[0]&0x3f)==PH_RT && (direct[1]&0x3f)==PH_UJ);
-    assert(jv_vtrx_word(LG_DE,"unknown",7,direct,&dns)==0 && dns==0);
-    assert(jv_vtrx_word(LG_DE,"pa",2,direct,&dns)==1 && (direct[0]&0x3f)==PH_SIL);
-    assert(jv_vtrx_word(LG_RU,"ly-yi",5,direct,&dns)==2 && (direct[0]&0x3f)==PH_RU_L && (direct[1]&0x3f)==PH_UH);
-    jv_control(e,23,0);jv_text(e,"r",LG_DE);jv_note_on(e,0,65,100,0,3);assert(sing_phon(sing_view(&trk[3]))==PH_RT);
     // "sounds": keep the original word path and the timed n-d-z coda audible;
     // after z, the articulation must go to silence rather than another vowel.
     jv_reset(e);jv_control(e,4,1);jv_text(e,"sounds",LG_EN);jv_note_on(e,0,60,100,0,1);
