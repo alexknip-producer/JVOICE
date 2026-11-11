@@ -148,6 +148,7 @@ void jv_note_on(jv_engine *e, int channel, int note, int vel, int chord, int not
         v->pitch16 = v->pitch_cur = v->gfrom = note * 16;v->age = age;
         if(unison && sub)v->ph[0]=noise32(&formant_nz); /* decorrelate layered oscillators */
         e->ids[slot] = note_id;t->p[P_M1AMT] = (int16_t)channel;
+        e->key_down[slot]=1;
         e->detune_position[slot]=unison ? (nv==1 ? 0 : 2.0f*sub/(nv-1)-1) : VP[slot-1];
         e->pan_position[slot]=unison ? (nv==1 ? 0 : 2.0f*sub/(nv-1)-1) : VP[slot-1];
         e->pan_current[slot]=e->pan_position[slot]*(float)e->controls[6];
@@ -165,23 +166,41 @@ void jv_note_on(jv_engine *e, int channel, int note, int vel, int chord, int not
         if(!e->glide_duration[slot])e->glide_now[slot]=note;
     }
 }
+static void jv_release_slot(jv_engine *e,int k)
+{
+    voice_t *v=&trk[k].v[0];
+    if(!v->active || !v->gate)return;
+    v->gate=0;
+    const sing_t *s=sing_view(&trk[k]);
+    if(trk[k].p[P_VLANG]==LG_RU && s->cd<s->np && (s->ph[s->np-1]==PH_L || s->ph[s->np-1]==PH_RU_L))
+        e->lateral_hold[k]=(uint16_t)sy_ms(80);
+}
+void jv_sustain(jv_engine *e,int channel,double value)
+{
+    if(channel<0 || channel>=16 || !isfinite(value))return;
+    jv_bind(e);
+    int down=value>=.5;
+    if(e->sustain[channel] && !down)
+        for(int k=1;k<NTRK;++k)
+            if(trk[k].p[P_M1AMT]==channel && !e->key_down[k])jv_release_slot(e,k);
+    e->sustain[channel]=(uint8_t)down;
+}
 void jv_note_off(jv_engine *e, int channel, int note, int note_id)
 {
+    if(channel<0 || channel>=16)return;
     jv_bind(e);
     int slot = 0;
     for (int k = 1; k < NTRK; ++k) {
         voice_t *v = &trk[k].v[0];
-        if (v->active && v->gate && v->note == note && trk[k].p[P_M1AMT] == channel &&
+        if (v->active && v->gate && e->key_down[k] && v->note == note && trk[k].p[P_M1AMT] == channel &&
             (note_id < 0 || e->ids[k] == note_id) &&
             (!slot || v->age < trk[slot].v[0].age)) slot = k;
     }
     if(slot) {
         uint32_t age=trk[slot].v[0].age;
-        for(int k=1;k<NTRK;++k)if(trk[k].v[0].age==age){
-            trk[k].v[0].gate=0;
-            const sing_t *s=sing_view(&trk[k]);
-            if(trk[k].p[P_VLANG]==LG_RU && s->cd<s->np && (s->ph[s->np-1]==PH_L || s->ph[s->np-1]==PH_RU_L))
-                e->lateral_hold[k]=(uint16_t)sy_ms(80);
+        for(int k=1;k<NTRK;++k)if(trk[k].v[0].active && trk[k].v[0].age==age){
+            e->key_down[k]=0;
+            if(!e->sustain[channel])jv_release_slot(e,k);
         }
     }
 }
@@ -194,6 +213,8 @@ void jv_panic(jv_engine *e)
     memset(e->glide_last_valid,0,sizeof e->glide_last_valid);
     memset(e->glide_group,0,sizeof e->glide_group);e->glide_epoch=0;
     memset(e->lateral_hold,0,sizeof e->lateral_hold);
+    memset(e->sustain,0,sizeof e->sustain);
+    memset(e->key_down,0,sizeof e->key_down);
 }
 int jv_active(jv_engine *e)
 {

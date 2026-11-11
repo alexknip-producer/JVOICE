@@ -96,11 +96,13 @@ public:
             parameters.addParameter(STR16("MIDI panic"),nullptr,0,0,ParameterInfo::kIsHidden,100+ch*128+cc);
         for(int ch=0;ch<16;++ch)parameters.addParameter(STR16("Pitch bend"),nullptr,0,.5,ParameterInfo::kIsHidden,4000+ch);
         for(int ch=0;ch<16;++ch)parameters.addParameter(STR16("Mod wheel"),nullptr,0,0,ParameterInfo::kIsHidden,4100+ch);
+        for(int ch=0;ch<16;++ch)parameters.addParameter(STR16("Sustain pedal"),nullptr,0,0,ParameterInfo::kIsHidden,4200+ch);
         return kResultOk;
     }
     tresult PLUGIN_API getMidiControllerAssignment(int32 bus,int16 channel,CtrlNumber cc,ParamID& id) override {
         if(bus==0 && channel>=0 && channel<16 && cc==kPitchBend){id=4000+channel;return kResultOk;}
         if(bus==0 && channel>=0 && channel<16 && cc==kCtrlModWheel){id=4100+channel;return kResultOk;}
+        if(bus==0 && channel>=0 && channel<16 && cc==kCtrlSustainOnOff){id=4200+channel;return kResultOk;}
         if(bus!=0 || channel<0 || channel>=16 || (cc!=120 && cc!=123))return kResultFalse;
         id=100+channel*128+cc;return kResultOk;
     }
@@ -324,6 +326,7 @@ private:
         else if(id>=firstControlID && id<firstControlID+controlCount){int i=int(id-firstControlID);if(i==ReservedControl || i==ReservedThickness)return;double before=controls[i].exchange(v);jv_control(engine,i,v);if(i==Newspeak && (before>=.5)!=(v>=.5))selectLine(selected.load());}
         else if(id>=4000 && id<4016)jv_bend(engine,int(id-4000),2*v-1);
         else if(id>=4100 && id<4116)jv_mod_wheel(engine,int(id-4100),v);
+        else if(id>=4200 && id<4216)jv_sustain(engine,int(id-4200),v);
         else if(id>=100){jv_panic(engine);held.fill(0);}
     }
     void syncBank() {
@@ -519,5 +522,5 @@ bool InitModule(){return true;}
 bool DeinitModule(){return true;}
 BEGIN_FACTORY_DEF("", "https://github.com/alexknip-producer/JVOICE", "")
 DEF_CLASS2(INLINE_UID_FROM_FUID(voice::classID),PClassInfo::kManyInstances,kVstAudioEffectClass,
-    "JVoice",0,"Instrument|Synth", "0.4.0",kVstVersionString,voice::Plugin::create)
+    "JVoice",0,"Instrument|Synth", "0.4.1",kVstVersionString,voice::Plugin::create)
 END_FACTORY

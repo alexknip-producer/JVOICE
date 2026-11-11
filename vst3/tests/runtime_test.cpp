@@ -55,6 +55,22 @@ int main(){
     // CC1 has its own per-channel ID. Moving it must not edit Mod Depth/Rate.
     Run wheeled,unmodulated;auto* wheelSpy=new Spy;wheeled.p->setComponentHandler(wheelSpy);
     ParamID wheelID=0;assert(wheeled.p->getMidiControllerAssignment(0,0,kCtrlModWheel,wheelID)==kResultOk && wheelID==4100);
+    ParamID sustainID=0;assert(wheeled.p->getMidiControllerAssignment(0,3,kCtrlSustainOnOff,sustainID)==kResultOk && sustainID==4203);
+    assert(wheeled.p->getMidiControllerAssignment(0,16,kCtrlSustainOnOff,sustainID)!=kResultOk);
+    // The host's CC64 queue holds a lifted key until the pedal is released.
+    Run sustained(222),ordinary(222);
+    for(auto* run:{&sustained,&ordinary}){run->p->setDocument("a");run->p->setParamNormalized(firstControlID+Release,0);run->start();run->note();}
+    ParameterChanges pedalDown;int32 pedalQueue=0,pedalPoint=0;
+    pedalDown.addParameterData(4200,pedalQueue)->addPoint(0,1,pedalPoint);
+    sustained.data.inputParameterChanges=&pedalDown;sustained.render();sustained.data.inputParameterChanges=nullptr;ordinary.render();
+    Event noteOff{};noteOff.type=Event::kNoteOffEvent;noteOff.noteOff.channel=0;noteOff.noteOff.pitch=60;noteOff.noteOff.noteId=1;
+    sustained.events.addEvent(noteOff);ordinary.events.addEvent(noteOff);sustained.render();ordinary.render();
+    double heldEnergy=0,releasedEnergy=0;
+    for(int k=0;k<30;++k){sustained.render();ordinary.render();if(k>10)for(int i=0;i<256;++i){heldEnergy+=sustained.l[i]*sustained.l[i];releasedEnergy+=ordinary.l[i]*ordinary.l[i];}}
+    assert(heldEnergy>.001 && releasedEnergy<1e-8);
+    ParameterChanges pedalUp;pedalUp.addParameterData(4200,pedalQueue)->addPoint(0,0,pedalPoint);
+    sustained.data.inputParameterChanges=&pedalUp;sustained.render();sustained.data.inputParameterChanges=nullptr;
+    double afterPedal=0;for(int k=0;k<30;++k){sustained.render();if(k>10)for(float x:sustained.l)afterPedal+=x*x;}assert(afterPedal<1e-8);
     assert(wheeled.p->getMidiControllerAssignment(0,16,kCtrlModWheel,wheelID)!=kResultOk);
     for(auto* run:{&wheeled,&unmodulated}){run->p->setDocument("aaaa");run->start();run->note();}
     double depth=wheeled.p->control(ModDepth),rate=wheeled.p->control(ModRate);

@@ -146,5 +146,20 @@ int main(void) {
     jv_note_on(e,0,64,100,0,2);
     assert(e->glide_from[1]==60 && e->glide_from[2]==60 && e->glide_from[3]==60);
     assert(e->glide_duration[1]==FS/4 && e->glide_duration[2]==FS && e->glide_duration[3]==FS*4);
+    // Sustain is channel-specific, releases only lifted keys, and handles
+    // repeated notes with no MIDI note ID independently.
+    jv_reset(e);jv_text(e,"aaaa",LG_RU);jv_sustain(e,0,1);
+    jv_note_on(e,0,60,100,0,-1);jv_note_on(e,0,60,100,1,-1);jv_note_on(e,1,64,100,1,3);
+    jv_note_off(e,0,60,-1);jv_note_off(e,1,64,3);
+    assert(trk[1].v[0].gate && !e->key_down[1]);
+    assert(trk[2].v[0].gate && e->key_down[2]);assert(!trk[3].v[0].gate);
+    jv_sustain(e,0,0);assert(!trk[1].v[0].gate && trk[2].v[0].gate);
+    jv_note_off(e,0,60,-1);assert(!trk[2].v[0].gate);
+    // All layers of a unison note are held and released together.
+    jv_reset(e);jv_control(e,8,1);jv_control(e,9,2.0/7);jv_text(e,"aaaa",LG_RU);jv_sustain(e,0,1);
+    jv_note_on(e,0,60,100,0,4);jv_note_off(e,0,60,4);
+    for(int k=1;k<=3;++k)assert(trk[k].v[0].gate && !e->key_down[k]);
+    jv_sustain(e,0,0);for(int k=1;k<=3;++k)assert(!trk[k].v[0].gate);
+    jv_sustain(e,0,1);jv_panic(e);assert(!e->sustain[0] && jv_active(e)==0);
     jv_destroy(e);puts("PASS: phonetics, consonants, Slur and polyphonic Glide");
 }

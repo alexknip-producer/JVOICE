@@ -261,6 +261,7 @@ context += '''    uint8_t cache_ready;
     int32_t noise;
     uint32_t age;
     int ids[NTRK];
+    uint8_t sustain[16], key_down[NTRK];
     double controls[JV_CONTROL_COUNT];
     double bend[16], bend_target[16];
     double mod_wheel[16], mod_target[16], mod_phase;

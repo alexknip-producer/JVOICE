@@ -11,6 +11,7 @@ void jv_reset(jv_engine *);
 void jv_seed(jv_engine *, unsigned seed);
 void jv_bend(jv_engine *, int channel, double bipolar);
 void jv_mod_wheel(jv_engine *, int channel, double normalized);
+void jv_sustain(jv_engine *, int channel, double normalized);
 void jv_text(jv_engine *, const char *utf8, int language);
 /* index: CONS rank, SHIFT, Q, BREATH, BUZZ, ARTIC; value normalized 0..1. */
 void jv_control(jv_engine *, int index, double value);
