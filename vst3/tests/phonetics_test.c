@@ -55,6 +55,10 @@ int main(void) {
     uint32_t count=jv_ru_tokens("ugol'",5,codes,kinds);assert(count==4 && codes[3]==PH_RU_L);
     count=jv_ru_tokens("ugol",4,codes,kinds);assert(count==4 && codes[3]==PH_L);
     count=jv_ru_tokens("lya",3,codes,kinds);assert(count==2 && codes[0]==PH_RU_L && codes[1]==PH_AE);
+    count=jv_ru_tokens("pomyataya",9,codes,kinds);
+    assert(count==8 && codes[2]==PH_RU_M && codes[3]==PH_AE && codes[6]==PH_Y && codes[7]==PH_A);
+    const phon_t *soft_a=jv_phon(LG_RU,PH_AE);
+    assert(soft_a->f1>750 && soft_a->f2<1550);
     count=jv_ru_tokens("ya",2,codes,kinds);assert(count==2 && codes[0]==PH_Y && codes[1]==PH_A);
     count=jv_ru_tokens("l'ya",4,codes,kinds);assert(count==3 && codes[0]==PH_RU_L && codes[1]==PH_Y);
     count=jv_ru_tokens("s''el",5,codes,kinds);assert(count==4 && codes[0]==PH_S && codes[1]==PH_Y);
