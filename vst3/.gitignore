@@ -1,0 +1,5 @@
+/build*/
+/src/felucca_tables.h
+/src/felucca_lyrics.h
+/cmake/mingw-local.cmake
+/editor-preview.bmp

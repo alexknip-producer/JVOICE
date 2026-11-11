@@ -1,0 +1,44 @@
+name: JVOICE Windows x64
+on:
+  push:
+    branches: [voice-vst3-preview]
+    paths: ['vst3/**', '.github/workflows/jvoice-windows.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Fetch pinned MIT VST3 SDK
+        shell: pwsh
+        run: |
+          git clone --recurse-submodules https://github.com/steinbergmedia/vst3sdk.git "$env:RUNNER_TEMP/vst3sdk"
+          git -C "$env:RUNNER_TEMP/vst3sdk" checkout 3cdf9ca5d1f5b1b21e0a86832aa4abe55607bd96
+          git -C "$env:RUNNER_TEMP/vst3sdk" submodule update --init --recursive
+      - name: Configure and build
+        shell: pwsh
+        run: |
+          cmake -S vst3 -B vst3/build -A x64 "-DVST3_SDK_ROOT=$env:RUNNER_TEMP/vst3sdk"
+          cmake --build vst3/build --config Release --parallel 2
+      - name: Tests
+        shell: pwsh
+        run: |
+          ctest --test-dir vst3/build -C Release --output-on-failure
+          & vst3/build/bin/Release/validator.exe vst3/build/JiantVoice.vst3
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - name: Upload VST3 and instructions
+        uses: actions/upload-artifact@v4
+        with:
+          name: JVOICE-0.1.0-win-x64
+          path: |
+            vst3/build/JiantVoice.vst3
+            vst3/USAGE.ru.md
+            vst3/UPSTREAM.md
+            vst3/src/TransliterationTable.h
+            LICENSE
+            LICENSES/BSD-2-Clause-CMUdict.txt
