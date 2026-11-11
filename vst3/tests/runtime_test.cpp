@@ -157,7 +157,7 @@ int main(){
     // A silent extra note and its release must never duck the existing vowel.
     for(bool external:{false,true}){
         jv_reset(e);jv_reset(single);
-        for(auto* engine:{e,single}){jv_control(engine,Buzz,1);jv_control(engine,Breath,0);jv_control(engine,ExtInput,external);jv_text(engine,"aaaa",2);jv_note_on(engine,0,60,100,0,1);}
+        for(auto* engine:{e,single}){jv_control(engine,Velo,1);jv_control(engine,Buzz,1);jv_control(engine,Breath,0);jv_control(engine,ExtInput,external);jv_text(engine,"aaaa",2);jv_note_on(engine,0,60,100,0,1);}
         for(int k=0;k<600;++k){if(k==50)jv_note_on(e,0,60,0,1,2);if(k==100)jv_note_off(e,0,60,2);
             for(int i=0;i<JV_BLOCK;++i)il[i]=float(.1*std::sin(2*3.141592653589793*220*(k*JV_BLOCK+i)/JV_SAMPLE_RATE));
             jv_render_input(e,il,il,ol,orr);jv_render_input(single,il,il,referenceMono,ir);for(int i=0;i<JV_BLOCK;++i)assert(ol[i]==referenceMono[i]);}
