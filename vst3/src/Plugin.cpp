@@ -3,6 +3,7 @@
 #include "VoiceEngine.h"
 #include "VoiceParameters.h"
 #include "FixedRateStream.h"
+#include "TransportTracker.h"
 #include "pluginterfaces/base/ustring.h"
 #include "public.sdk/source/vst/vstsinglecomponenteffect.h"
 #include "public.sdk/source/main/pluginfactory.h"
@@ -55,8 +56,8 @@ class VoiceParameter : public RangeParameter {
     int index;
 public:
     explicit VoiceParameter(int i):RangeParameter(STR16(""),firstControlID+i,nullptr,
-        i==PhonemeGlide ? 25 : i==Smear ? -100 : i==ModRate ? .1 : i==MasterVolume ? -60 : i==ExtGain ? -24 : i==Shift ? -12 : i==SpeechRate ? 50 : i==Voices || i==Release ? 1 : i==PitchBendRange ? 2 : 0,
-        i==PhonemeGlide ? 400 : i==ModDepth ? 50 : i==ExtGain ? 24 : i==ModRate || i==MasterVolume || i==Shift ? 12 : i==SpeechRate ? 600 : i==Detune ? 40 : i==Unison || i==ExtInput || i==Mono || i==Newspeak ? 1 : i==Voices ? 8 : i==Release ? 10000 : i==PitchBendRange ? 12 : 100,
+        i==PhonemeGlide || i==Thickness ? 25 : i==Smear ? -100 : i==ModRate ? .1 : i==MasterVolume ? -60 : i==ExtGain ? -24 : i==Shift ? -12 : i==SpeechRate ? 50 : i==Voices || i==Release ? 1 : i==PitchBendRange ? 2 : 0,
+        i==PhonemeGlide ? 1000 : i==Thickness ? 400 : i==ModDepth ? 50 : i==ExtGain ? 24 : i==ModRate || i==MasterVolume || i==Shift ? 12 : i==SpeechRate ? 600 : i==Detune ? 40 : i==Unison || i==ExtInput || i==Mono || i==Newspeak ? 1 : i==Voices ? 8 : i==Release ? 10000 : i==PitchBendRange ? 12 : 100,
         plainControl(i,controlDefaults[i]),i==Unison || i==ExtInput || i==Mono || i==Newspeak ? 1 : i==Voices ? 7 : i==PitchBendRange ? 10 : 0),index(i) {
         UString(info.title,128).fromAscii(controlNames[i]);
         UString(info.units,128).fromAscii(i==ModRate ? "Hz" : i==MasterVolume || i==ExtGain ? "dB" : i==Shift ? "st" : i==Detune || i==ModDepth ? "ct" : i==Release ? "ms" : i==PitchBendRange ? "st" : i==Voices || i==Unison || i==ExtInput || i==Mono || i==Newspeak ? "" : "%");
@@ -118,22 +119,21 @@ public:
     }
     tresult PLUGIN_API setActive(TBool active) override {
         if(active) {
-            transportPlaying=false;jv_reset(engine);stream.reset(processSetup.sampleRate);held.fill(0);
+            transport.reset();jv_reset(engine);stream.reset(processSetup.sampleRate);held.fill(0);
             appliedRevision=0;syncBank();selectLine(selected.load());
             for(int i=0;i<controlCount;++i)jv_control(engine,i,controls[i].load());
         } else jv_panic(engine);
         return kResultOk;
     }
     tresult PLUGIN_API setProcessing(TBool state) override {
-        if(!state){transportPlaying=false;jv_panic(engine);stream.reset(processSetup.sampleRate);held.fill(0);}
+        if(!state){transport.reset();jv_panic(engine);stream.reset(processSetup.sampleRate);held.fill(0);selectLine(selected.load());}
         return kResultOk;
     }
     uint32 PLUGIN_API getLatencySamples() override {return FixedRateStream::latency(processSetup.sampleRate);}
     uint32 PLUGIN_API getTailSamples() override {return uint32_t(processSetup.sampleRate*(.4+2*plainControl(Release,controls[Release].load())/1000));}
     tresult PLUGIN_API process(ProcessData& data) override {
         syncBank();
-        if(data.processContext){bool playing=(data.processContext->state & ProcessContext::kPlaying)!=0;
-            if(playing && !transportPlaying)selectLine(selected.load());transportPlaying=playing;}
+        if(transport.observe(data.processContext,data.numSamples))selectLine(selected.load());
         int request=requestedLine.exchange(-1);
         if(request>=0)selectLine(request);
         for(int i=0;i<controlCount;++i)jv_control(engine,i,controls[i].load());
@@ -277,7 +277,7 @@ public:
         Bank copy=snapshot();
         const uint32_t magic=0x31564A54;
         auto write=[&](const void* p,int n){int32 done=0;return stream->write(const_cast<void*>(p),n,&done)==kResultOk && done==n;};
-        uint32_t values[]={magic,6,uint32_t(copy.language),uint32_t(copy.selected)};
+        uint32_t values[]={magic,7,uint32_t(copy.language),uint32_t(copy.selected)};
         if(!write(values,sizeof values))return kResultFalse;
         for(auto& l:copy.lines) {
             uint32_t len=uint32_t(std::strlen(l.original.data()));
@@ -291,14 +291,14 @@ public:
         Bank copy;
         auto read=[&](void* p,int n){int32 done=0;return stream->read(p,n,&done)==kResultOk && done==n;};
         uint32_t values[4]{};
-        if(!read(values,sizeof values)||values[0]!=0x31564A54||(values[1]<1 || values[1]>6)||values[2]<1||values[2]>9||values[3]>15)return kResultFalse;
+        if(!read(values,sizeof values)||values[0]!=0x31564A54||(values[1]<1 || values[1]>7)||values[2]<1||values[2]>9||values[3]>15)return kResultFalse;
         copy.language=int(values[2]);copy.selected=std::min(int(values[3]),lineCount-1);
         for(auto& l:copy.lines) {
             uint32_t len=0;char text[textBytes]{};
             if(!read(&len,4)||len>=textBytes||!read(text,int(len))||!makeLine(std::string_view(text,len),copy.language,l))return kResultFalse;
         }
         auto restored=controlDefaults;
-        int nControls=values[1]==1 ? 0:values[1]==2 ? 10:values[1]==3 ? 14:values[1]==4 ? 16:values[1]==5 ? 20:controlCount;
+        int nControls=values[1]==1 ? 0:values[1]==2 ? 10:values[1]==3 ? 14:values[1]==4 ? 16:values[1]==5 ? 20:values[1]==6 ? 22:controlCount;
         for(int i=0;i<nControls;++i){auto& v=restored[i];if(!read(&v,sizeof v)||!std::isfinite(v)||v<0||v>1)return kResultFalse;}
         for(int i=0;i<controlCount;++i)setParamNormalized(firstControlID+i,restored[i]);
         {std::lock_guard<std::mutex> lock(mutex);bank=copy;++revision;}
@@ -328,7 +328,7 @@ private:
         rt.selected=std::clamp(line,0,lineCount-1);selected.store(rt.selected);
         jv_text(engine,rt.lines[rt.selected].sung.data(),rt.language);
     }
-    bool transportPlaying=false;
+    TransportTracker transport;
     jv_engine* engine;
     Bank bank{},rt{};
     std::mutex mutex;
@@ -444,12 +444,12 @@ tresult PLUGIN_API View::attached(void* parent,FIDString type) {
     control(L"BUTTON",L"Restart",WS_TABSTOP,638,52,80,29,22);
     unison=control(L"BUTTON",L"Unison",BS_AUTOCHECKBOX|WS_TABSTOP,732,53,80,28,25);
     mono=control(L"BUTTON",L"Mono",BS_AUTOCHECKBOX|WS_TABSTOP,816,53,70,28,29);
-    control(L"STATIC",L"C-2 to C-1 (MIDI 0-12): select lines 1-13. DAW Play restarts the selected line.",0,24,94,852,24,0);
-    const int firstRow[]={SpeechRate,Shift,Smear,Resonance,Breath,Buzz,Artic,Release};
+    control(L"STATIC",L"C-2 to C-1 (MIDI 0-12): select lines 1-13. DAW Play / seek restarts the selected line.",0,24,94,852,24,0);
+    const int firstRow[]={SpeechRate,Shift,Smear,Resonance,Breath,Buzz,Artic,Thickness,Release};
     const int secondRow[]={Image,Detune,Voices,ModDepth,ModRate,PhonemeGlide,ExtGain,MasterVolume};
-    for(int row=0;row<2;++row){int n=8;const int* indices=row ? secondRow:firstRow;
+    for(int row=0;row<2;++row){int n=row ? 8:9;const int* indices=row ? secondRow:firstRow;
         for(int col=0;col<n;++col){int i=indices[col];knobs[i]=CreateWindowExW(0,knobClass,L"",WS_CHILD|WS_VISIBLE|WS_TABSTOP,
-            24+col*107,row ? 242:126,103,110,window,reinterpret_cast<HMENU>(INT_PTR(2000+i)),module,this);}}
+            24+col*(row ? 107:95),row ? 242:126,row ? 103:90,110,window,reinterpret_cast<HMENU>(INT_PTR(2000+i)),module,this);}}
     control(L"STATIC",L"Lyrics - one line per keyswitch. Up to 13 lines, 128 characters per line.",0,24,367,852,24,0);
     text=control(L"EDIT",L"",ES_MULTILINE|ES_WANTRETURN|ES_AUTOHSCROLL|ES_AUTOVSCROLL|WS_HSCROLL|WS_VSCROLL|WS_TABSTOP,24,395,852,225,1000);
     SendMessageW(text,EM_SETLIMITTEXT,lineCount*256+lineCount*2,0);
@@ -505,5 +505,5 @@ bool InitModule(){return true;}
 bool DeinitModule(){return true;}
 BEGIN_FACTORY_DEF("", "https://github.com/alexknip-producer/JVOICE", "")
 DEF_CLASS2(INLINE_UID_FROM_FUID(voice::classID),PClassInfo::kManyInstances,kVstAudioEffectClass,
-    "JVoice",0,"Instrument|Synth", "0.3.3",kVstVersionString,voice::Plugin::create)
+    "JVoice",0,"Instrument|Synth", "0.3.4",kVstVersionString,voice::Plugin::create)
 END_FACTORY

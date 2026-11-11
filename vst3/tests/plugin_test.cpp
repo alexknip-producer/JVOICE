@@ -72,22 +72,27 @@ int main(){
     output.numChannels=2;output.channelBuffers32=channels;EventList events;
     ProcessData data{};data.numSamples=256;data.numOutputs=1;data.outputs=&output;data.symbolicSampleSize=kSample32;data.processMode=kRealtime;data.inputEvents=&events;
     ProcessContext context{};context.sampleRate=48000;data.processContext=&context;
+    auto render=[&](){auto result=p->process(data);if(context.state & ProcessContext::kPlaying)context.projectTimeSamples+=data.numSamples;return result;};
     Event key{};key.type=Event::kNoteOnEvent;key.noteOn.pitch=12;key.noteOn.velocity=1;events.addEvent(key);
-    p->process(data);assert(p->currentLine()==12);for(float x:left)assert(x==0);
-    events.clear();p->pick(0);p->process(data);p->edit(3,u8"Другая строка");p->process(data);assert(p->currentLine()==0);
+    render();assert(p->currentLine()==12);for(float x:left)assert(x==0);
+    events.clear();p->pick(0);render();p->edit(3,u8"Другая строка");render();assert(p->currentLine()==0);
     Event note{};note.type=Event::kNoteOnEvent;note.noteOn.pitch=60;note.noteOn.velocity=.8f;note.noteOn.noteId=1;
-    events.addEvent(note);p->process(data);assert(p->syllablePosition()==1);events.clear();
-    note.noteOn.noteId=2;events.addEvent(note);p->process(data);assert(p->syllablePosition()==2);events.clear();
-    context.state=ProcessContext::kPlaying;note.noteOn.noteId=3;events.addEvent(note);p->process(data);assert(p->syllablePosition()==1);events.clear();
-    p->process(data);assert(p->syllablePosition()==1); // no reset on every playing block
-    context.state=0;p->process(data);context.state=ProcessContext::kPlaying;note.noteOn.noteId=4;events.addEvent(note);p->process(data);assert(p->syllablePosition()==1);events.clear();
+    events.addEvent(note);render();assert(p->syllablePosition()==1);events.clear();
+    note.noteOn.noteId=2;events.addEvent(note);render();assert(p->syllablePosition()==2);events.clear();
+    context.state=ProcessContext::kPlaying;note.noteOn.noteId=3;events.addEvent(note);render();assert(p->syllablePosition()==1);events.clear();
+    render();assert(p->syllablePosition()==1); // no reset on every playing block
+    context.state=0;render();context.state=ProcessContext::kPlaying;note.noteOn.noteId=4;events.addEvent(note);render();assert(p->syllablePosition()==1);events.clear();
+    context.projectTimeSamples+=96000;render();assert(p->syllablePosition()==0);
+    context.state=0;render();note.noteOn.noteId=5;events.addEvent(note);render();events.clear();assert(p->syllablePosition()==1);
+    context.projectTimeSamples+=48000;render();assert(p->syllablePosition()==0);
+    render();assert(p->syllablePosition()==0); // unchanged stopped position is stable
     ParameterChanges automation;
     for(int i=0;i<controlCount;++i){int32 qi=0,pi=0;auto id=firstControlID+i;auto* queue=automation.addParameterData(id,qi);queue->addPoint(100,i==Unison || i==ExtInput || i==Mono || i==Newspeak ? 0:i==Voices ? 1:.7,pi);}
-    data.inputParameterChanges=&automation;p->process(data);data.inputParameterChanges=nullptr;
+    data.inputParameterChanges=&automation;render();data.inputParameterChanges=nullptr;
     for(int i=0;i<controlCount;++i)assert(std::abs(p->control(i)-(i==Unison || i==ExtInput || i==Mono || i==Newspeak || i==ReservedControl ? 0:i==Voices ? 1:.7))<1e-9);
-    double energy=0;for(int b=0;b<40;++b){p->process(data);for(float x:left){assert(std::isfinite(x));energy+=x*x;}}assert(energy>.01);
-    for(int id=1;id<=4;++id){Event off{};off.type=Event::kNoteOffEvent;off.noteOff.pitch=60;off.noteOff.noteId=id;events.addEvent(off);}
-    p->process(data);events.clear();for(int b=0;b<400;++b)p->process(data);for(float x:left)assert(x==0);
+    double energy=0;for(int b=0;b<40;++b){render();for(float x:left){assert(std::isfinite(x));energy+=x*x;}}assert(energy>.01);
+    for(int id=1;id<=5;++id){Event off{};off.type=Event::kNoteOffEvent;off.noteOff.pitch=60;off.noteOff.noteId=id;events.addEvent(off);}
+    render();events.clear();for(int b=0;b<400;++b)render();for(float x:left)assert(x==0);
 #ifdef _WIN32
     auto* view=p->createView(ViewType::kEditor);assert(view);
     HWND parent=CreateWindowExW(0,L"STATIC",L"JVoice test",WS_OVERLAPPEDWINDOW|WS_VISIBLE,0,0,930,770,nullptr,nullptr,GetModuleHandleW(nullptr),nullptr);

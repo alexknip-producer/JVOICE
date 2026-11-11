@@ -71,3 +71,10 @@ universal consonant-only articulation, Newspeak phoneme stepping and a neutral
 Phoneme Glide time multiplier. Focused phonetics checks exercise those paths.
 Other language tables remain upstream's; English/German standalone tokens use
 the common reader before dictionary letter names or automatic inserted vowels.
+
+0.3.4 smooths Mono retriggers over 132 native frames, retains the last release
+ramp, strengthens Russian laterals/codas and contextual soft A, and adds
+Thickness independently of CONS. Phoneme Glide reaches 1000% at neutral 100%.
+TransportTracker restarts the lyric cursor on project-position discontinuities
+while keeping contiguous playback/stopped blocks stable. Focused checks cover
+these changes, including stereo/external/unison Mono retriggers.

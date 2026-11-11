@@ -24,26 +24,32 @@ core = core.replace('static song_t song;', 'static JV_TLS song_t *song_ptr;\n#de
 core = re.sub(r'#define RING_PUBLISH\(\).*', '#define RING_PUBLISH() ((void)0)', core)
 sing = (root / 'firmware/src/sing.c').read_text()
 consonants = list(csv.DictReader((root / 'vst3/src/RussianConsonants.csv').open(encoding='utf-8')))
-assert len(consonants) == 16
+added_consonants = [c for c in consonants if c['code'].startswith('PH_RU_')]
+assert len(added_consonants) == 16
 # Append codes without moving dictionary phonemes; all still fit below SYB.
 lyric_path = out / 'felucca_lyrics.h'
 lyric_header = lyric_path.read_text()
-lyric_header = lyric_header.replace(', PH_COUNT };', ', ' + ', '.join(c['code'] for c in consonants) + ', PH_COUNT };')
-names = ', '.join('"' + ('sc' if c['code']=='PH_RU_SHCH' else c['code'][-1].lower()+"'") + '"' for c in consonants)
+lyric_header = lyric_header.replace(', PH_COUNT };', ', ' + ', '.join(c['code'] for c in added_consonants) + ', PH_COUNT };')
+names = ', '.join('"' + ('sc' if c['code']=='PH_RU_SHCH' else c['code'][-1].lower()+"'") + '"' for c in added_consonants)
 lyric_header = re.sub(r'(static const char PH_NAME\[PH_COUNT\]\[3\] = \{[^\n]*)(\};)', lambda m:m[1]+', '+names+m[2], lyric_header)
 lyric_path.write_text(lyric_header)
 sing = sing.replace('PH_COUNT == 46', 'PH_COUNT == 62')
 phoneme_table = re.search(r'static const phon_t PHON\[PH_COUNT\] = \{.*?\n\};', sing, re.S)[0]
 rows = ''
+overrides = ''
 soft_cases = ''
 for c in consonants:
-    assert re.fullmatch(r'PH_RU_[A-Z]+', c['code'])
+    assert re.fullmatch(r'PH_(RU_)?[A-Z]+', c['code'])
     fields = [v.strip() for v in re.search(r'\['+c['base']+r'\] = \{([^}]+)\}', phoneme_table)[1].split(',')]
     fields[:3] = [c['F1_Hz'],c['F2_Hz'],c['F3_Hz']]
     fields[6:9] = [str(int(c['noise_Hz'])//50),str(int(c['noise_width_Hz'])//50),c['duration_ms']]
-    fields[10] = 'PL_PAL'
-    rows += '    ['+c['code']+'] = {'+', '.join(fields)+'},\n'
-    if c['code']!='PH_RU_SHCH':soft_cases += 'case '+c['base']+': return '+c['code']+';\n'
+    if c.get('voice'):fields[4]=c['voice']
+    if c.get('bandwidth_scale'):fields[9]=c['bandwidth_scale']
+    if c in added_consonants:
+        fields[10] = 'PL_PAL'
+        rows += '    ['+c['code']+'] = {'+', '.join(fields)+'},\n'
+        if c['code']!='PH_RU_SHCH':soft_cases += 'case '+c['base']+': return '+c['code']+';\n'
+    else:overrides += '    {'+c['code']+', {'+', '.join(fields)+'}},\n'
 sing = sing.replace(phoneme_table, phoneme_table[:-3]+'\n'+rows+'};')
 vowels = list(csv.DictReader((root / 'vst3/src/RussianVowels.csv').open(encoding='utf-8')))
 assert len({v['phoneme'] for v in vowels}) == len(vowels)
@@ -60,10 +66,13 @@ sing = sing.replace('#include "sing_ext.c"', ext)
 profile = 'static const struct { uint8_t code; phon_t target; } JV_RU_VOWELS[] = {\n'
 for v in vowels:
     profile += f'    {{{v["phoneme"]}, {{{v["F1_Hz"]}, {v["F2_Hz"]}, {v["F3_Hz"]}, PC_VOW, 255, 0, 0, 0, 0, 16, {"PL_RND" if v["rounded"] == "1" else "PL_NONE"}}}}},\n'
+profile += '};\nstatic const struct { uint8_t code; phon_t target; } JV_RU_CONSONANTS[] = {\n'+overrides
 profile += '''};
 static const phon_t JV_RU_CH={250,2250,2900,PC_AFF,0,0,0,0,45,16,PL_PAL};
 static const phon_t *jv_phon(uint32_t lang, uint32_t code) {
     if (lang == LG_RU && code == PH_CH) return &JV_RU_CH;
+    if (lang == LG_RU) for (uint32_t j = 0; j < sizeof JV_RU_CONSONANTS / sizeof *JV_RU_CONSONANTS; ++j)
+        if (JV_RU_CONSONANTS[j].code == code) return &JV_RU_CONSONANTS[j].target;
     if (lang == LG_RU) for (uint32_t j = 0; j < sizeof JV_RU_VOWELS / sizeof *JV_RU_VOWELS; ++j)
         if (JV_RU_VOWELS[j].code == code) return &JV_RU_VOWELS[j].target;
     return &PHON[code];
@@ -118,6 +127,9 @@ sing = sing.replace("(c=='\\''&&lang==LG_GN)", "(c=='\\''&&(lang==LG_GN||lang==L
 sing = sing.replace('uint8_t ph[SY_N], np, nu, cd;', 'uint16_t jv_trill_tick;\n    uint8_t ph[SY_N], np, nu, cd;')
 sing = sing.replace('static void sy_enter(sing_t *s, uint32_t lang)', '#include "ConsonantArticulation.h"\nstatic void sy_enter(sing_t *s, uint32_t lang)')
 sing = sing.replace('if (s->i == s->nu) {', 'if (s->i == s->nu && !jv_timed_nucleus(s,P->cls)) {')
+needle = '    if (P->cls != PC_VOW)'
+assert sing.count(needle)==1
+sing = sing.replace(needle, '    if(P->cls==PC_PLO || P->cls==PC_AFF)ms=(uint32_t)lround(ms*pow(16.0,jv_control_values[22]-.5));\n'+needle)
 sing = sing.replace('PHON[ph_fric(c)].dur', 'PHON[jv_fric(lang,c)].dur')
 sing = sing.replace('F = &PHON[ph_fric(c)];', 'F = jv_phon(lang,jv_fric(lang,c));')
 sing = sing.replace('if (s->i > s->nu && !s->cdon && s->i >= s->cd)', 'if (s->i > s->nu && !s->cdon && s->i >= s->cd && !jv_vowelless(s))')
@@ -130,7 +142,7 @@ needle = '    for (j = 0; j < 6u; j++) {'
 assert sing.count(needle)==1
 sing = sing.replace(needle, '''    double jv_alpha=0;
     if(fabs(jv_control_values[21]-.5)>1e-12){
-        double timescale=pow(16.0,jv_control_values[21]-.5);
+        double value=jv_control_values[21],timescale=pow(value<=.5 ? 4.0:10.0,2*value-1);
         jv_alpha=1-pow(1-ldexp(1.0,-(int)sh),1/timescale);
     }
 ''' + needle)
@@ -216,6 +228,10 @@ context += '''    uint8_t cache_ready;
     int32_t right_f5[NTRK][2];
     float mix_gain;
     float external_gain;
+    float last_output[2], declick_offset[2];
+    unsigned declick_remaining;
+    uint8_t declick_pending;
+    uint16_t lateral_hold[NTRK];
     float detune_position[NTRK], pan_position[NTRK], pan_current[NTRK];
 };
 static void jv_bind(struct jv_engine *e) {

@@ -3,6 +3,7 @@
 #include "engine_generated.inc"
 _Static_assert(CTL == JV_BLOCK, "Desktop block size must match pinned preview");
 _Static_assert(FS == JV_SAMPLE_RATE, "FM-1 DSP must remain at 44100 Hz");
+enum { JV_DECLICK_FRAMES = 132 }; /* 3 ms at the native clock. */
 
 /* Eight independent articulation tracks. Track zero is only the lyric cursor.
  * No shared mutable DSP state survives jv_bind: different plugin instances may
@@ -22,6 +23,7 @@ void jv_reset(jv_engine *e)
     e->controls[16]=.5; /* Wheel fully up: +/-25 cents by default, +/-50 maximum. */
     e->controls[17]=49.0/119; /* 5 Hz sine LFO. */
     e->controls[21]=.5; /* Phoneme Glide: native transition times at centre. */
+    e->controls[22]=.5; /* Thickness: native plosive/affricate duration. */
     e->controls[19]=.5; /* Smear centre leaves each vowel unchanged. */
     e->mix_gain=.7f;
     e->external_gain=1;
@@ -53,7 +55,7 @@ void jv_control(jv_engine *e, int index, double value)
     if(index==18 && value>=.5){
         uint32_t newest=0;
         for(int k=1;k<NTRK;++k)if(trk[k].v[0].active && trk[k].v[0].age>newest)newest=trk[k].v[0].age;
-        for(int k=1;k<NTRK;++k)if(trk[k].v[0].age!=newest)trk[k].v[0].active=trk[k].v[0].gate=0;
+        for(int k=1;k<NTRK;++k)if(trk[k].v[0].active && trk[k].v[0].age!=newest){trk[k].v[0].active=trk[k].v[0].gate=0;e->declick_pending=1;}
     }
     if(index>=6)return;
     int param, raw=(int)(value*127+.5);
@@ -80,7 +82,11 @@ void jv_text(jv_engine *e, const char *s, int lang)
 void jv_note_on(jv_engine *e, int channel, int note, int vel, int chord, int note_id)
 {
     jv_bind(e);
-    if(e->controls[18]>=.5)jv_panic(e); /* New note replaces the old note and its release, including unison layers. */
+    if(e->controls[18]>=.5){
+        /* Replace the old stack, then remove the output discontinuity over 3 ms. */
+        if(jv_active(e) || e->declick_remaining)e->declick_pending=1;
+        for(int k=1;k<NTRK;++k)memset(trk[k].v,0,sizeof trk[k].v);
+    }
 
     if (!chord || !sing[0].live) {
         trk[0].v[0].active = trk[0].v[0].gate = 1;
@@ -113,6 +119,7 @@ void jv_note_on(jv_engine *e, int channel, int note, int vel, int chord, int not
         e->pan_position[slot]=unison ? (nv==1 ? 0 : 2.0f*sub/(nv-1)-1) : VP[slot-1];
         e->pan_current[slot]=e->pan_position[slot]*(float)e->controls[6];
         e->right_voice[slot]=*v;memset(e->right_f5[slot],0,sizeof e->right_f5[slot]);
+        e->lateral_hold[slot]=0;
     }
 }
 void jv_note_off(jv_engine *e, int channel, int note, int note_id)
@@ -127,13 +134,21 @@ void jv_note_off(jv_engine *e, int channel, int note, int note_id)
     }
     if(slot) {
         uint32_t age=trk[slot].v[0].age;
-        for(int k=1;k<NTRK;++k)if(trk[k].v[0].age==age)trk[k].v[0].gate=0;
+        for(int k=1;k<NTRK;++k)if(trk[k].v[0].age==age){
+            trk[k].v[0].gate=0;
+            const sing_t *s=sing_view(&trk[k]);
+            if(trk[k].p[P_VLANG]==LG_RU && s->cd<s->np && (s->ph[s->np-1]==PH_L || s->ph[s->np-1]==PH_RU_L))
+                e->lateral_hold[k]=(uint16_t)sy_ms(80);
+        }
     }
 }
 void jv_panic(jv_engine *e)
 {
     jv_bind(e);
     for (int k = 1; k < NTRK; ++k) memset(trk[k].v, 0, sizeof trk[k].v);
+    e->declick_pending=e->declick_remaining=0;
+    e->last_output[0]=e->last_output[1]=0;
+    memset(e->lateral_hold,0,sizeof e->lateral_hold);
 }
 int jv_active(jv_engine *e)
 {
@@ -175,7 +190,8 @@ void jv_render_input(jv_engine *e,const float *input_l,const float *input_r,floa
         /* 5 ms onset; adjustable upstream release curve. */
         uint32_t rel=ENV_EXP[(uint32_t)(e->controls[12]*127+.5)];
         int32_t next = v->gate ? amp + (target - amp + 3) / 4 : amp-(int32_t)(((uint32_t)amp*rel+65535u)>>16);
-        if (!v->gate && next < 8) { v->active = 0; continue; }
+        if(!v->gate && e->lateral_hold[k]){next=amp;--e->lateral_hold[k];}
+        int finished=!v->gate && next<8;if(finished)next=0;
         vmod_t m = {0};
         m.inc = pitch_inc(v->pitch16);
         int channel=t->p[P_M1AMT]&15;
@@ -210,11 +226,22 @@ void jv_render_input(jv_engine *e,const float *input_l,const float *input_r,floa
         }
         e->pan_current[k]=pan1;
         v->env_out = next;
+        if(finished)v->active=0; /* Render the final ramp before retiring the voice. */
     }
     for (int i = 0; i < CTL; ++i) {
         float gain=previous_gain+(target_gain-previous_gain)*(i+1)/CTL;
         left[i]=mix_l[i]*gain;
         right[i]=mix_r[i]*gain;
+        if(e->declick_pending){
+            e->declick_offset[0]=e->last_output[0]-left[i];e->declick_offset[1]=e->last_output[1]-right[i];
+            e->declick_remaining=JV_DECLICK_FRAMES;e->declick_pending=0;
+        }
+        if(e->declick_remaining){
+            float phase=(JV_DECLICK_FRAMES-e->declick_remaining)/(float)JV_DECLICK_FRAMES;
+            float fade=.5f+.5f*cosf(3.141592653589793f*phase);
+            left[i]+=e->declick_offset[0]*fade;right[i]+=e->declick_offset[1]*fade;--e->declick_remaining;
+        }
+        e->last_output[0]=left[i];e->last_output[1]=right[i];
     }
     e->mix_gain=target_gain;
     jv_carrier=NULL;

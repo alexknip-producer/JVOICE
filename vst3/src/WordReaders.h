@@ -26,7 +26,10 @@ static uint32_t jv_ru_tokens(const char *w,uint32_t n,uint8_t *tc,uint8_t *tk) {
         i+=used;if(!c)continue;
         if(ph_vowel(c) && soften){
             int previousConsonant=m && !ph_vowel(tc[m-1]) && tc[m-1]!=PH_Y;
-            if(previousConsonant && !separated)tc[m-1]=(uint8_t)jv_ru_soft(tc[m-1]);
+            if(previousConsonant && !separated){
+                tc[m-1]=(uint8_t)jv_ru_soft(tc[m-1]);
+                if(c==PH_A && iotated && jv_phon(LG_RU,tc[m-1])->place==PL_PAL)c=PH_AE;
+            }
             else if(iotated && (!m || separated || tc[m-1]!=PH_Y)){tc[m]=PH_Y;tk[m++]=TK_C;}
         }
         tc[m]=(uint8_t)c;tk[m++]=ph_vowel(c)?TK_S:TK_C;separated=0;
