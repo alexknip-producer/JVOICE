@@ -32,11 +32,13 @@ int main(){
     for(int lang=1;lang<=9;++lang){assert(p->setLanguage(lang));assert(std::string(p->snapshot().lines[0].original.data())==u8"Привет, мир");}
     assert(p->setLanguage(4));
     for(int i=0;i<controlCount;++i){
+        if(i==ReservedControl)continue;
         ParameterInfo info{};assert(p->getParameterInfoByTag(firstControlID+i,info)==kResultOk);
         assert(info.flags & ParameterInfo::kCanAutomate);
         p->gestureBegin(i);p->gestureValue(i,i==Voices ? 1:i==Unison || i==ExtInput ? 0:.5);p->gestureEnd(i);
     }
-    assert(spy->begins>=controlCount && spy->edits>=controlCount && spy->begins==spy->ends);
+    assert(spy->begins>=controlCount-1 && spy->edits>=controlCount-1 && spy->begins==spy->ends);
+    ParameterInfo retired{};assert(p->getParameterInfoByTag(firstControlID+ReservedControl,retired)!=kResultOk);
     ResizableMemoryIBStream stream;assert(p->getState(&stream)==kResultOk);
     auto* q=new Plugin;assert(q->initialize(nullptr)==kResultOk);stream.rewind();assert(q->setState(&stream)==kResultOk);
     auto bank=q->snapshot();assert(bank.selected==12 && bank.language==4);
@@ -48,6 +50,14 @@ int main(){
     legacy.rewind();assert(q->setState(&legacy)==kResultOk);assert(q->currentLine()==12);
     assert(std::string(q->snapshot().lines[15].original.data())=="legacy");
     for(int i=0;i<controlCount;++i)assert(q->control(i)==controlDefaults[i]);
+    // Version 3 has fourteen controls; new Master Volume must default to 0 dB.
+    ResizableMemoryIBStream previous;header[1]=3;previous.write(header,sizeof header,nullptr);
+    for(int i=0;i<16;++i){uint32_t len=2;previous.write(&len,4,nullptr);previous.write(const_cast<char*>("la"),len,nullptr);}
+    for(int i=0;i<14;++i){double value=.25;previous.write(&value,sizeof value,nullptr);}
+    previous.rewind();assert(q->setState(&previous)==kResultOk);
+    for(int i=0;i<14;++i)assert(q->control(i)==(i==ReservedControl ? 0:.25));
+    assert(q->control(MasterVolume)==controlDefaults[MasterVolume]);
+    assert(q->control(ExtGain)==controlDefaults[ExtGain]);
     assert(p->setActive(true)==kResultOk);assert(p->setProcessing(true)==kResultOk);
     float left[256]{},right[256]{};float* channels[]={left,right};AudioBusBuffers output{};
     output.numChannels=2;output.channelBuffers32=channels;EventList events;
@@ -65,7 +75,7 @@ int main(){
     ParameterChanges automation;
     for(int i=0;i<controlCount;++i){int32 qi=0,pi=0;auto id=firstControlID+i;auto* queue=automation.addParameterData(id,qi);queue->addPoint(100,i==Unison || i==ExtInput ? 0:i==Voices ? 1:.7,pi);}
     data.inputParameterChanges=&automation;p->process(data);data.inputParameterChanges=nullptr;
-    for(int i=0;i<controlCount;++i)assert(std::abs(p->control(i)-(i==Unison || i==ExtInput ? 0:i==Voices ? 1:.7))<1e-9);
+    for(int i=0;i<controlCount;++i)assert(std::abs(p->control(i)-(i==Unison || i==ExtInput || i==ReservedControl ? 0:i==Voices ? 1:.7))<1e-9);
     double energy=0;for(int b=0;b<40;++b){p->process(data);for(float x:left){assert(std::isfinite(x));energy+=x*x;}}assert(energy>.01);
     for(int id=1;id<=4;++id){Event off{};off.type=Event::kNoteOffEvent;off.noteOff.pitch=60;off.noteOff.noteId=id;events.addEvent(off);}
     p->process(data);events.clear();for(int b=0;b<400;++b)p->process(data);for(float x:left)assert(x==0);
@@ -86,7 +96,8 @@ int main(){
     auto language=GetDlgItem(editor,20);SendMessageW(language,CB_SETCURSEL,1,0);
     SendMessageW(editor,WM_COMMAND,MAKEWPARAM(20,CBN_SELCHANGE),0);assert(p->snapshot().language==2);
     assert(std::string(p->snapshot().lines[0].original.data())==u8"Проверка русского текста");
-    for(int i=0;i<controlCount;++i)if(i!=Unison && i!=ExtInput && i!=PitchBendRange){auto knob=GetDlgItem(editor,2000+i);assert(knob);SendMessageW(knob,WM_KEYDOWN,VK_RIGHT,0);}
+    for(int i=0;i<controlCount;++i)if(i!=Unison && i!=ExtInput && i!=PitchBendRange && i!=ReservedControl){auto knob=GetDlgItem(editor,2000+i);assert(knob);SendMessageW(knob,WM_KEYDOWN,VK_RIGHT,0);}
+    assert(!GetDlgItem(editor,2000+ReservedControl));
     auto toggle=GetDlgItem(editor,25);SendMessageW(toggle,BM_SETCHECK,BST_CHECKED,0);SendMessageW(editor,WM_COMMAND,MAKEWPARAM(25,BN_CLICKED),0);assert(p->control(Unison)==1);
     ShowWindow(parent,SW_SHOW);UpdateWindow(parent);MSG msg{};
     while(PeekMessageW(&msg,nullptr,0,0,PM_REMOVE)){TranslateMessage(&msg);DispatchMessageW(&msg);}Sleep(300);

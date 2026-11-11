@@ -31,6 +31,10 @@ struct Run {
 int main(){
     assert(plainControl(SpeechRate,1)==600 && plainControl(SpeechRate,controlDefaults[SpeechRate])==100);
     assert(plainControl(PitchBendRange,0)==2 && plainControl(PitchBendRange,1)==12);
+    assert(plainControl(MasterVolume,controlDefaults[MasterVolume])==0);
+    assert(plainControl(MasterVolume,0)==-60 && plainControl(MasterVolume,1)==12);
+    assert(plainControl(ExtGain,controlDefaults[ExtGain])==0);
+    assert(plainControl(ExtGain,0)==-24 && plainControl(ExtGain,1)==24);
     // Copy/paste state must never copy the editor's host handler or any live DSP storage.
     Run a,b,reference;auto* sa=new Spy;auto* sb=new Spy;a.p->setComponentHandler(sa);b.p->setComponentHandler(sb);
     a.p->setDocument("la luna");a.p->setParamNormalized(firstControlID+Shift,.3);
@@ -79,15 +83,53 @@ int main(){
     assert(hostL>.001 && hostR<1e-9);
     jv_reset(e);jv_control(e,ExtInput,1);jv_control(e,Breath,0);jv_text(e,"sa",1);jv_note_on(e,0,60,100,0,1);double hiss=0;
     for(int k=0;k<100;++k){jv_render_input(e,ir,ir,ol,orr);for(float x:ol)hiss+=x*x;}assert(hiss>.001);
-    // Release extremes and polyphony headroom without a master saturation stage.
+    // Release extremes and linear polyphony without automatic gain or saturation.
     jv_reset(e);jv_control(e,Release,0);jv_text(e,"la",1);jv_note_on(e,0,60,127,0,1);for(int k=0;k<10;++k)jv_render(e,ol);jv_note_off(e,0,60,1);for(int k=0;k<20;++k)jv_render(e,ol);assert(jv_active(e)==0);
     jv_reset(e);jv_control(e,Release,1);jv_text(e,"la",1);jv_note_on(e,0,60,127,0,1);for(int k=0;k<10;++k)jv_render(e,ol);jv_note_off(e,0,60,1);for(int k=0;k<20;++k)jv_render(e,ol);assert(jv_active(e)==1);
-    jv_reset(e);jv_control(e,Buzz,1);jv_control(e,Breath,.05);jv_control(e,Resonance,1);jv_text(e,"aaaa",2);for(int n=0;n<8;++n)jv_note_on(e,0,60,127,n>0,n);
-    float peak=0;for(int k=0;k<1000;++k){jv_render_stereo(e,ol,orr);for(int i=0;i<JV_BLOCK;++i){assert(std::isfinite(ol[i]));peak=std::max(peak,std::abs(ol[i]));}}assert(peak<1);
+    auto* single=jv_create();jv_reset(e);
+    for(auto* engine:{e,single}){jv_control(engine,Buzz,1);jv_control(engine,Breath,0);jv_control(engine,Resonance,1);jv_text(engine,"aaaa",2);}
+    jv_note_on(single,0,60,127,0,1);for(int n=0;n<8;++n)jv_note_on(e,0,60,127,n>0,n);
+    float referenceMono[JV_BLOCK];double linearEnergy=0;
+    for(int k=0;k<200;++k){jv_render(e,ol);jv_render(single,referenceMono);for(int i=0;i<JV_BLOCK;++i){assert(std::isfinite(ol[i]));assert(std::abs(ol[i]-8*referenceMono[i])<1e-6);linearEnergy+=ol[i]*ol[i];}}assert(linearEnergy>.01);
+    // Manual master is a linear dB multiplier, also for external carrier and hiss.
+    for(bool external:{false,true}){
+        jv_reset(e);jv_reset(single);
+        for(auto* engine:{e,single}){jv_control(engine,ExtInput,external);jv_text(engine,"sa",1);jv_note_on(engine,0,60,100,0,1);}
+        jv_control(e,MasterVolume,normalizedControl(MasterVolume,-12));
+        for(int k=0;k<100;++k){std::fill(il,il+JV_BLOCK,.05f);jv_render_input(e,il,il,ol,orr);jv_render_input(single,il,il,referenceMono,ir);
+            if(k)for(int i=0;i<JV_BLOCK;++i)assert(std::abs(ol[i]-referenceMono[i]*std::pow(10.f,-12.f/20))<1e-6);}
+    }
+    // A silent extra note and its release must never duck the existing vowel.
+    for(bool external:{false,true}){
+        jv_reset(e);jv_reset(single);
+        for(auto* engine:{e,single}){jv_control(engine,Buzz,1);jv_control(engine,Breath,0);jv_control(engine,ExtInput,external);jv_text(engine,"aaaa",2);jv_note_on(engine,0,60,100,0,1);}
+        for(int k=0;k<600;++k){if(k==50)jv_note_on(e,0,60,0,1,2);if(k==100)jv_note_off(e,0,60,2);
+            for(int i=0;i<JV_BLOCK;++i)il[i]=float(.1*std::sin(2*3.141592653589793*220*(k*JV_BLOCK+i)/JV_SAMPLE_RATE));
+            jv_render_input(e,il,il,ol,orr);jv_render_input(single,il,il,referenceMono,ir);for(int i=0;i<JV_BLOCK;++i)assert(ol[i]==referenceMono[i]);}
+    }
+    // Input gain does not touch the internal carrier or internally generated hiss.
+    for(bool external:{false,true}){
+        jv_reset(e);jv_reset(single);
+        for(auto* engine:{e,single}){jv_control(engine,ExtInput,external);jv_text(engine,"sa",1);jv_note_on(engine,0,60,100,0,1);}
+        jv_control(e,ExtGain,1);std::fill(il,il+JV_BLOCK,0);
+        for(int k=0;k<150;++k){jv_render_input(e,il,il,ol,orr);jv_render_input(single,il,il,referenceMono,ir);for(int i=0;i<JV_BLOCK;++i)assert(ol[i]==referenceMono[i]);}
+    }
+    // +6.0206 dB at the input knob equals twice the external source amplitude.
+    jv_reset(e);jv_reset(single);
+    for(auto* engine:{e,single}){jv_control(engine,ExtInput,1);jv_control(engine,Buzz,1);jv_control(engine,Breath,0);jv_text(engine,"aaaa",2);}
+    jv_control(e,ExtGain,normalizedControl(ExtGain,20*std::log10(2.0)));
+    // Settle the intentional gain ramp before exciting the integer resonators.
+    std::fill(il,il+JV_BLOCK,0);jv_render_input(e,il,il,ol,orr);jv_render_input(single,il,il,referenceMono,ir);
+    for(auto* engine:{e,single})jv_note_on(engine,0,60,100,0,1);
+    double gainError=0,gainEnergy=0;
+    float twice[JV_BLOCK];
+    for(int k=0;k<400;++k){for(int i=0;i<JV_BLOCK;++i){il[i]=float(.01*std::sin(2*3.141592653589793*220*(k*JV_BLOCK+i)/JV_SAMPLE_RATE));twice[i]=il[i]*2;}
+        jv_render_input(e,il,il,ol,orr);jv_render_input(single,twice,twice,referenceMono,ir);
+        if(k>200)for(int i=0;i<JV_BLOCK;++i){gainError+=std::pow(ol[i]-referenceMono[i],2);gainEnergy+=referenceMono[i]*referenceMono[i];}}
+    if(!(gainEnergy>1e-6 && gainError/gainEnergy<1e-4))std::cerr<<"Input gain energy "<<gainEnergy<<", relative squared error "<<gainError/gainEnergy<<"\n";
+    assert(gainEnergy>1e-6 && gainError/gainEnergy<1e-4);
+    jv_destroy(single);
     auto* other=jv_create();jv_reset(e);
-    for(auto* engine:{e,other}){jv_control(engine,ExtInput,1);jv_control(engine,Breath,0);jv_text(engine,"sa",1);jv_note_on(engine,0,60,100,0,1);}
-    jv_control(e,SibilanceRandom,1);double sibilanceDifference=0;
-    for(int k=0;k<100;++k){jv_render(e,ol);jv_render(other,orr);for(int i=0;i<JV_BLOCK;++i)sibilanceDifference+=std::abs(ol[i]-orr[i]);}assert(sibilanceDifference>.001);
     jv_reset(e);jv_reset(other);
     for(auto* engine:{e,other}){jv_control(engine,Buzz,1);jv_control(engine,Breath,0);jv_text(engine,"aaaa",2);jv_note_on(engine,1,69,100,0,1);}
     jv_bend(e,0,1);
@@ -96,5 +138,5 @@ int main(){
     for(int k=0;k<100;++k){jv_render(e,ol);jv_render(other,orr);for(int i=0;i<JV_BLOCK;++i)bendDifference+=std::abs(ol[i]-orr[i]);}assert(bendDifference>.01);
     jv_destroy(other);
     jv_destroy(e);
-    std::cout<<"PASS: duplicated-instance automation/UI/DSP isolation, fixed 44.1kHz clock, stereo carrier, retained hiss, release and headroom\n";
+    std::cout<<"PASS: instance isolation, fixed clock, stereo carrier, retained hiss, release, linear polyphony and manual master without note-induced ducking\n";
 }

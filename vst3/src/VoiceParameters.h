@@ -4,14 +4,17 @@
 #include <array>
 #include <cmath>
 namespace voice {
-enum Control { SpeechRate, Shift, Resonance, Breath, Buzz, Artic, Image, Detune, Unison, Voices, ExtInput, SibilanceRandom, Release, PitchBendRange, controlCount };
+// Slot 11 is retired; preserve subsequent parameter IDs and saved-state offsets.
+enum Control { SpeechRate, Shift, Resonance, Breath, Buzz, Artic, Image, Detune, Unison, Voices, ExtInput, ReservedControl, Release, PitchBendRange, MasterVolume, ExtGain, controlCount };
 inline constexpr unsigned firstControlID = 10;
-inline constexpr const char* controlNames[] = {"Speech Rate", "Shift", "Q", "Breath", "Buzz", "Artic", "Image", "Detune", "Unison", "Voices", "Ext. input", "Sibilance Random", "Release", "Pitch Bend Range"};
-inline constexpr std::array<double,controlCount> controlDefaults = {32.0/127, .5, 72.0/127, .05, 1, 1, 0, 0, 0, 1, 0, 0, 72.0/127, 0};
+inline constexpr const char* controlNames[] = {"Speech Rate", "Shift", "Q", "Breath", "Buzz", "Artic", "Image", "Detune", "Unison", "Voices", "Ext. input", "", "Release", "Pitch Bend Range", "Master Volume", "Ext. Input Gain"};
+inline constexpr std::array<double,controlCount> controlDefaults = {32.0/127, .5, 72.0/127, .05, 1, 1, 0, 0, 0, 1, 0, 0, 72.0/127, 0, 60.0/72, .5};
 inline double plainControl(int i,double n) {
     n=std::clamp(n,0.0,1.0);
     if(i==SpeechRate){double rank=n*127;return rank<32 ? 50+rank*50/32 : 100+(rank-32)*500/95;}
     if(i==Detune)return n*40;
+    if(i==MasterVolume)return n*72-60;
+    if(i==ExtGain)return n*48-24;
     if(i==Unison || i==ExtInput)return n>=.5 ? 1 : 0;
     if(i==Release)return std::pow(10000.0,n);
     if(i==PitchBendRange)return 2+std::round(n*10);
@@ -21,6 +24,8 @@ inline double plainControl(int i,double n) {
 inline double normalizedControl(int i,double p) {
     if(i==SpeechRate)return std::clamp((p<100 ? (p-50)*32/50 : 32+(p-100)*95/500)/127,0.0,1.0);
     if(i==Detune)return std::clamp(p/40,0.0,1.0);
+    if(i==MasterVolume)return std::clamp((p+60)/72,0.0,1.0);
+    if(i==ExtGain)return std::clamp((p+24)/48,0.0,1.0);
     if(i==Unison || i==ExtInput)return p>=.5 ? 1 : 0;
     if(i==Release)return std::clamp(std::log(std::max(p,1.0))/std::log(10000.0),0.0,1.0);
     if(i==PitchBendRange)return std::clamp((p-2)/10,0.0,1.0);

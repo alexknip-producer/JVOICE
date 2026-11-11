@@ -51,10 +51,7 @@ formant = formant.replace('static int32_t formant_nz = 0x2545F491;',
     'static JV_TLS int32_t *formant_noise;\n#define formant_nz (*formant_noise)\n')
 # Replace only the periodic excitation; aspiration and frication remain upstream's.
 assert formant.count('x = (lp * gv) >> 15;') == 2
-formant = formant.replace('x = (lp * gv) >> 15;', 'x = ((jv_carrier ? clamp((int32_t)(jv_carrier[i] * 12000.0f), -32768, 32767) : lp) * gv) >> 15;')
-needle='    fres_coef(&r4, (uint32_t)clamp((int32_t)(umul64((uint32_t)clamp(sg->ff'
-assert needle in formant
-formant = formant.replace(needle, '    r4r = (uint32_t)(((uint64_t)r4r * (uint32_t)(65536 + (((int32_t)jv_sibilance_ratio - 65536) * fw >> 15))) >> 16);\n'+needle)
+formant = formant.replace('x = (lp * gv) >> 15;', 'x = jv_carrier ? jv_excitation(jv_carrier[i], gv, jv_carrier_gain[i]) : (lp * gv) >> 15;')
 prefix = '''/* Generated adaptation; upstream copyright and GPL notices follow. */
 #include <stdlib.h>
 #include <string.h>
@@ -77,7 +74,14 @@ static void str_cpy(char *d, const char *s, unsigned n) {
 #define JV_TLS _Thread_local
 #endif
 static JV_TLS const float *jv_carrier;
-static JV_TLS uint32_t jv_sibilance_ratio;
+static JV_TLS const float *jv_carrier_gain;
+/* +12 dB on external tonal excitation only. Keep headroom in the conversion:
+ * a normal full-scale input must not clip at the old int16 carrier boundary. */
+static inline int32_t jv_excitation(float sample, int32_t voicing, float gain) {
+    if (!isfinite(sample)) sample = 0;
+    sample = fmaxf(-4.0f, fminf(4.0f, sample));
+    return (int32_t)(((int64_t)(sample * (12000.0f * 3.981071706f) * gain) * voicing) >> 15);
+}
 #include "felucca_tables.h"
 '''
 context = '\nstruct jv_engine {\n    track_t tracks[NTRK];\n    song_t song_state;\n'
@@ -92,9 +96,9 @@ context += '''    uint8_t cache_ready;
     uint32_t noise_seed;
     voice_t right_voice[NTRK];
     int32_t right_f5[NTRK][2];
-    float sibilance_position[NTRK];
     float mix_gain;
-    float detune_position[NTRK], pan_position[NTRK], gain[NTRK], pan_current[NTRK];
+    float external_gain;
+    float detune_position[NTRK], pan_position[NTRK], pan_current[NTRK];
 };
 static void jv_bind(struct jv_engine *e) {
     trk = e->tracks;

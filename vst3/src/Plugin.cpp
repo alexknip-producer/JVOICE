@@ -55,11 +55,11 @@ class VoiceParameter : public RangeParameter {
     int index;
 public:
     explicit VoiceParameter(int i):RangeParameter(STR16(""),firstControlID+i,nullptr,
-        i==Shift ? -12 : i==SpeechRate ? 50 : i==Voices || i==Release ? 1 : i==PitchBendRange ? 2 : 0,
-        i==Shift ? 12 : i==SpeechRate ? 600 : i==Detune ? 40 : i==Unison || i==ExtInput ? 1 : i==Voices ? 8 : i==Release ? 10000 : i==PitchBendRange ? 12 : 100,
+        i==MasterVolume ? -60 : i==ExtGain ? -24 : i==Shift ? -12 : i==SpeechRate ? 50 : i==Voices || i==Release ? 1 : i==PitchBendRange ? 2 : 0,
+        i==ExtGain ? 24 : i==MasterVolume || i==Shift ? 12 : i==SpeechRate ? 600 : i==Detune ? 40 : i==Unison || i==ExtInput ? 1 : i==Voices ? 8 : i==Release ? 10000 : i==PitchBendRange ? 12 : 100,
         plainControl(i,controlDefaults[i]),i==Unison || i==ExtInput ? 1 : i==Voices ? 7 : i==PitchBendRange ? 10 : 0),index(i) {
         UString(info.title,128).fromAscii(controlNames[i]);
-        UString(info.units,128).fromAscii(i==Shift ? "st" : i==Detune ? "ct" : i==Release ? "ms" : i==PitchBendRange ? "st" : i==Voices || i==Unison || i==ExtInput ? "" : "%");
+        UString(info.units,128).fromAscii(i==MasterVolume || i==ExtGain ? "dB" : i==Shift ? "st" : i==Detune ? "ct" : i==Release ? "ms" : i==PitchBendRange ? "st" : i==Voices || i==Unison || i==ExtInput ? "" : "%");
         setPrecision(i==Shift || i==Unison || i==ExtInput || i==Voices || i==Release || i==PitchBendRange ? 0:1);
         info.defaultNormalizedValue=controlDefaults[i];setNormalized(controlDefaults[i]);
     }
@@ -90,7 +90,7 @@ public:
         addAudioInput(STR16("Sidechain"),SpeakerArr::kStereo,kAux,0);
         addEventInput(STR16("MIDI input"),16);
         parameters.addParameter(STR16("Text line"),nullptr,lineCount-1,0,ParameterInfo::kCanAutomate,1);
-        for(int i=0;i<controlCount;++i)parameters.addParameter(new VoiceParameter(i));
+        for(int i=0;i<controlCount;++i)if(i!=ReservedControl)parameters.addParameter(new VoiceParameter(i));
         for(int ch=0;ch<16;++ch) for(int cc : {120,123})
             parameters.addParameter(STR16("MIDI panic"),nullptr,0,0,ParameterInfo::kIsHidden,100+ch*128+cc);
         for(int ch=0;ch<16;++ch)parameters.addParameter(STR16("Pitch bend"),nullptr,0,.5,ParameterInfo::kIsHidden,4000+ch);
@@ -234,6 +234,7 @@ public:
         return SingleComponentEffect::getParamNormalized(id);
     }
     tresult PLUGIN_API setParamNormalized(ParamID id,ParamValue v) override {
+        if(id==firstControlID+ReservedControl)return kResultFalse;
         if(!std::isfinite(v))return kInvalidArgument;
         if(id>=firstControlID && id<firstControlID+controlCount)controls[id-firstControlID].store(std::clamp(v,0.0,1.0));
         return SingleComponentEffect::setParamNormalized(id,v);
@@ -273,7 +274,7 @@ public:
         Bank copy=snapshot();
         const uint32_t magic=0x31564A54;
         auto write=[&](const void* p,int n){int32 done=0;return stream->write(const_cast<void*>(p),n,&done)==kResultOk && done==n;};
-        uint32_t values[]={magic,3,uint32_t(copy.language),uint32_t(copy.selected)};
+        uint32_t values[]={magic,4,uint32_t(copy.language),uint32_t(copy.selected)};
         if(!write(values,sizeof values))return kResultFalse;
         for(auto& l:copy.lines) {
             uint32_t len=uint32_t(std::strlen(l.original.data()));
@@ -287,14 +288,14 @@ public:
         Bank copy;
         auto read=[&](void* p,int n){int32 done=0;return stream->read(p,n,&done)==kResultOk && done==n;};
         uint32_t values[4]{};
-        if(!read(values,sizeof values)||values[0]!=0x31564A54||(values[1]<1 || values[1]>3)||values[2]<1||values[2]>9||values[3]>15)return kResultFalse;
+        if(!read(values,sizeof values)||values[0]!=0x31564A54||(values[1]<1 || values[1]>4)||values[2]<1||values[2]>9||values[3]>15)return kResultFalse;
         copy.language=int(values[2]);copy.selected=std::min(int(values[3]),lineCount-1);
         for(auto& l:copy.lines) {
             uint32_t len=0;char text[textBytes]{};
             if(!read(&len,4)||len>=textBytes||!read(text,int(len))||!makeLine(std::string_view(text,len),copy.language,l))return kResultFalse;
         }
         auto restored=controlDefaults;
-        int nControls=values[1]==1 ? 0:values[1]==2 ? 10:controlCount;
+        int nControls=values[1]==1 ? 0:values[1]==2 ? 10:values[1]==3 ? 14:controlCount;
         for(int i=0;i<nControls;++i){auto& v=restored[i];if(!read(&v,sizeof v)||!std::isfinite(v)||v<0||v>1)return kResultFalse;}
         for(int i=0;i<controlCount;++i)setParamNormalized(firstControlID+i,restored[i]);
         {std::lock_guard<std::mutex> lock(mutex);bank=copy;++revision;}
@@ -307,7 +308,7 @@ private:
     void applyParameter(ParamID id,double v) {
         if(!std::isfinite(v))return;v=std::clamp(v,0.0,1.0);
         if(id==1)selectLine(int(v*(lineCount-1)+.5));
-        else if(id>=firstControlID && id<firstControlID+controlCount){int i=int(id-firstControlID);controls[i].store(v);jv_control(engine,i,v);}
+        else if(id>=firstControlID && id<firstControlID+controlCount){int i=int(id-firstControlID);if(i==ReservedControl)return;controls[i].store(v);jv_control(engine,i,v);}
         else if(id>=4000 && id<4016)jv_bend(engine,int(id-4000),2*v-1);
         else if(id>=100){jv_panic(engine);held.fill(0);}
     }
@@ -400,6 +401,7 @@ void View::paintKnob(HWND h,int i) {
     else if(i==Voices)swprintf(value,64,L"%.0f",p);
     else if(i==Detune)swprintf(value,64,L"%.1f ct",p);
     else if(i==Release)swprintf(value,64,L"%.0f ms",p);
+    else if(i==MasterVolume || i==ExtGain)swprintf(value,64,L"%+.1f dB",p);
     else swprintf(value,64,L"%.0f %%",p);
     RECT number{0,83,r.right,108};DrawTextW(dc,value,-1,&number,DT_CENTER|DT_SINGLELINE);
     if(GetFocus()==h){RECT focus{2,1,r.right-2,r.bottom-2};DrawFocusRect(dc,&focus);}
@@ -436,10 +438,10 @@ tresult PLUGIN_API View::attached(void* parent,FIDString type) {
     unison=control(L"BUTTON",L"Unison",BS_AUTOCHECKBOX|WS_TABSTOP,790,53,90,28,25);
     control(L"STATIC",L"C-2 to C-1 (MIDI 0-12): select lines 1-13. DAW Play restarts the selected line.",0,24,94,852,24,0);
     const int firstRow[]={SpeechRate,Shift,Resonance,Breath,Buzz,Artic,Release};
-    const int secondRow[]={Image,Detune,SibilanceRandom,Voices};
-    for(int row=0;row<2;++row){int n=row ? 4:7;const int* indices=row ? secondRow:firstRow;
+    const int secondRow[]={Image,Detune,Voices,ExtGain,MasterVolume};
+    for(int row=0;row<2;++row){int n=row ? 5:7;const int* indices=row ? secondRow:firstRow;
         for(int col=0;col<n;++col){int i=indices[col];knobs[i]=CreateWindowExW(0,knobClass,L"",WS_CHILD|WS_VISIBLE|WS_TABSTOP,
-            24+col*(row ? 210:120),row ? 242:126,row ? 200:110,110,window,reinterpret_cast<HMENU>(INT_PTR(2000+i)),module,this);}}
+            24+col*(row ? 170:120),row ? 242:126,row ? 158:110,110,window,reinterpret_cast<HMENU>(INT_PTR(2000+i)),module,this);}}
     control(L"STATIC",L"Lyrics - one line per keyswitch. Up to 13 lines, 128 characters per line.",0,24,367,852,24,0);
     text=control(L"EDIT",L"",ES_MULTILINE|ES_WANTRETURN|ES_AUTOHSCROLL|ES_AUTOVSCROLL|WS_HSCROLL|WS_VSCROLL|WS_TABSTOP,24,395,852,225,1000);
     SendMessageW(text,EM_SETLIMITTEXT,lineCount*256+lineCount*2,0);
@@ -494,5 +496,5 @@ bool InitModule(){return true;}
 bool DeinitModule(){return true;}
 BEGIN_FACTORY_DEF("", "https://github.com/alexknip-producer/JVOICE", "")
 DEF_CLASS2(INLINE_UID_FROM_FUID(voice::classID),PClassInfo::kManyInstances,kVstAudioEffectClass,
-    "JVoice",0,"Instrument|Synth", "0.3.0",kVstVersionString,voice::Plugin::create)
+    "JVoice",0,"Instrument|Synth", "0.3.1",kVstVersionString,voice::Plugin::create)
 END_FACTORY

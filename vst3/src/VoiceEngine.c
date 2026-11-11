@@ -17,7 +17,10 @@ void jv_reset(jv_engine *e)
     sing_init();
     e->controls[9]=1; /* eight poly voices until plugin parameters are applied */
     e->controls[12]=72.0/127;
+    e->controls[14]=60.0/72; /* Master Volume: 0 dB. */
+    e->controls[15]=.5; /* External input gain: 0 dB above the +12 dB calibration. */
     e->mix_gain=.7f;
+    e->external_gain=1;
     const preset_t *p = &FORMANT_PRESETS[9]; /* SINGER EN */
     for (int k = 0; k < NTRK; ++k) {
         for (int j = 0; j < 8; ++j) trk[k].p[P_E0+j] = p->e[j];
@@ -37,7 +40,7 @@ void jv_seed(jv_engine *e,unsigned seed){e->noise_seed=seed ? seed:1;jv_bind(e);
 void jv_bend(jv_engine *e,int ch,double v){if(ch>=0 && ch<16 && isfinite(v))e->bend_target[ch]=v<-1 ? -1:v>1 ? 1:v;}
 void jv_control(jv_engine *e, int index, double value)
 {
-    if(index<0 || index>=JV_CONTROL_COUNT || !isfinite(value))return;
+    if(index<0 || index>=JV_CONTROL_COUNT || index==11 || !isfinite(value))return;
     jv_bind(e);
     value=value<0 ? 0 : value>1 ? 1 : value;
     e->controls[index]=value;
@@ -98,10 +101,7 @@ void jv_note_on(jv_engine *e, int channel, int note, int vel, int chord, int not
         e->detune_position[slot]=unison ? (nv==1 ? 0 : 2.0f*sub/(nv-1)-1) : VP[slot-1];
         e->pan_position[slot]=unison ? (nv==1 ? 0 : 2.0f*sub/(nv-1)-1) : VP[slot-1];
         e->pan_current[slot]=e->pan_position[slot]*(float)e->controls[6];
-        e->gain[slot]=unison ? 1.0f/sqrtf((float)nv) : 1;
         e->right_voice[slot]=*v;memset(e->right_f5[slot],0,sizeof e->right_f5[slot]);
-        int32_t random=(int32_t)(e->noise_seed ^ age*0x9E3779B9u ^ (uint32_t)slot*0x85EBCA6Bu);
-        e->sibilance_position[slot]=(noise32(&random)>>8)*(2.0f/16777215.0f)-1;
     }
 }
 void jv_note_off(jv_engine *e, int channel, int note, int note_id)
@@ -137,9 +137,12 @@ void jv_render_input(jv_engine *e,const float *input_l,const float *input_r,floa
     jv_bind(e);
     float mix_l[CTL]={0},mix_r[CTL]={0};
     const float zero[CTL]={0};int external=e->controls[10]>=.5;
-    float sum_gain=0;
-    for(int k=1;k<NTRK;++k)if(trk[k].v[0].active)sum_gain+=e->gain[k];
-    float target_gain=.7f/(sum_gain>1 ? sum_gain:1),previous_gain=e->mix_gain;
+    /* Manual master only. Notes, release tails and unison never change gain. */
+    float target_gain=.7f*(float)pow(10.0,(e->controls[14]*72-60)/20),previous_gain=e->mix_gain;
+    float external_target=(float)pow(10.0,(e->controls[15]*48-24)/20),carrier_gain[CTL];
+    for(int i=0;i<CTL;++i)carrier_gain[i]=e->external_gain+(external_target-e->external_gain)*(i+1)/CTL;
+    jv_carrier_gain=carrier_gain;
+    e->external_gain=external_target;
     for(int ch=0;ch<16;++ch)e->bend[ch]+=(e->bend_target[ch]-e->bend[ch])*.2;
     sing_block(&trk[0]); /* silent cursor follows articulation timing between notes */
     for (int k = 1; k < NTRK; ++k) {
@@ -164,7 +167,6 @@ void jv_render_input(jv_engine *e,const float *input_l,const float *input_r,floa
         m.amp1 = next * v->vel / 127;
         m.envq15 = next;
         m.shape = 64 << 8;
-        jv_sibilance_ratio=(uint32_t)(65536*(1+e->sibilance_position[k]*e->controls[11]*.03));
         int32_t mono[CTL]={0},mono_r[CTL]={0};voice_t before=*v;
         int32_t noise_before=formant_nz;
         jv_carrier=external ? (input_l ? input_l:zero):NULL;
@@ -182,7 +184,7 @@ void jv_render_input(jv_engine *e,const float *input_l,const float *input_r,floa
         }
         float pan0=e->pan_current[k],pan1=e->pan_position[k]*(float)e->controls[6];
         for(int i=0;i<CTL;++i) {
-            float pan=pan0+(pan1-pan0)*(i+1)/CTL, gain=e->gain[k]/65536.0f;
+            float pan=pan0+(pan1-pan0)*(i+1)/CTL, gain=1.0f/65536.0f;
             mix_l[i]+=mono[i]*gain*(pan>0 ? 1-pan : 1);mix_r[i]+=mono_r[i]*gain*(pan<0 ? 1+pan : 1);
         }
         e->pan_current[k]=pan1;
@@ -195,6 +197,7 @@ void jv_render_input(jv_engine *e,const float *input_l,const float *input_r,floa
     }
     e->mix_gain=target_gain;
     jv_carrier=NULL;
+    jv_carrier_gain=NULL;
 }
 void jv_render_stereo(jv_engine *e,float *left,float *right){jv_render_input(e,NULL,NULL,left,right);}
 

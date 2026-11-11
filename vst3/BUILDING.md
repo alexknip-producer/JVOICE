@@ -40,8 +40,17 @@ gestures and event points, timbre controls, stereo spread, polyphonic detune
 and 1–8-layer unison.
 
 Version 0.3 adds stereo sidechain carrier input, fixed-rate input/output
-interpolation, release, per-channel pitch bend and sibilance randomization.
+interpolation, release and per-channel pitch bend.
 Runtime tests cover state duplication into independent instances, host
 automation handlers, concurrent DSP, and two Win32 editor windows.
 No Studio One installation is bundled; its particular project routing
 requires verification in the user's DAW.
+
+Version 0.3.1 removes all voice-count gain normalization and adds an automatable
+manual Master Volume (-60..+12 dB, default 0 dB). Tests check linear eight-note
+summation, a silent note/release not ducking other voices in either carrier mode,
+manual dB gain on the whole output and version-3 state migration.
+The experimental frication randomization has been removed from the DSP, editor
+and host parameter list; its old parameter ID is retired without renumbering.
+Ext. Input Gain (-24..+24 dB, default 0 dB) adjusts only the tonal input, with
+a fixed +12 dB calibration relative to 0.3.0 at the new zero position.

@@ -34,7 +34,7 @@ int main() {
     float x[JV_BLOCK],y[JV_BLOCK]; double energy=0;
     for (int block=0;block<300;++block) {
         jv_render(a,x); jv_render(b,y);
-        for(int i=0;i<JV_BLOCK;++i) { assert(x[i]==y[i]); assert(std::isfinite(x[i]) && std::abs(x[i])<=1); energy+=x[i]*x[i]; }
+        for(int i=0;i<JV_BLOCK;++i) { assert(x[i]==y[i]); assert(std::isfinite(x[i])); energy+=x[i]*x[i]; }
     }
     assert(energy>0.01);
     // Editing the cursor must leave existing voices untouched.
