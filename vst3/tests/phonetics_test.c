@@ -53,6 +53,14 @@ int main(void) {
     count=jv_ru_tokens("sad",3,codes,kinds);assert(codes[count-1]==PH_D);
     count=jv_ru_tokens("raz",3,codes,kinds);assert(codes[count-1]==PH_Z);
     assert(PHON[PH_RU_L].f2>PHON[PH_L].f2 && PHON[PH_RU_S].ff>PHON[PH_S].ff);
+    // Robo uses the same Russian vowel targets and soft-consonant parser.
+    jv_reset(e);jv_control(e,23,1);jv_text(e,"y",LG_RU);jv_note_on(e,0,60,100,0,1);
+    for(int k=0;k<200;++k)jv_render(e,out);
+    s=sing_view(&trk[1]);for(int j=0;j<3;++j)assert(abs(s->f[j]-yTargets[j])<10);
+    count=jv_ru_tokens("lya",3,codes,kinds);assert(count==2 && codes[0]==PH_RU_L && codes[1]==PH_AE);
+    jv_text(e,"r'",LG_RU);jv_note_on(e,0,62,100,0,2);int lo=32767,hi=0;
+    for(int k=0;k<160;++k){jv_render(e,out);int v=sing_view(&trk[2])->gv;if(v<lo)lo=v;if(v>hi)hi=v;}
+    assert(hi>20000 && lo<hi/2);
     for(int lang=LG_ES;lang<LG_N;++lang){bare_sound(e,lang,"s",0);bare_sound(e,lang,"g",1);}
     bare_sound(e,LG_RU,"sh",0);bare_sound(e,LG_RU,"m",0);bare_sound(e,LG_RU,"l'",0);
     // "sounds": keep the original word path and the timed n-d-z coda audible;

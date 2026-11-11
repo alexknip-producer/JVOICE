@@ -32,7 +32,7 @@ class Plugin;
 #ifdef _WIN32
 class View : public CPluginView {
     Plugin& owner;
-    HWND window=nullptr,language=nullptr,linePick=nullptr,status=nullptr,text=nullptr,unison=nullptr,mono=nullptr,newspeak=nullptr,external=nullptr,bendRange=nullptr;
+    HWND window=nullptr,language=nullptr,linePick=nullptr,status=nullptr,text=nullptr,unison=nullptr,mono=nullptr,newspeak=nullptr,robo=nullptr,external=nullptr,bendRange=nullptr;
     HWND knobs[controlCount]{};
     HFONT font=nullptr;
     HINSTANCE module=nullptr;
@@ -57,11 +57,11 @@ class VoiceParameter : public RangeParameter {
 public:
     explicit VoiceParameter(int i):RangeParameter(STR16(""),firstControlID+i,nullptr,
         i==PhonemeGlide ? 25 : i==Smear ? -100 : i==ModRate ? .1 : i==MasterVolume ? -60 : i==ExtGain ? -24 : i==Shift ? -12 : i==SpeechRate ? 50 : i==Voices || i==Release ? 1 : i==PitchBendRange ? 2 : 0,
-        i==PhonemeGlide ? 1000 : i==ModDepth ? 50 : i==ExtGain ? 24 : i==ModRate || i==MasterVolume || i==Shift ? 12 : i==SpeechRate ? 600 : i==Detune ? 40 : i==Unison || i==ExtInput || i==Mono || i==Newspeak ? 1 : i==Voices ? 8 : i==Release ? 10000 : i==PitchBendRange ? 12 : 100,
-        plainControl(i,controlDefaults[i]),i==Unison || i==ExtInput || i==Mono || i==Newspeak ? 1 : i==Voices ? 7 : i==PitchBendRange ? 10 : 0),index(i) {
+        i==PhonemeGlide ? 1000 : i==ModDepth ? 50 : i==ExtGain ? 24 : i==ModRate || i==MasterVolume || i==Shift ? 12 : i==SpeechRate ? 600 : i==Detune ? 40 : i==Unison || i==ExtInput || i==Mono || i==Newspeak || i==RoboMode ? 1 : i==Voices ? 8 : i==Release ? 10000 : i==PitchBendRange ? 12 : 100,
+        plainControl(i,controlDefaults[i]),i==Unison || i==ExtInput || i==Mono || i==Newspeak || i==RoboMode ? 1 : i==Voices ? 7 : i==PitchBendRange ? 10 : 0),index(i) {
         UString(info.title,128).fromAscii(controlNames[i]);
-        UString(info.units,128).fromAscii(i==ModRate ? "Hz" : i==MasterVolume || i==ExtGain ? "dB" : i==Shift ? "st" : i==Detune || i==ModDepth ? "ct" : i==Release ? "ms" : i==PitchBendRange ? "st" : i==Voices || i==Unison || i==ExtInput || i==Mono || i==Newspeak ? "" : "%");
-        setPrecision(i==Shift || i==Unison || i==ExtInput || i==Mono || i==Newspeak || i==Voices || i==Release || i==PitchBendRange ? 0:1);
+        UString(info.units,128).fromAscii(i==ModRate ? "Hz" : i==MasterVolume || i==ExtGain ? "dB" : i==Shift ? "st" : i==Detune || i==ModDepth ? "ct" : i==Release ? "ms" : i==PitchBendRange ? "st" : i==Voices || i==Unison || i==ExtInput || i==Mono || i==Newspeak || i==RoboMode ? "" : "%");
+        setPrecision(i==Shift || i==Unison || i==ExtInput || i==Mono || i==Newspeak || i==RoboMode || i==Voices || i==Release || i==PitchBendRange ? 0:1);
         info.defaultNormalizedValue=controlDefaults[i];setNormalized(controlDefaults[i]);
     }
     ParamValue toPlain(ParamValue n) const override {return plainControl(index,n);}
@@ -247,7 +247,7 @@ public:
     void gestureValue(int i,double value) {
         value=std::clamp(value,0.0,1.0);
         if(i==Voices)value=std::round(value*7)/7;
-        if(i==Unison || i==ExtInput || i==Mono || i==Newspeak)value=value>=.5 ? 1:0;
+        if(i==Unison || i==ExtInput || i==Mono || i==Newspeak || i==RoboMode)value=value>=.5 ? 1:0;
         if(i==PitchBendRange)value=std::round(value*10)/10;
         setParamNormalized(firstControlID+i,value);performEdit(firstControlID+i,value);
     }
@@ -277,7 +277,7 @@ public:
         Bank copy=snapshot();
         const uint32_t magic=0x31564A54;
         auto write=[&](const void* p,int n){int32 done=0;return stream->write(const_cast<void*>(p),n,&done)==kResultOk && done==n;};
-        uint32_t values[]={magic,7,uint32_t(copy.language),uint32_t(copy.selected)};
+        uint32_t values[]={magic,8,uint32_t(copy.language),uint32_t(copy.selected)};
         if(!write(values,sizeof values))return kResultFalse;
         for(auto& l:copy.lines) {
             uint32_t len=uint32_t(std::strlen(l.original.data()));
@@ -291,14 +291,14 @@ public:
         Bank copy;
         auto read=[&](void* p,int n){int32 done=0;return stream->read(p,n,&done)==kResultOk && done==n;};
         uint32_t values[4]{};
-        if(!read(values,sizeof values)||values[0]!=0x31564A54||(values[1]<1 || values[1]>7)||values[2]<1||values[2]>9||values[3]>15)return kResultFalse;
+        if(!read(values,sizeof values)||values[0]!=0x31564A54||(values[1]<1 || values[1]>8)||values[2]<1||values[2]>9||values[3]>15)return kResultFalse;
         copy.language=int(values[2]);copy.selected=std::min(int(values[3]),lineCount-1);
         for(auto& l:copy.lines) {
             uint32_t len=0;char text[textBytes]{};
             if(!read(&len,4)||len>=textBytes||!read(text,int(len))||!makeLine(std::string_view(text,len),copy.language,l))return kResultFalse;
         }
         auto restored=controlDefaults;
-        int nControls=values[1]==1 ? 0:values[1]==2 ? 10:values[1]==3 ? 14:values[1]==4 ? 16:values[1]==5 ? 20:values[1]==6 ? 22:controlCount;
+        int nControls=values[1]==1 ? 0:values[1]==2 ? 10:values[1]==3 ? 14:values[1]==4 ? 16:values[1]==5 ? 20:values[1]==6 ? 22:values[1]==7 ? 23:controlCount;
         for(int i=0;i<nControls;++i){auto& v=restored[i];if(!read(&v,sizeof v)||!std::isfinite(v)||v<0||v>1)return kResultFalse;}
         for(int i=0;i<controlCount;++i)setParamNormalized(firstControlID+i,restored[i]);
         {std::lock_guard<std::mutex> lock(mutex);bank=copy;++revision;}
@@ -427,7 +427,8 @@ tresult PLUGIN_API View::attached(void* parent,FIDString type) {
             x,y,width,height,window,reinterpret_cast<HMENU>(INT_PTR(id)),module,nullptr);
         SendMessageW(h,WM_SETFONT,reinterpret_cast<WPARAM>(font),TRUE);return h;
     };
-    control(L"STATIC",L"JVoice - construction demo",0,24,16,340,26,0);
+    control(L"STATIC",L"JVoice - construction demo",0,24,16,260,26,0);
+    robo=control(L"BUTTON",L"Robo",BS_AUTOCHECKBOX|WS_TABSTOP,286,12,92,28,31);
     newspeak=control(L"BUTTON",L"Newspeak",BS_AUTOCHECKBOX|WS_TABSTOP,384,12,138,28,30);
     external=control(L"BUTTON",L"Ext. input",BS_AUTOCHECKBOX|WS_TABSTOP,540,12,115,28,28);
     control(L"STATIC",L"Pitch bend",0,666,17,90,24,0);
@@ -474,7 +475,7 @@ void View::refresh() {
     }
     if(SendMessageW(linePick,CB_GETCURSEL,0,0)!=owner.currentLine())SendMessageW(linePick,CB_SETCURSEL,owner.currentLine(),0);
     auto check=[&](HWND h,int i){auto state=owner.control(i)>=.5 ? BST_CHECKED:BST_UNCHECKED;if(SendMessageW(h,BM_GETCHECK,0,0)!=state)SendMessageW(h,BM_SETCHECK,state,0);};
-    check(unison,Unison);check(mono,Mono);check(newspeak,Newspeak);check(external,ExtInput);
+    check(unison,Unison);check(mono,Mono);check(newspeak,Newspeak);check(robo,RoboMode);check(external,ExtInput);
     int range=int(std::round(owner.control(PitchBendRange)*10));if(SendMessageW(bendRange,CB_GETCURSEL,0,0)!=range)SendMessageW(bendRange,CB_SETCURSEL,range,0);
     for(int i=0;i<controlCount;++i)if(knobs[i]){double value=owner.control(i);if(value!=lastDrawn[i]){lastDrawn[i]=value;InvalidateRect(knobs[i],nullptr,FALSE);}}
 
@@ -487,6 +488,7 @@ void View::command(int id,int notification) {
     else if(id==23)owner.pick((owner.currentLine()+lineCount-1)%lineCount);
     else if(id==24)owner.pick((owner.currentLine()+1)%lineCount);
     else if(id==25 || id==28 || id==29){int i=id==25 ? Unison:id==29 ? Mono:ExtInput;HWND h=id==25 ? unison:id==29 ? mono:external;owner.gestureBegin(i);owner.gestureValue(i,SendMessageW(h,BM_GETCHECK,0,0)==BST_CHECKED ? 1:0);owner.gestureEnd(i);}
+    else if(id==31){owner.gestureBegin(RoboMode);owner.gestureValue(RoboMode,SendMessageW(robo,BM_GETCHECK,0,0)==BST_CHECKED ? 1:0);owner.gestureEnd(RoboMode);}
     else if(id==30){owner.gestureBegin(Newspeak);owner.gestureValue(Newspeak,SendMessageW(newspeak,BM_GETCHECK,0,0)==BST_CHECKED ? 1:0);owner.gestureEnd(Newspeak);}
     else if(id==27 && notification==CBN_SELCHANGE){owner.gestureBegin(PitchBendRange);owner.gestureValue(PitchBendRange,SendMessageW(bendRange,CB_GETCURSEL,0,0)/10.0);owner.gestureEnd(PitchBendRange);}
     else if(id==26){int row=int(SendMessageW(text,EM_LINEFROMCHAR,WPARAM(-1),0));if(row>=0 && row<lineCount)owner.pick(row);}
@@ -505,5 +507,5 @@ bool InitModule(){return true;}
 bool DeinitModule(){return true;}
 BEGIN_FACTORY_DEF("", "https://github.com/alexknip-producer/JVOICE", "")
 DEF_CLASS2(INLINE_UID_FROM_FUID(voice::classID),PClassInfo::kManyInstances,kVstAudioEffectClass,
-    "JVoice",0,"Instrument|Synth", "0.3.6",kVstVersionString,voice::Plugin::create)
+    "JVoice",0,"Instrument|Synth", "0.3.7",kVstVersionString,voice::Plugin::create)
 END_FACTORY

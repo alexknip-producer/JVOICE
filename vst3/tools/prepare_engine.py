@@ -163,6 +163,20 @@ assert sing.count(needle)==1
 sing = sing.replace(needle, '''        int32_t step=jv_alpha>0 ? (int32_t)lround(d*jv_alpha):(d >> sh)+(d>0 && (d >> sh)==0);
         if(jv_alpha>0 && !step && d)step=d>0 ? 1:-1;
         *a=(int16_t)(*a+step);''')
+# Experimental SC-02-inspired transition: constant-rate movement toward the
+# existing language targets, with no per-syllable randomised formant offsets.
+needle = '    {   /* (V10.40) each syllable its own mouth:'
+assert sing.count(needle)==1
+sing = sing.replace(needle, '    if(jv_control_values[23]<.5) {   /* (V10.40) each syllable its own mouth:')
+needle = '        int32_t step=jv_alpha>0 ? (int32_t)lround(d*jv_alpha):(d >> sh)+(d>0 && (d >> sh)==0);'
+assert sing.count(needle)==1
+sing = sing.replace(needle, '''        if(jv_control_values[23]>=.5){
+            if(j>=3u){*a=x->fq[j-3u];continue;}
+            double v=jv_control_values[21],scale=pow(v<=.5 ? 4.0:10.0,2*v-1);
+            int32_t limit=(int32_t)(40.0/scale+.5);if(limit<1)limit=1;
+            *a=(int16_t)(*a+clamp(d,-limit,limit));continue;
+        }
+''' + needle)
 # 128 Unicode codepoints require at most 512 UTF-8 bytes, plus terminator.
 sing = sing.replace('#define LYR_LEN 64u', '#define LYR_LEN 513u')
 sing = sing.replace('uint8_t to, tl;', 'uint16_t to, tl;')
@@ -186,6 +200,10 @@ sing = sing.replace('static int16_t sy_cx;', 'static JV_TLS int16_t sy_cx;')
 sing = sing.replace('static uint8_t lyb_ok __attribute__((section(".pool")));',
                     'static JV_TLS uint8_t *lyb_ok_ptr;\n#define lyb_ok (*lyb_ok_ptr)')
 formant = (root / 'firmware/src/eng_formant.c').read_text().replace('#include "sing.c"', sing)
+# Keep the excitation stable in Robo mode while retaining Breath/Buzz controls.
+assert formant.count('hum = clamp((127 - p[P_E4]) * 4, 0, 64);') == 1
+formant = formant.replace('hum = clamp((127 - p[P_E4]) * 4, 0, 64);',
+    'hum = jv_control_values[23]>=.5 ? 0 : clamp((127 - p[P_E4]) * 4, 0, 64);')
 formant = re.sub(r'static (int32_t) (fmt_f5)((?:\[[^\]]+\])+)(?: __attribute__\(\(section\("[^"]+"\)\)\))?;', replace_array, formant)
 formant = formant.replace('static int32_t formant_nz = 0x2545F491;',
     'static JV_TLS int32_t *formant_noise;\n#define formant_nz (*formant_noise)\n')

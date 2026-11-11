@@ -35,7 +35,7 @@ int main(){
         if(i==ReservedControl || i==ReservedThickness)continue;
         ParameterInfo info{};assert(p->getParameterInfoByTag(firstControlID+i,info)==kResultOk);
         assert(info.flags & ParameterInfo::kCanAutomate);
-        p->gestureBegin(i);p->gestureValue(i,i==Voices ? 1:i==Unison || i==ExtInput || i==Mono || i==Newspeak ? 0:.5);p->gestureEnd(i);
+        p->gestureBegin(i);p->gestureValue(i,i==Voices ? 1:i==Unison || i==ExtInput || i==Mono || i==Newspeak || i==RoboMode ? 0:.5);p->gestureEnd(i);
     }
     assert(spy->begins>=controlCount-2 && spy->edits>=controlCount-2 && spy->begins==spy->ends);
     ParameterInfo retired{};assert(p->getParameterInfoByTag(firstControlID+ReservedControl,retired)!=kResultOk);
@@ -87,9 +87,9 @@ int main(){
     context.projectTimeSamples+=48000;render();assert(p->syllablePosition()==0);
     render();assert(p->syllablePosition()==0); // unchanged stopped position is stable
     ParameterChanges automation;
-    for(int i=0;i<controlCount;++i){if(i==ReservedThickness)continue;int32 qi=0,pi=0;auto id=firstControlID+i;auto* queue=automation.addParameterData(id,qi);queue->addPoint(100,i==Unison || i==ExtInput || i==Mono || i==Newspeak ? 0:i==Voices ? 1:.7,pi);}
+    for(int i=0;i<controlCount;++i){if(i==ReservedThickness)continue;int32 qi=0,pi=0;auto id=firstControlID+i;auto* queue=automation.addParameterData(id,qi);queue->addPoint(100,i==Unison || i==ExtInput || i==Mono || i==Newspeak || i==RoboMode ? 0:i==Voices ? 1:.7,pi);}
     data.inputParameterChanges=&automation;render();data.inputParameterChanges=nullptr;
-    for(int i=0;i<controlCount;++i)if(i!=ReservedThickness)assert(std::abs(p->control(i)-(i==Unison || i==ExtInput || i==Mono || i==Newspeak || i==ReservedControl ? 0:i==Voices ? 1:.7))<1e-9);
+    for(int i=0;i<controlCount;++i)if(i!=ReservedThickness)assert(std::abs(p->control(i)-(i==Unison || i==ExtInput || i==Mono || i==Newspeak || i==RoboMode || i==ReservedControl ? 0:i==Voices ? 1:.7))<1e-9);
     double energy=0;for(int b=0;b<40;++b){render();for(float x:left){assert(std::isfinite(x));energy+=x*x;}}assert(energy>.01);
     for(int id=1;id<=5;++id){Event off{};off.type=Event::kNoteOffEvent;off.noteOff.pitch=60;off.noteOff.noteId=id;events.addEvent(off);}
     render();events.clear();for(int b=0;b<400;++b)render();for(float x:left)assert(x==0);
@@ -110,7 +110,7 @@ int main(){
     auto language=GetDlgItem(editor,20);SendMessageW(language,CB_SETCURSEL,1,0);
     SendMessageW(editor,WM_COMMAND,MAKEWPARAM(20,CBN_SELCHANGE),0);assert(p->snapshot().language==2);
     assert(std::string(p->snapshot().lines[0].original.data())==u8"Проверка русского текста");
-    for(int i=0;i<controlCount;++i)if(i!=Unison && i!=ExtInput && i!=Mono && i!=Newspeak && i!=PitchBendRange && i!=ReservedControl && i!=ReservedThickness){auto knob=GetDlgItem(editor,2000+i);assert(knob);SendMessageW(knob,WM_KEYDOWN,VK_RIGHT,0);}
+    for(int i=0;i<controlCount;++i)if(i!=Unison && i!=ExtInput && i!=Mono && i!=Newspeak && i!=RoboMode && i!=PitchBendRange && i!=ReservedControl && i!=ReservedThickness){auto knob=GetDlgItem(editor,2000+i);assert(knob);SendMessageW(knob,WM_KEYDOWN,VK_RIGHT,0);}
     assert(!GetDlgItem(editor,2000+ReservedControl));
     auto toggle=GetDlgItem(editor,25);SendMessageW(toggle,BM_SETCHECK,BST_CHECKED,0);SendMessageW(editor,WM_COMMAND,MAKEWPARAM(25,BN_CLICKED),0);assert(p->control(Unison)==1);
     auto monoToggle=GetDlgItem(editor,29);assert(monoToggle);SendMessageW(monoToggle,BM_SETCHECK,BST_CHECKED,0);SendMessageW(editor,WM_COMMAND,MAKEWPARAM(29,BN_CLICKED),0);assert(p->control(Mono)==1);
