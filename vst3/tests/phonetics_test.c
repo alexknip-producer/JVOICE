@@ -53,27 +53,19 @@ int main(void) {
     count=jv_ru_tokens("sad",3,codes,kinds);assert(codes[count-1]==PH_D);
     count=jv_ru_tokens("raz",3,codes,kinds);assert(codes[count-1]==PH_Z);
     assert(PHON[PH_RU_L].f2>PHON[PH_L].f2 && PHON[PH_RU_S].ff>PHON[PH_S].ff);
-    // Robo uses the same Russian vowel targets and soft-consonant parser.
-    jv_reset(e);jv_control(e,23,1);jv_text(e,"y",LG_RU);jv_note_on(e,0,60,100,0,1);
-    for(int k=0;k<200;++k)jv_render(e,out);
-    int iRef[]={PHON[PH_I].f1,PHON[PH_I].f2,PHON[PH_I].f3};
-    s=sing_view(&trk[1]);for(int j=0;j<3;++j)assert(abs(s->f[j]-(JV_VTRX[PH_I][j]+yTargets[j]-iRef[j]))<10);
-    assert(abs(s->f[1]-yTargets[1])>30);
-    // At the same pitch and settings Vtrx must produce a different waveform.
-    float reference[JV_BLOCK];double difference=0,energy=0;
-    for(int mode=0;mode<2;++mode){
-        jv_reset(e);jv_seed(e,123);jv_control(e,23,mode);jv_text(e,"a",LG_RU);jv_note_on(e,0,60,100,0,1);
-        for(int k=0;k<150;++k)jv_render(e,out);
-        if(!mode)for(int j=0;j<JV_BLOCK;++j)reference[j]=out[j];
-        else for(int j=0;j<JV_BLOCK;++j){double d=out[j]-reference[j];difference+=d*d;energy+=reference[j]*reference[j];}
-    }
-    assert(energy>1e-8 && difference>energy*.01);
-    count=jv_ru_tokens("lya",3,codes,kinds);assert(count==2 && codes[0]==PH_RU_L && codes[1]==PH_AE);
-    jv_text(e,"r'",LG_RU);jv_note_on(e,0,62,100,0,2);int lo=32767,hi=0;
-    for(int k=0;k<160;++k){jv_render(e,out);int v=sing_view(&trk[2])->gv;if(v<lo)lo=v;if(v>hi)hi=v;}
-    assert(hi>20000 && lo<hi/2);
     for(int lang=LG_ES;lang<LG_N;++lang){bare_sound(e,lang,"s",0);bare_sound(e,lang,"g",1);}
     bare_sound(e,LG_RU,"sh",0);bare_sound(e,LG_RU,"m",0);bare_sound(e,LG_RU,"l'",0);
+    // Vtrx accepts SC-02 symbols grouped into explicitly timed syllables.
+    jv_reset(e);jv_control(e,23,1);jv_control(e,20,1);jv_text(e,"K-R-AH-F-T V-EH-R-K",LG_DE);
+    jv_note_on(e,0,60,100,0,1);const sing_t *vp=sing_view(&trk[1]);
+    assert(vp->np==5 && vp->ph[0]==PH_K && vp->ph[1]==PH_RT && vp->ph[2]==PH_AA && vp->ph[3]==PH_F && vp->ph[4]==PH_T);
+    jv_note_on(e,0,62,100,0,2);vp=sing_view(&trk[2]);
+    assert(vp->np==4 && vp->ph[0]==PH_V && vp->ph[1]==PH_EH && vp->ph[2]==PH_RT && vp->ph[3]==PH_K);
+    uint8_t direct[SW_MAX];uint32_t dns=0;assert(jv_vtrx_word(LG_DE,"r2-:u",5,direct,&dns)==2 && dns==1 && (direct[0]&0x3f)==PH_RT && (direct[1]&0x3f)==PH_UJ);
+    assert(jv_vtrx_word(LG_DE,"unknown",7,direct,&dns)==0 && dns==0);
+    assert(jv_vtrx_word(LG_DE,"pa",2,direct,&dns)==1 && (direct[0]&0x3f)==PH_SIL);
+    assert(jv_vtrx_word(LG_RU,"ly-yi",5,direct,&dns)==2 && (direct[0]&0x3f)==PH_RU_L && (direct[1]&0x3f)==PH_UH);
+    jv_control(e,23,0);jv_text(e,"r",LG_DE);jv_note_on(e,0,65,100,0,3);assert(sing_phon(sing_view(&trk[3]))==PH_RT);
     // "sounds": keep the original word path and the timed n-d-z coda audible;
     // after z, the articulation must go to silence rather than another vowel.
     jv_reset(e);jv_control(e,4,1);jv_text(e,"sounds",LG_EN);jv_note_on(e,0,60,100,0,1);

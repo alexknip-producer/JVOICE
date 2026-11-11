@@ -32,11 +32,12 @@ class Plugin;
 #ifdef _WIN32
 class View : public CPluginView {
     Plugin& owner;
-    HWND window=nullptr,language=nullptr,linePick=nullptr,status=nullptr,text=nullptr,unison=nullptr,mono=nullptr,newspeak=nullptr,robo=nullptr,external=nullptr,bendRange=nullptr;
+    HWND window=nullptr,language=nullptr,linePick=nullptr,status=nullptr,text=nullptr,lyricsHint=nullptr,unison=nullptr,mono=nullptr,newspeak=nullptr,robo=nullptr,external=nullptr,bendRange=nullptr;
     HWND knobs[controlCount]{};
     HFONT font=nullptr;
     HINSTANCE module=nullptr;
     bool loading=false;
+    int lastRobo=-1;
     int dragging=-1,dragY=0;double dragStart=0;
     uint32_t seenRevision=0;
     std::array<double,controlCount> lastDrawn{};
@@ -239,7 +240,7 @@ public:
         if((id==firstControlID+ReservedControl || id==firstControlID+ReservedThickness))return kResultFalse;
         if(!std::isfinite(v))return kInvalidArgument;
         if(id>=firstControlID && id<firstControlID+controlCount){int i=int(id-firstControlID);double before=controls[i].exchange(std::clamp(v,0.0,1.0));
-            if(i==Newspeak && (before>=.5)!=(v>=.5))requestedLine.store(selected.load());}
+            if((i==Newspeak || i==RoboMode) && (before>=.5)!=(v>=.5))requestedLine.store(selected.load());}
         return SingleComponentEffect::setParamNormalized(id,v);
     }
     double control(int i) const {return controls[i].load();}
@@ -311,7 +312,7 @@ private:
     void applyParameter(ParamID id,double v) {
         if(!std::isfinite(v))return;v=std::clamp(v,0.0,1.0);
         if(id==1)selectLine(int(v*(lineCount-1)+.5));
-        else if(id>=firstControlID && id<firstControlID+controlCount){int i=int(id-firstControlID);if(i==ReservedControl || i==ReservedThickness)return;double before=controls[i].exchange(v);jv_control(engine,i,v);if(i==Newspeak && (before>=.5)!=(v>=.5))selectLine(selected.load());}
+        else if(id>=firstControlID && id<firstControlID+controlCount){int i=int(id-firstControlID);if(i==ReservedControl || i==ReservedThickness)return;double before=controls[i].exchange(v);jv_control(engine,i,v);if((i==Newspeak || i==RoboMode) && (before>=.5)!=(v>=.5))selectLine(selected.load());}
         else if(id>=4000 && id<4016)jv_bend(engine,int(id-4000),2*v-1);
         else if(id>=4100 && id<4116)jv_mod_wheel(engine,int(id-4100),v);
         else if(id>=100){jv_panic(engine);held.fill(0);}
@@ -320,13 +321,14 @@ private:
         uint32_t v=revision.load();if(v==appliedRevision)return;
         std::unique_lock<std::mutex> lock(mutex,std::try_to_lock);if(!lock)return;
         int old=rt.selected;
-        bool changed=rt.language!=bank.language || rt.lines[old].sung!=bank.lines[old].sung;
+        bool changed=rt.language!=bank.language || rt.lines[old].sung!=bank.lines[old].sung ||
+            (controls[RoboMode].load()>=.5 && rt.lines[old].original!=bank.lines[old].original);
         rt=bank;rt.selected=old;appliedRevision=revision.load();
         if(changed)selectLine(old);
     }
     void selectLine(int line) {
         rt.selected=std::clamp(line,0,lineCount-1);selected.store(rt.selected);
-        jv_text(engine,rt.lines[rt.selected].sung.data(),rt.language);
+        jv_text(engine,(controls[RoboMode].load()>=.5 ? rt.lines[rt.selected].original:rt.lines[rt.selected].sung).data(),rt.language);
     }
     TransportTracker transport;
     jv_engine* engine;
@@ -451,7 +453,7 @@ tresult PLUGIN_API View::attached(void* parent,FIDString type) {
     for(int row=0;row<2;++row){int n=8;const int* indices=row ? secondRow:firstRow;
         for(int col=0;col<n;++col){int i=indices[col];knobs[i]=CreateWindowExW(0,knobClass,L"",WS_CHILD|WS_VISIBLE|WS_TABSTOP,
             24+col*107,row ? 242:126,103,110,window,reinterpret_cast<HMENU>(INT_PTR(2000+i)),module,this);}}
-    control(L"STATIC",L"Lyrics - one line per keyswitch. Up to 13 lines, 128 characters per line.",0,24,367,852,24,0);
+    lyricsHint=control(L"STATIC",L"Lyrics - one line per keyswitch. Up to 13 lines, 128 characters per line.",0,24,367,852,24,0);
     text=control(L"EDIT",L"",ES_MULTILINE|ES_WANTRETURN|ES_AUTOHSCROLL|ES_AUTOVSCROLL|WS_HSCROLL|WS_VSCROLL|WS_TABSTOP,24,395,852,225,1000);
     SendMessageW(text,EM_SETLIMITTEXT,lineCount*256+lineCount*2,0);
     control(L"BUTTON",L"Select cursor line",WS_TABSTOP,24,632,275,32,26);
@@ -476,6 +478,8 @@ void View::refresh() {
     if(SendMessageW(linePick,CB_GETCURSEL,0,0)!=owner.currentLine())SendMessageW(linePick,CB_SETCURSEL,owner.currentLine(),0);
     auto check=[&](HWND h,int i){auto state=owner.control(i)>=.5 ? BST_CHECKED:BST_UNCHECKED;if(SendMessageW(h,BM_GETCHECK,0,0)!=state)SendMessageW(h,BM_SETCHECK,state,0);};
     check(unison,Unison);check(mono,Mono);check(newspeak,Newspeak);check(robo,RoboMode);check(external,ExtInput);
+    int currentRobo=owner.control(RoboMode)>=.5;
+    if(currentRobo!=lastRobo){lastRobo=currentRobo;SetWindowTextW(lyricsHint,currentRobo ? L"Vtrx: connect phonemes with - ; separate syllables with spaces (K-R-AH-F-T V-EH-R-K)." : L"Lyrics - one line per keyswitch. Up to 13 lines, 128 characters per line.");}
     int range=int(std::round(owner.control(PitchBendRange)*10));if(SendMessageW(bendRange,CB_GETCURSEL,0,0)!=range)SendMessageW(bendRange,CB_SETCURSEL,range,0);
     for(int i=0;i<controlCount;++i)if(knobs[i]){double value=owner.control(i);if(value!=lastDrawn[i]){lastDrawn[i]=value;InvalidateRect(knobs[i],nullptr,FALSE);}}
 
@@ -507,5 +511,5 @@ bool InitModule(){return true;}
 bool DeinitModule(){return true;}
 BEGIN_FACTORY_DEF("", "https://github.com/alexknip-producer/JVOICE", "")
 DEF_CLASS2(INLINE_UID_FROM_FUID(voice::classID),PClassInfo::kManyInstances,kVstAudioEffectClass,
-    "JVoice",0,"Instrument|Synth", "0.3.8",kVstVersionString,voice::Plugin::create)
+    "JVoice",0,"Instrument|Synth", "0.3.9",kVstVersionString,voice::Plugin::create)
 END_FACTORY

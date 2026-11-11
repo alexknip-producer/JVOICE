@@ -67,27 +67,7 @@ profile = 'static const struct { uint8_t code; phon_t target; } JV_RU_VOWELS[] =
 for v in vowels:
     profile += f'    {{{v["phoneme"]}, {{{v["F1_Hz"]}, {v["F2_Hz"]}, {v["F3_Hz"]}, PC_VOW, 255, 0, 0, 0, 0, 16, {"PL_RND" if v["rounded"] == "1" else "PL_NONE"}}}}},\n'
 profile += '};\nstatic const struct { uint8_t code; phon_t target; } JV_RU_CONSONANTS[] = {\n'+overrides
-profile += '};\n'
-vtrx = list(csv.DictReader((root / 'vst3/src/VtrxFormants.csv').open(encoding='utf-8')))
-profile += 'static const int16_t JV_VTRX[PH_COUNT][3] = {\n'
-for v in vtrx:
-    assert re.fullmatch(r'PH_[A-Z]+', v['phoneme'])
-    profile += '    ['+v['phoneme']+'] = {'+', '.join(v[f'F{i}_Hz'] for i in range(1,4))+'},\n'
-profile += '};\nstatic uint32_t jv_vtrx_base(uint32_t c) {switch(c) {\n'
-for v in added_consonants:
-    profile += 'case '+v['code']+': return '+v['base']+';\n'
-profile += '''default:return c;}}
-static void jv_vtrx_formants(uint32_t lang, uint32_t code, const phon_t *p, int32_t *f) {
-    if(jv_control_values[23]<.5 || !p->f1)return;
-    uint32_t base=jv_vtrx_base(code);
-    if(lang==LG_RU && code==PH_UH)base=PH_I; /* Russian y is a distinct high vowel. */
-    if(lang==LG_RU && code==PH_E)base=PH_EH;
-    if(!JV_VTRX[base][0])return;
-    const phon_t *ref=&PHON[base];
-    f[0]=JV_VTRX[base][0]+(int32_t)p->f1-ref->f1;
-    f[1]=JV_VTRX[base][1]+(int32_t)p->f2-ref->f2;
-    f[2]=JV_VTRX[base][2]+(int32_t)p->f3-ref->f3;
-}
+profile += '''};
 static const phon_t JV_RU_CH={250,2250,2900,PC_AFF,0,0,0,0,45,16,PL_PAL};
 static const phon_t *jv_phon(uint32_t lang, uint32_t code) {
     if (lang == LG_RU && code == PH_CH) return &JV_RU_CH;
@@ -122,9 +102,6 @@ sing = sing.replace(needle, profile + needle).replace('P = &PHON[c];', 'P = jv_p
 needle = '    if (F) {'
 assert sing.count(needle) == 1
 sing = sing.replace(needle, '    if (k == PC_VOW) jv_smear(lang, tF);\n' + needle)
-needle = '    tbm = P->bwm;'
-assert sing.count(needle)==1
-sing = sing.replace(needle, '    jv_vtrx_formants(lang, c, P, tF);\n'+needle)
 # Keep the firmware's ordinary syllabifier unchanged. Consonant-only tokens
 # take an explicit path before it, separate from normal words.
 needle = 'static uint32_t sy_word(uint32_t lang, const char *w, uint32_t n, uint8_t *out, uint32_t *ns)'
@@ -133,7 +110,9 @@ sing = sing.replace(needle, '#include "WordReaders.h"\nstatic uint32_t jv_word_b
 needle = '    if (lang == LG_JA)\n        return sy_ja(w, n, out, ns);'
 sing = sing.replace(needle, '    if(lang==LG_RU){m=jv_ru_tokens(w,n,tc,tk);uint32_t bare=jv_consonant_word(tc,m,out,ns);return bare ? bare:sy_syl(tc,tk,m,out,ns);}\n    m=jv_bare_tokens(lang,w,n,tc,tk);if(m)return jv_consonant_word(tc,m,out,ns);\n'+needle)
 needle = '/* --------------------------------------------------------------------------------------- the generator --- */'
-sing = sing.replace(needle, '''static uint32_t sy_word(uint32_t lang,const char *w,uint32_t n,uint8_t *out,uint32_t *ns) {
+sing = sing.replace(needle, '''#include "VtrxPhonemes.h"
+static uint32_t sy_word(uint32_t lang,const char *w,uint32_t n,uint8_t *out,uint32_t *ns) {
+    if(jv_control_values && jv_control_values[23]>=.5)return jv_vtrx_word(lang,w,n,out,ns);
     uint32_t count=jv_word_base(lang,w,n,out,ns);
     if(jv_control_values && jv_control_values[20]>=.5){for(uint32_t j=0;j<count;++j)out[j]|=SYB;*ns=count;}
     return count;
@@ -141,7 +120,23 @@ sing = sing.replace(needle, '''static uint32_t sy_word(uint32_t lang,const char 
 ''' + needle)
 needle = '    for (i = 0; i < n; i++)\n        out[i] = e[2u + i];'
 assert sing.count(needle)==1
-sing = sing.replace(needle, needle+'\n    if(jv_control_values[20]>=.5){for(i=0;i<n;++i)out[i]|=SYB;*ns=n;}')
+sing = sing.replace(needle, needle+'\n    if(jv_control_values[20]>=.5 && jv_control_values[23]<.5){for(i=0;i<n;++i)out[i]|=SYB;*ns=n;}')
+# Vtrx reads explicit SC-02 symbols, including numbers and :vowel codes.
+needle = '    if(lang<LG_RU) return sy_norm(s,n,d,max);'
+assert sing.count(needle)==1
+sing = sing.replace(needle, '''    if(jv_control_values && jv_control_values[23]>=.5){
+        uint32_t i,m=0;for(i=0;i<n && s[i] && m+1<max;++i){char c=s[i];
+            if(c>='A' && c<='Z')c+=32;
+            if((c>='a' && c<='z') || (c>='0' && c<='9') || c=='-' || c=='_' || c==':')d[m++]=c;
+        }d[m]=0;return m;
+    }
+''' + needle)
+needle = "(txt[p] >= 'a' && txt[p] <= 'z') || (txt[p] >= 'A' && txt[p] <= 'Z')"
+assert sing.count(needle)==1
+sing = sing.replace(needle, "(jv_control_values && jv_control_values[23]>=.5 && ((txt[p]>='0' && txt[p]<='9') || txt[p]==':')) || " + needle)
+needle = "(txt[q] >= 'A' && txt[q] <= 'Z')))"
+assert sing.count(needle)==1
+sing = sing.replace(needle, "(txt[q] >= 'A' && txt[q] <= 'Z') || (jv_control_values && jv_control_values[23]>=.5 && ((txt[q]>='0' && txt[q]<='9') || txt[q]=='-' || txt[q]==':'))))")
 # Preserve Russian soft/hard separators during normalization.
 sing = sing.replace("(c=='\\''&&lang==LG_GN)", "(c=='\\''&&(lang==LG_GN||lang==LG_RU))")
 # The extension state is copied with each articulation track, never global.
@@ -186,20 +181,6 @@ assert sing.count(needle)==1
 sing = sing.replace(needle, '''        int32_t step=jv_alpha>0 ? (int32_t)lround(d*jv_alpha):(d >> sh)+(d>0 && (d >> sh)==0);
         if(jv_alpha>0 && !step && d)step=d>0 ? 1:-1;
         *a=(int16_t)(*a+step);''')
-# Experimental SC-02-inspired transition: constant-rate movement toward the
-# existing language targets, with no per-syllable randomised formant offsets.
-needle = '    {   /* (V10.40) each syllable its own mouth:'
-assert sing.count(needle)==1
-sing = sing.replace(needle, '    if(jv_control_values[23]<.5) {   /* (V10.40) each syllable its own mouth:')
-needle = '        int32_t step=jv_alpha>0 ? (int32_t)lround(d*jv_alpha):(d >> sh)+(d>0 && (d >> sh)==0);'
-assert sing.count(needle)==1
-sing = sing.replace(needle, '''        if(jv_control_values[23]>=.5){
-            if(j>=3u){*a=x->fq[j-3u];continue;}
-            double v=jv_control_values[21],scale=pow(v<=.5 ? 4.0:10.0,2*v-1);
-            int32_t limit=(int32_t)(40.0/scale+.5);if(limit<1)limit=1;
-            *a=(int16_t)(*a+clamp(d,-limit,limit));continue;
-        }
-''' + needle)
 # 128 Unicode codepoints require at most 512 UTF-8 bytes, plus terminator.
 sing = sing.replace('#define LYR_LEN 64u', '#define LYR_LEN 513u')
 sing = sing.replace('uint8_t to, tl;', 'uint16_t to, tl;')
@@ -223,10 +204,6 @@ sing = sing.replace('static int16_t sy_cx;', 'static JV_TLS int16_t sy_cx;')
 sing = sing.replace('static uint8_t lyb_ok __attribute__((section(".pool")));',
                     'static JV_TLS uint8_t *lyb_ok_ptr;\n#define lyb_ok (*lyb_ok_ptr)')
 formant = (root / 'firmware/src/eng_formant.c').read_text().replace('#include "sing.c"', sing)
-# Keep the excitation stable in Robo mode while retaining Breath/Buzz controls.
-assert formant.count('hum = clamp((127 - p[P_E4]) * 4, 0, 64);') == 1
-formant = formant.replace('hum = clamp((127 - p[P_E4]) * 4, 0, 64);',
-    'hum = jv_control_values[23]>=.5 ? 0 : clamp((127 - p[P_E4]) * 4, 0, 64);')
 formant = re.sub(r'static (int32_t) (fmt_f5)((?:\[[^\]]+\])+)(?: __attribute__\(\(section\("[^"]+"\)\)\))?;', replace_array, formant)
 formant = formant.replace('static int32_t formant_nz = 0x2545F491;',
     'static JV_TLS int32_t *formant_noise;\n#define formant_nz (*formant_noise)\n')
