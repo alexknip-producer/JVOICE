@@ -55,15 +55,16 @@ int main(){
     for(int i=0;i<16;++i){uint32_t len=2;previous.write(&len,4,nullptr);previous.write(const_cast<char*>("la"),len,nullptr);}
     for(int i=0;i<14;++i){double value=.25;previous.write(&value,sizeof value,nullptr);}
     previous.rewind();assert(q->setState(&previous)==kResultOk);
-    for(int i=0;i<14;++i)assert(q->control(i)==(i==ReservedControl ? 0:.25));
+    for(int i=0;i<14;++i)assert(q->control(i)==(i==ReservedControl ? 0:i==PitchBendRange ? 4.0/11:.25));
     assert(q->control(MasterVolume)==controlDefaults[MasterVolume]);
     assert(q->control(ExtGain)==controlDefaults[ExtGain]);
     assert(q->control(ModDepth)==controlDefaults[ModDepth] && q->control(ModRate)==controlDefaults[ModRate]);
     // Projects saved by the removed Vtrx experiment retain their text and controls.
     ResizableMemoryIBStream v8;header[1]=8;v8.write(header,sizeof header,nullptr);
     for(int i=0;i<16;++i){const char* word=i==0 ? "hello":"la";uint32_t len=uint32_t(std::strlen(word));v8.write(&len,4,nullptr);v8.write(const_cast<char*>(word),len,nullptr);}
-    for(int i=0;i<24;++i){double value=i==23 ? 1:controlDefaults[i];v8.write(&value,sizeof value,nullptr);}
+    for(int i=0;i<24;++i){double value=i==23 ? 1:i==PitchBendRange ? 0:controlDefaults[i];v8.write(&value,sizeof value,nullptr);}
     v8.rewind();assert(q->setState(&v8)==kResultOk);assert(std::string(q->snapshot().lines[0].original.data())=="hello");
+    assert(plainControl(PitchBendRange,q->control(PitchBendRange))==2);
     assert(q->control(Mono)==0 && q->control(Smear)==.5);
     // Version 4 gains survive; newly introduced modulation keeps its defaults.
     ResizableMemoryIBStream v4;header[1]=4;v4.write(header,sizeof header,nullptr);
@@ -126,7 +127,9 @@ int main(){
     SendMessageW(bend,CB_SHOWDROPDOWN,TRUE,0);assert(SendMessageW(bend,CB_GETDROPPEDSTATE,0,0));
     SendMessageW(bend,CB_SETCURSEL,7,0);SendMessageW(editor,WM_TIMER,1,0);
     assert(SendMessageW(bend,CB_GETCURSEL,0,0)==7);
-    SendMessageW(editor,WM_COMMAND,MAKEWPARAM(27,CBN_SELCHANGE),0);assert(std::abs(p->control(PitchBendRange)-.7)<1e-9);
+    SendMessageW(editor,WM_COMMAND,MAKEWPARAM(27,CBN_SELCHANGE),0);assert(std::abs(p->control(PitchBendRange)-7.0/11)<1e-9);
+    SendMessageW(bend,CB_SETCURSEL,0,0);SendMessageW(editor,WM_COMMAND,MAKEWPARAM(27,CBN_SELCHANGE),0);
+    assert(plainControl(PitchBendRange,p->control(PitchBendRange))==1);
     SendMessageW(bend,CB_SHOWDROPDOWN,FALSE,0);
     auto direction=GetDlgItem(editor,31);assert(direction && SendMessageW(direction,CB_GETCOUNT,0,0)==3);
     SendMessageW(direction,CB_SHOWDROPDOWN,TRUE,0);SendMessageW(direction,CB_SETCURSEL,2,0);

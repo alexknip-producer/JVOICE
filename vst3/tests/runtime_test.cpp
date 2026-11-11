@@ -32,7 +32,7 @@ int main(){
     assert(std::abs(plainControl(PhonemeGlide,0)-1)<1e-12 && plainControl(PhonemeGlide,.5)==100 && plainControl(PhonemeGlide,1)==1000);
     assert(plainControl(Glide,0)==0 && plainControl(Glide,1)==10);
     assert(plainControl(SpeechRate,1)==600 && plainControl(SpeechRate,controlDefaults[SpeechRate])==100);
-    assert(plainControl(PitchBendRange,0)==2 && plainControl(PitchBendRange,1)==12);
+    assert(plainControl(PitchBendRange,0)==1 && plainControl(PitchBendRange,controlDefaults[PitchBendRange])==2 && plainControl(PitchBendRange,1)==12);
     assert(plainControl(MasterVolume,controlDefaults[MasterVolume])==0);
     assert(plainControl(MasterVolume,0)==-60 && plainControl(MasterVolume,1)==12);
     assert(plainControl(ExtGain,controlDefaults[ExtGain])==0);

@@ -19,6 +19,7 @@ void jv_reset(jv_engine *e)
     for(int k=0;k<NTRK;++k){e->grain[k].bits=(seed^(0x5a39u*(k+1)))&0x7fffu;if(!e->grain[k].bits)e->grain[k].bits=1;}
     e->controls[9]=1; /* eight poly voices until plugin parameters are applied */
     e->controls[12]=72.0/127;
+    e->controls[13]=1.0/11; /* Pitch bend remains +/-2 semitones by default. */
     e->controls[14]=60.0/72; /* Master Volume: 0 dB. */
     e->controls[15]=.5; /* External input gain: 0 dB above the +12 dB calibration. */
     e->controls[16]=.5; /* Wheel fully up: +/-25 cents by default, +/-50 maximum. */
@@ -282,7 +283,7 @@ void jv_render_input(jv_engine *e,const float *input_l,const float *input_r,floa
         int32_t pitch16=clamp((int32_t)floor(played*16),0,2047);
         m.inc = pitch_inc((uint32_t)pitch16);
         int channel=t->p[P_M1AMT]&15;
-        double bend=e->bend[channel]*(2+(int)(e->controls[13]*10+.5));
+        double bend=e->bend[channel]*(1+(int)(e->controls[13]*11+.5));
         double ratio=pow(2.0,(bend+vibrato*e->mod_wheel[channel]+played-pitch16/16.0)/12+e->detune_position[k]*e->controls[7]*40/1200);
         m.fine=(int32_t)((ratio-1)*4096);
         m.inc=(uint32_t)fmin(m.inc*ratio,2147483647.0);
