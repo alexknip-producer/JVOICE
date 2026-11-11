@@ -2,6 +2,7 @@
 #include "TextBank.h"
 #include "VoiceEngine.h"
 #include "VoiceParameters.h"
+#include "FixedRateStream.h"
 #include "pluginterfaces/base/ustring.h"
 #include "public.sdk/source/vst/vstsinglecomponenteffect.h"
 #include "public.sdk/source/main/pluginfactory.h"
@@ -10,6 +11,7 @@
 #include "pluginterfaces/vst/ivstevents.h"
 #include "pluginterfaces/vst/ivstparameterchanges.h"
 #include "pluginterfaces/vst/ivstprocesscontext.h"
+#include "pluginterfaces/vst/ivstmidicontrollers.h"
 #include <atomic>
 #include <cmath>
 #include <mutex>
@@ -22,18 +24,21 @@
 using namespace Steinberg;
 using namespace Steinberg::Vst;
 namespace voice {
+static_assert(controlCount==JV_CONTROL_COUNT,"Plugin and DSP parameter counts must match");
 static const FUID classID(0x82B9CB47,0xC243412D,0x8F8B35EA,0x3DE56001);
+static std::atomic<uint32_t> noiseSerial{0x2545F491u};
 class Plugin;
 #ifdef _WIN32
 class View : public CPluginView {
     Plugin& owner;
-    HWND window=nullptr,language=nullptr,linePick=nullptr,status=nullptr,text=nullptr,unison=nullptr;
+    HWND window=nullptr,language=nullptr,linePick=nullptr,status=nullptr,text=nullptr,unison=nullptr,external=nullptr,bendRange=nullptr;
     HWND knobs[controlCount]{};
     HFONT font=nullptr;
     HINSTANCE module=nullptr;
     bool loading=false;
     int dragging=-1,dragY=0;double dragStart=0;
     uint32_t seenRevision=0;
+    std::array<double,controlCount> lastDrawn{};
     static LRESULT CALLBACK proc(HWND,UINT,WPARAM,LPARAM);
     static LRESULT CALLBACK knobProc(HWND,UINT,WPARAM,LPARAM);
     void refresh();void command(int,int);void paintKnob(HWND,int);
@@ -50,12 +55,12 @@ class VoiceParameter : public RangeParameter {
     int index;
 public:
     explicit VoiceParameter(int i):RangeParameter(STR16(""),firstControlID+i,nullptr,
-        i==Shift ? -12 : i==SpeechRate ? 50 : i==Voices ? 1 : 0,
-        i==Shift ? 12 : i==SpeechRate ? 400 : i==Detune ? 40 : i==Unison ? 1 : i==Voices ? 8 : 100,
-        plainControl(i,controlDefaults[i]),i==Unison ? 1 : i==Voices ? 7 : 0),index(i) {
+        i==Shift ? -12 : i==SpeechRate ? 50 : i==Voices || i==Release ? 1 : i==PitchBendRange ? 2 : 0,
+        i==Shift ? 12 : i==SpeechRate ? 600 : i==Detune ? 40 : i==Unison || i==ExtInput ? 1 : i==Voices ? 8 : i==Release ? 10000 : i==PitchBendRange ? 12 : 100,
+        plainControl(i,controlDefaults[i]),i==Unison || i==ExtInput ? 1 : i==Voices ? 7 : i==PitchBendRange ? 10 : 0),index(i) {
         UString(info.title,128).fromAscii(controlNames[i]);
-        UString(info.units,128).fromAscii(i==Shift ? "st" : i==Detune ? "ct" : i==Voices || i==Unison ? "" : "%");
-        setPrecision(i==Shift || i==Unison || i==Voices ? 0:1);
+        UString(info.units,128).fromAscii(i==Shift ? "st" : i==Detune ? "ct" : i==Release ? "ms" : i==PitchBendRange ? "st" : i==Voices || i==Unison || i==ExtInput ? "" : "%");
+        setPrecision(i==Shift || i==Unison || i==ExtInput || i==Voices || i==Release || i==PitchBendRange ? 0:1);
         info.defaultNormalizedValue=controlDefaults[i];setNormalized(controlDefaults[i]);
     }
     ParamValue toPlain(ParamValue n) const override {return plainControl(index,n);}
@@ -65,7 +70,8 @@ public:
 class Plugin : public SingleComponentEffect, public IMidiMapping {
 public:
     static FUnknown* create(void*) { return static_cast<IComponent*>(new Plugin); }
-    Plugin() : engine(jv_create()) {
+    explicit Plugin(uint32_t seed=0) : engine(jv_create()) {
+        if(engine)jv_seed(engine,seed ? seed : noiseSerial.fetch_add(0x9E3779B9u));
         for(int i=0;i<controlCount;++i)controls[i].store(controlDefaults[i]);
         makeLine("pulsare quasare die sonne der mond die sterne",5,bank.lines[0]);
     }
@@ -81,40 +87,47 @@ public:
         if(!engine)return kOutOfMemory;
         processContextRequirements.needTransportState();
         addAudioOutput(STR16("Stereo output"),SpeakerArr::kStereo);
+        addAudioInput(STR16("Sidechain"),SpeakerArr::kStereo,kAux,0);
         addEventInput(STR16("MIDI input"),16);
         parameters.addParameter(STR16("Text line"),nullptr,lineCount-1,0,ParameterInfo::kCanAutomate,1);
         for(int i=0;i<controlCount;++i)parameters.addParameter(new VoiceParameter(i));
         for(int ch=0;ch<16;++ch) for(int cc : {120,123})
             parameters.addParameter(STR16("MIDI panic"),nullptr,0,0,ParameterInfo::kIsHidden,100+ch*128+cc);
+        for(int ch=0;ch<16;++ch)parameters.addParameter(STR16("Pitch bend"),nullptr,0,.5,ParameterInfo::kIsHidden,4000+ch);
         return kResultOk;
     }
     tresult PLUGIN_API getMidiControllerAssignment(int32 bus,int16 channel,CtrlNumber cc,ParamID& id) override {
+        if(bus==0 && channel>=0 && channel<16 && cc==kPitchBend){id=4000+channel;return kResultOk;}
         if(bus!=0 || channel<0 || channel>=16 || (cc!=120 && cc!=123))return kResultFalse;
         id=100+channel*128+cc;return kResultOk;
     }
-    tresult PLUGIN_API setBusArrangements(SpeakerArrangement*,int32 ni,SpeakerArrangement* out,int32 no) override {
-        return ni==0 && no==1 && out && out[0]==SpeakerArr::kStereo ? kResultOk : kResultFalse;
+    tresult PLUGIN_API setBusArrangements(SpeakerArrangement* in,int32 ni,SpeakerArrangement* out,int32 no) override {
+        if(no!=1 || !out || out[0]!=SpeakerArr::kStereo || ni<0 || ni>1)return kResultFalse;
+        if(ni && (!in || (in[0]!=SpeakerArr::kStereo && in[0]!=SpeakerArr::kMono)))return kResultFalse;
+        if(ni)static_cast<AudioBus*>(audioInputs.at(0).get())->setArrangement(in[0]);
+        return kResultOk;
     }
     tresult PLUGIN_API canProcessSampleSize(int32 size) override {
         return size==kSample32 || size==kSample64 ? kResultTrue : kResultFalse;
     }
     tresult PLUGIN_API setupProcessing(ProcessSetup& s) override {
-        if(s.sampleRate<8000 || s.sampleRate>384000)return kInvalidArgument;
-        return SingleComponentEffect::setupProcessing(s);
+        if(!std::isfinite(s.sampleRate) || s.sampleRate<8000 || s.sampleRate>384000)return kInvalidArgument;
+        stream.reset(s.sampleRate);return SingleComponentEffect::setupProcessing(s);
     }
     tresult PLUGIN_API setActive(TBool active) override {
         if(active) {
-            transportPlaying=false;jv_reset(engine);queueIndex=JV_BLOCK;phase=1;previous[0]=previous[1]=next[0]=next[1]=0;held.fill(0);
+            transportPlaying=false;jv_reset(engine);stream.reset(processSetup.sampleRate);held.fill(0);
             appliedRevision=0;syncBank();selectLine(selected.load());
             for(int i=0;i<controlCount;++i)jv_control(engine,i,controls[i].load());
         } else jv_panic(engine);
         return kResultOk;
     }
     tresult PLUGIN_API setProcessing(TBool state) override {
-        if(!state){transportPlaying=false;jv_panic(engine);queueIndex=JV_BLOCK;phase=1;previous[0]=previous[1]=next[0]=next[1]=0;held.fill(0);}
+        if(!state){transportPlaying=false;jv_panic(engine);stream.reset(processSetup.sampleRate);held.fill(0);}
         return kResultOk;
     }
-    uint32 PLUGIN_API getTailSamples() override { return uint32(processSetup.sampleRate*0.4); }
+    uint32 PLUGIN_API getLatencySamples() override {return FixedRateStream::latency(processSetup.sampleRate);}
+    uint32 PLUGIN_API getTailSamples() override {return uint32_t(processSetup.sampleRate*(.4+2*plainControl(Release,controls[Release].load())/1000));}
     tresult PLUGIN_API process(ProcessData& data) override {
         syncBank();
         if(data.processContext){bool playing=(data.processContext->state & ProcessContext::kPlaying)!=0;
@@ -167,13 +180,18 @@ public:
                 }
                 ++evIndex;has=evIndex<count && events->getEvent(evIndex,ev)==kResultOk;
             }
-            while(phase>=1.0) {
-                previous[0]=next[0];previous[1]=next[1];
-                if(queueIndex>=JV_BLOCK){jv_render_stereo(engine,queue[0],queue[1]);queueIndex=0;}
-                next[0]=queue[0][queueIndex];next[1]=queue[1][queueIndex++];phase-=1;
+            float input[2]{};
+            if(data.numInputs>0 && data.inputs && data.inputs[0].numChannels>0){
+                auto& bus=data.inputs[0];
+                for(int ch=0;ch<2;++ch){int c=std::min(ch,bus.numChannels-1);
+                    if(!(bus.silenceFlags & (uint64(1)<<c))){
+                        if(data.symbolicSampleSize==kSample32 && bus.channelBuffers32 && bus.channelBuffers32[c])input[ch]=bus.channelBuffers32[c][sample];
+                        if(data.symbolicSampleSize==kSample64 && bus.channelBuffers64 && bus.channelBuffers64[c])input[ch]=float(bus.channelBuffers64[c][sample]);
+                    }
+                }
             }
-            float left=float(previous[0]+(next[0]-previous[0])*phase),right=float(previous[1]+(next[1]-previous[1])*phase);
-            phase+=44100.0/processSetup.sampleRate;
+            auto value=stream.tick(input[0],input[1],[&](const float* l,const float* r,float* outL,float* outR){jv_render_input(engine,l,r,outL,outR);});
+            float left=value[0],right=value[1];
             if(data.symbolicSampleSize==kSample32) {
                 data.outputs[0].channelBuffers32[0][sample]=left;
                 data.outputs[0].channelBuffers32[1][sample]=right;
@@ -225,7 +243,8 @@ public:
     void gestureValue(int i,double value) {
         value=std::clamp(value,0.0,1.0);
         if(i==Voices)value=std::round(value*7)/7;
-        if(i==Unison)value=value>=.5 ? 1:0;
+        if(i==Unison || i==ExtInput)value=value>=.5 ? 1:0;
+        if(i==PitchBendRange)value=std::round(value*10)/10;
         setParamNormalized(firstControlID+i,value);performEdit(firstControlID+i,value);
     }
     void gestureEnd(int i){endEdit(firstControlID+i);}
@@ -245,13 +264,16 @@ public:
     }
     uint32_t version() const {return revision.load();}
     int currentLine() const {return selected.load();}
+    tresult PLUGIN_API setComponentState(IBStream* state) override {return setState(state);}
+    tresult PLUGIN_API getEditorState(IBStream* state) override {return getState(state);}
+    tresult PLUGIN_API setEditorState(IBStream* state) override {setState(state);return kResultOk;}
     unsigned syllablePosition(){return jv_position(engine);}
     tresult PLUGIN_API getState(IBStream* stream) override {
         if(!stream)return kInvalidArgument;
         Bank copy=snapshot();
         const uint32_t magic=0x31564A54;
         auto write=[&](const void* p,int n){int32 done=0;return stream->write(const_cast<void*>(p),n,&done)==kResultOk && done==n;};
-        uint32_t values[]={magic,2,uint32_t(copy.language),uint32_t(copy.selected)};
+        uint32_t values[]={magic,3,uint32_t(copy.language),uint32_t(copy.selected)};
         if(!write(values,sizeof values))return kResultFalse;
         for(auto& l:copy.lines) {
             uint32_t len=uint32_t(std::strlen(l.original.data()));
@@ -265,14 +287,15 @@ public:
         Bank copy;
         auto read=[&](void* p,int n){int32 done=0;return stream->read(p,n,&done)==kResultOk && done==n;};
         uint32_t values[4]{};
-        if(!read(values,sizeof values)||values[0]!=0x31564A54||(values[1]!=1 && values[1]!=2)||values[2]<1||values[2]>9||values[3]>15)return kResultFalse;
+        if(!read(values,sizeof values)||values[0]!=0x31564A54||(values[1]<1 || values[1]>3)||values[2]<1||values[2]>9||values[3]>15)return kResultFalse;
         copy.language=int(values[2]);copy.selected=std::min(int(values[3]),lineCount-1);
         for(auto& l:copy.lines) {
             uint32_t len=0;char text[textBytes]{};
             if(!read(&len,4)||len>=textBytes||!read(text,int(len))||!makeLine(std::string_view(text,len),copy.language,l))return kResultFalse;
         }
         auto restored=controlDefaults;
-        if(values[1]==2)for(auto& v:restored)if(!read(&v,sizeof v)||!std::isfinite(v)||v<0||v>1)return kResultFalse;
+        int nControls=values[1]==1 ? 0:values[1]==2 ? 10:controlCount;
+        for(int i=0;i<nControls;++i){auto& v=restored[i];if(!read(&v,sizeof v)||!std::isfinite(v)||v<0||v>1)return kResultFalse;}
         for(int i=0;i<controlCount;++i)setParamNormalized(firstControlID+i,restored[i]);
         {std::lock_guard<std::mutex> lock(mutex);bank=copy;++revision;}
         selected.store(copy.selected);
@@ -285,6 +308,7 @@ private:
         if(!std::isfinite(v))return;v=std::clamp(v,0.0,1.0);
         if(id==1)selectLine(int(v*(lineCount-1)+.5));
         else if(id>=firstControlID && id<firstControlID+controlCount){int i=int(id-firstControlID);controls[i].store(v);jv_control(engine,i,v);}
+        else if(id>=4000 && id<4016)jv_bend(engine,int(id-4000),2*v-1);
         else if(id>=100){jv_panic(engine);held.fill(0);}
     }
     void syncBank() {
@@ -308,7 +332,7 @@ private:
     std::atomic<int> requestedLine{-1};
     std::array<uint8_t,16> held{};
     std::array<std::atomic<double>,controlCount> controls;
-    float queue[2][JV_BLOCK]{},previous[2]{},next[2]{};int queueIndex=JV_BLOCK;double phase=1;
+    FixedRateStream stream;
 };
 
 #ifdef _WIN32
@@ -323,7 +347,7 @@ static std::wstring lineLabel(int row) {
     static const wchar_t* notes[]={L"C",L"C#",L"D",L"D#",L"E",L"F",L"F#",L"G",L"G#",L"A",L"A#",L"B"};
     return std::to_wstring(row+1)+L"  /  "+notes[row%12]+(row==12 ? L"-1":L"-2");
 }
-View::View(Plugin& p):owner(p){rect={0,0,900,720};owner.addRef();}
+View::View(Plugin& p):owner(p){rect={0,0,900,720};lastDrawn.fill(-1);owner.addRef();}
 View::~View(){removed();owner.release();}
 LRESULT CALLBACK View::proc(HWND h,UINT msg,WPARAM w,LPARAM l) {
     auto* self=reinterpret_cast<View*>(GetWindowLongPtrW(h,GWLP_USERDATA));
@@ -341,6 +365,7 @@ LRESULT CALLBACK View::knobProc(HWND h,UINT msg,WPARAM w,LPARAM l) {
     switch(msg) {
     case WM_PAINT:self->paintKnob(h,i);return 0;
     case WM_ERASEBKGND:return 1;
+    case WM_SETFOCUS:case WM_KILLFOCUS:InvalidateRect(h,nullptr,FALSE);return 0;
     case WM_LBUTTONDOWN:
         SetFocus(h);SetCapture(h);self->dragging=i;self->dragY=GET_Y_LPARAM(l);self->dragStart=self->owner.control(i);self->owner.gestureBegin(i);return 0;
     case WM_MOUSEMOVE:
@@ -361,10 +386,11 @@ LRESULT CALLBACK View::knobProc(HWND h,UINT msg,WPARAM w,LPARAM l) {
     return DefWindowProcW(h,msg,w,l);
 }
 void View::paintKnob(HWND h,int i) {
-    PAINTSTRUCT ps{};HDC dc=BeginPaint(h,&ps);RECT r{};GetClientRect(h,&r);FillRect(dc,&r,GetSysColorBrush(COLOR_BTNFACE));
+    PAINTSTRUCT ps{};HDC dc=BeginPaint(h,&ps);RECT r{};GetClientRect(h,&r);
+    HDC screen=dc;HBITMAP bitmap=CreateCompatibleBitmap(screen,r.right,r.bottom);dc=CreateCompatibleDC(screen);auto oldBitmap=SelectObject(dc,bitmap);FillRect(dc,&r,GetSysColorBrush(COLOR_BTNFACE));
     auto oldFont=SelectObject(dc,font);SetBkMode(dc,TRANSPARENT);SetTextColor(dc,RGB(35,45,55));
-    RECT label{0,2,r.right,25};auto title=wide(controlNames[i]);DrawTextW(dc,title.c_str(),-1,&label,DT_CENTER|DT_SINGLELINE);
-    int cx=r.right/2,cy=58;auto pen=CreatePen(PS_SOLID,2,RGB(75,105,125));auto brush=CreateSolidBrush(RGB(245,247,250));
+    RECT label{0,0,r.right,24};auto title=wide(controlNames[i]);DrawTextW(dc,title.c_str(),-1,&label,DT_CENTER|DT_SINGLELINE);
+    int cx=r.right/2,cy=52;auto pen=CreatePen(PS_SOLID,2,RGB(75,105,125));auto brush=CreateSolidBrush(RGB(245,247,250));
     auto oldPen=SelectObject(dc,pen),oldBrush=SelectObject(dc,brush);Ellipse(dc,cx-25,cy-25,cx+25,cy+25);
     double n=owner.control(i),angle=(135+n*270)*3.141592653589793/180;
     MoveToEx(dc,cx,cy,nullptr);LineTo(dc,cx+int(std::cos(angle)*20),cy+int(std::sin(angle)*20));
@@ -373,10 +399,11 @@ void View::paintKnob(HWND h,int i) {
     if(i==Shift)swprintf(value,64,L"%+.0f st",p);
     else if(i==Voices)swprintf(value,64,L"%.0f",p);
     else if(i==Detune)swprintf(value,64,L"%.1f ct",p);
+    else if(i==Release)swprintf(value,64,L"%.0f ms",p);
     else swprintf(value,64,L"%.0f %%",p);
-    RECT number{0,91,r.right,116};DrawTextW(dc,value,-1,&number,DT_CENTER|DT_SINGLELINE);
+    RECT number{0,83,r.right,108};DrawTextW(dc,value,-1,&number,DT_CENTER|DT_SINGLELINE);
     if(GetFocus()==h){RECT focus{2,1,r.right-2,r.bottom-2};DrawFocusRect(dc,&focus);}
-    SelectObject(dc,oldFont);EndPaint(h,&ps);
+    SelectObject(dc,oldFont);BitBlt(screen,0,0,r.right,r.bottom,dc,0,0,SRCCOPY);SelectObject(dc,oldBitmap);DeleteObject(bitmap);DeleteDC(dc);EndPaint(h,&ps);
 }
 tresult PLUGIN_API View::attached(void* parent,FIDString type) {
     if(!parent||window||isPlatformTypeSupported(type)!=kResultTrue)return kResultFalse;
@@ -393,6 +420,10 @@ tresult PLUGIN_API View::attached(void* parent,FIDString type) {
         SendMessageW(h,WM_SETFONT,reinterpret_cast<WPARAM>(font),TRUE);return h;
     };
     control(L"STATIC",L"JVoice",0,24,16,500,26,0);
+    external=control(L"BUTTON",L"Ext. input",BS_AUTOCHECKBOX|WS_TABSTOP,540,12,115,28,28);
+    control(L"STATIC",L"Pitch bend",0,666,17,90,24,0);
+    bendRange=control(L"COMBOBOX",L"",CBS_DROPDOWNLIST|WS_TABSTOP,765,11,112,310,27);
+    for(int st=2;st<=12;++st){auto label=L"+/- "+std::to_wstring(st)+L" st";SendMessageW(bendRange,CB_ADDSTRING,0,reinterpret_cast<LPARAM>(label.c_str()));}
     control(L"STATIC",L"Language",0,24,58,80,24,0);
     language=control(L"COMBOBOX",L"",CBS_DROPDOWNLIST|WS_TABSTOP,105,53,85,280,20);
     for(auto* name:languageNames)SendMessageW(language,CB_ADDSTRING,0,reinterpret_cast<LPARAM>(wide(name).c_str()));
@@ -404,17 +435,17 @@ tresult PLUGIN_API View::attached(void* parent,FIDString type) {
     control(L"BUTTON",L"Restart",WS_TABSTOP,678,52,90,29,22);
     unison=control(L"BUTTON",L"Unison",BS_AUTOCHECKBOX|WS_TABSTOP,790,53,90,28,25);
     control(L"STATIC",L"C-2 to C-1 (MIDI 0-12): select lines 1-13. DAW Play restarts the selected line.",0,24,94,852,24,0);
-    int column=0;
-    for(int i=0;i<controlCount;++i)if(i!=Unison){
-        knobs[i]=CreateWindowExW(0,knobClass,L"",WS_CHILD|WS_VISIBLE|WS_TABSTOP,24+column++*94,132,90,122,
-            window,reinterpret_cast<HMENU>(INT_PTR(2000+i)),module,this);
-    }
-    control(L"STATIC",L"Lyrics - one line per keyswitch. Up to 13 lines, 128 characters per line.",0,24,273,852,24,0);
-    text=control(L"EDIT",L"",ES_MULTILINE|ES_WANTRETURN|ES_AUTOHSCROLL|ES_AUTOVSCROLL|WS_HSCROLL|WS_VSCROLL|WS_TABSTOP,24,305,852,300,1000);
+    const int firstRow[]={SpeechRate,Shift,Resonance,Breath,Buzz,Artic,Release};
+    const int secondRow[]={Image,Detune,SibilanceRandom,Voices};
+    for(int row=0;row<2;++row){int n=row ? 4:7;const int* indices=row ? secondRow:firstRow;
+        for(int col=0;col<n;++col){int i=indices[col];knobs[i]=CreateWindowExW(0,knobClass,L"",WS_CHILD|WS_VISIBLE|WS_TABSTOP,
+            24+col*(row ? 210:120),row ? 242:126,row ? 200:110,110,window,reinterpret_cast<HMENU>(INT_PTR(2000+i)),module,this);}}
+    control(L"STATIC",L"Lyrics - one line per keyswitch. Up to 13 lines, 128 characters per line.",0,24,367,852,24,0);
+    text=control(L"EDIT",L"",ES_MULTILINE|ES_WANTRETURN|ES_AUTOHSCROLL|ES_AUTOVSCROLL|WS_HSCROLL|WS_VSCROLL|WS_TABSTOP,24,395,852,225,1000);
     SendMessageW(text,EM_SETLIMITTEXT,lineCount*256+lineCount*2,0);
-    control(L"BUTTON",L"Select cursor line",WS_TABSTOP,24,620,275,32,26);
-    control(L"STATIC",L"Blank lines count too. Press Enter for a new line.",0,320,626,556,24,0);
-    status=control(L"STATIC",L"",0,24,672,852,26,0);
+    control(L"BUTTON",L"Select cursor line",WS_TABSTOP,24,632,275,32,26);
+    control(L"STATIC",L"Blank lines count too. Press Enter for a new line.",0,320,638,556,24,0);
+    status=control(L"STATIC",L"",0,24,685,852,26,0);
     seenRevision=0;refresh();SetTimer(window,1,80,nullptr);return CPluginView::attached(parent,type);
 }
 tresult PLUGIN_API View::removed() {
@@ -431,9 +462,12 @@ void View::refresh() {
         if(value!=current){DWORD first=0,last=0;SendMessageW(text,EM_GETSEL,reinterpret_cast<WPARAM>(&first),reinterpret_cast<LPARAM>(&last));SetWindowTextW(text,value.c_str());SendMessageW(text,EM_SETSEL,first,last);}
         SendMessageW(language,CB_SETCURSEL,bank.language-1,0);seenRevision=version;loading=false;
     }
-    SendMessageW(linePick,CB_SETCURSEL,owner.currentLine(),0);
-    SendMessageW(unison,BM_SETCHECK,owner.control(Unison)>=.5 ? BST_CHECKED:BST_UNCHECKED,0);
-    for(int i=0;i<controlCount;++i)if(knobs[i])InvalidateRect(knobs[i],nullptr,FALSE);
+    if(SendMessageW(linePick,CB_GETCURSEL,0,0)!=owner.currentLine())SendMessageW(linePick,CB_SETCURSEL,owner.currentLine(),0);
+    auto check=[&](HWND h,int i){auto state=owner.control(i)>=.5 ? BST_CHECKED:BST_UNCHECKED;if(SendMessageW(h,BM_GETCHECK,0,0)!=state)SendMessageW(h,BM_SETCHECK,state,0);};
+    check(unison,Unison);check(external,ExtInput);
+    int range=int(std::round(owner.control(PitchBendRange)*10));if(SendMessageW(bendRange,CB_GETCURSEL,0,0)!=range)SendMessageW(bendRange,CB_SETCURSEL,range,0);
+    for(int i=0;i<controlCount;++i)if(knobs[i]){double value=owner.control(i);if(value!=lastDrawn[i]){lastDrawn[i]=value;InvalidateRect(knobs[i],nullptr,FALSE);}}
+
 }
 void View::command(int id,int notification) {
     if(loading)return;
@@ -442,7 +476,8 @@ void View::command(int id,int notification) {
     else if(id==22)owner.pick(owner.currentLine());
     else if(id==23)owner.pick((owner.currentLine()+lineCount-1)%lineCount);
     else if(id==24)owner.pick((owner.currentLine()+1)%lineCount);
-    else if(id==25){owner.gestureBegin(Unison);owner.gestureValue(Unison,SendMessageW(unison,BM_GETCHECK,0,0)==BST_CHECKED ? 1:0);owner.gestureEnd(Unison);}
+    else if(id==25 || id==28){int i=id==25 ? Unison:ExtInput;HWND h=id==25 ? unison:external;owner.gestureBegin(i);owner.gestureValue(i,SendMessageW(h,BM_GETCHECK,0,0)==BST_CHECKED ? 1:0);owner.gestureEnd(i);}
+    else if(id==27 && notification==CBN_SELCHANGE){owner.gestureBegin(PitchBendRange);owner.gestureValue(PitchBendRange,SendMessageW(bendRange,CB_GETCURSEL,0,0)/10.0);owner.gestureEnd(PitchBendRange);}
     else if(id==26){int row=int(SendMessageW(text,EM_LINEFROMCHAR,WPARAM(-1),0));if(row>=0 && row<lineCount)owner.pick(row);}
     else if(id==1000 && notification==EN_CHANGE){
         int len=GetWindowTextLengthW(text);std::wstring input(size_t(len)+1,L'\0');GetWindowTextW(text,input.data(),len+1);
@@ -459,5 +494,5 @@ bool InitModule(){return true;}
 bool DeinitModule(){return true;}
 BEGIN_FACTORY_DEF("", "https://github.com/alexknip-producer/JVOICE", "")
 DEF_CLASS2(INLINE_UID_FROM_FUID(voice::classID),PClassInfo::kManyInstances,kVstAudioEffectClass,
-    "JVoice",0,"Instrument|Synth", "0.2.1",kVstVersionString,voice::Plugin::create)
+    "JVoice",0,"Instrument|Synth", "0.3.0",kVstVersionString,voice::Plugin::create)
 END_FACTORY

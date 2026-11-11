@@ -16,6 +16,7 @@ for name in ('tables', 'lyrics'):
     subprocess.run([sys.executable, str(root / f'tools/gen_{name}.py'),
                     str(out / f'felucca_{name}.h')], check=True)
 core = (root / 'firmware/src/core.h').read_text()
+core = core.replace('(r - 32u) * 192u / 95u','(r - 32u) * 320u / 95u') # desktop CONS up to 600%
 core = re.sub(r'#define NPART 6\b', '#define NPART 9', core)
 core = core.replace('static track_t trk[NTRK];', 'static JV_TLS track_t *trk;')
 core = core.replace('static song_t song;', 'static JV_TLS song_t *song_ptr;\n#define song (*song_ptr)')
@@ -48,11 +49,18 @@ formant = (root / 'firmware/src/eng_formant.c').read_text().replace('#include "s
 formant = re.sub(r'static (int32_t) (fmt_f5)((?:\[[^\]]+\])+)(?: __attribute__\(\(section\("[^"]+"\)\)\))?;', replace_array, formant)
 formant = formant.replace('static int32_t formant_nz = 0x2545F491;',
     'static JV_TLS int32_t *formant_noise;\n#define formant_nz (*formant_noise)\n')
+# Replace only the periodic excitation; aspiration and frication remain upstream's.
+assert formant.count('x = (lp * gv) >> 15;') == 2
+formant = formant.replace('x = (lp * gv) >> 15;', 'x = ((jv_carrier ? clamp((int32_t)(jv_carrier[i] * 12000.0f), -32768, 32767) : lp) * gv) >> 15;')
+needle='    fres_coef(&r4, (uint32_t)clamp((int32_t)(umul64((uint32_t)clamp(sg->ff'
+assert needle in formant
+formant = formant.replace(needle, '    r4r = (uint32_t)(((uint64_t)r4r * (uint32_t)(65536 + (((int32_t)jv_sibilance_ratio - 65536) * fw >> 15))) >> 16);\n'+needle)
 prefix = '''/* Generated adaptation; upstream copyright and GPL notices follow. */
 #include <stdlib.h>
 #include <string.h>
 #include <math.h>
 #include <stddef.h>
+#include <stdint.h>
 #ifdef _MSC_VER
 #define __builtin_offsetof offsetof
 #endif
@@ -68,6 +76,8 @@ static void str_cpy(char *d, const char *s, unsigned n) {
 #else
 #define JV_TLS _Thread_local
 #endif
+static JV_TLS const float *jv_carrier;
+static JV_TLS uint32_t jv_sibilance_ratio;
 #include "felucca_tables.h"
 '''
 context = '\nstruct jv_engine {\n    track_t tracks[NTRK];\n    song_t song_state;\n'
@@ -77,7 +87,13 @@ context += '''    uint8_t cache_ready;
     int32_t noise;
     uint32_t age;
     int ids[NTRK];
-    double controls[10];
+    double controls[JV_CONTROL_COUNT];
+    double bend[16], bend_target[16];
+    uint32_t noise_seed;
+    voice_t right_voice[NTRK];
+    int32_t right_f5[NTRK][2];
+    float sibilance_position[NTRK];
+    float mix_gain;
     float detune_position[NTRK], pan_position[NTRK], gain[NTRK], pan_current[NTRK];
 };
 static void jv_bind(struct jv_engine *e) {

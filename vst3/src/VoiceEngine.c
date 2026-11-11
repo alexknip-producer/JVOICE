@@ -2,6 +2,7 @@
 #include "VoiceEngine.h"
 #include "engine_generated.inc"
 _Static_assert(CTL == JV_BLOCK, "Desktop block size must match pinned preview");
+_Static_assert(FS == JV_SAMPLE_RATE, "FM-1 DSP must remain at 44100 Hz");
 
 /* Eight independent articulation tracks. Track zero is only the lyric cursor.
  * No shared mutable DSP state survives jv_bind: different plugin instances may
@@ -9,11 +10,14 @@ _Static_assert(CTL == JV_BLOCK, "Desktop block size must match pinned preview");
 /* Track's otherwise unused MIDI CC slot holds the channel for note pairing. */
 void jv_reset(jv_engine *e)
 {
-    memset(e, 0, sizeof *e);
+    uint32_t seed=e->noise_seed ? e->noise_seed : 0x2545F491;
+    memset(e, 0, sizeof *e);e->noise_seed=seed;
     jv_bind(e);
-    formant_nz = 0x2545F491;
+    formant_nz = (int32_t)seed;
     sing_init();
     e->controls[9]=1; /* eight poly voices until plugin parameters are applied */
+    e->controls[12]=72.0/127;
+    e->mix_gain=.7f;
     const preset_t *p = &FORMANT_PRESETS[9]; /* SINGER EN */
     for (int k = 0; k < NTRK; ++k) {
         for (int j = 0; j < 8; ++j) trk[k].p[P_E0+j] = p->e[j];
@@ -29,9 +33,11 @@ jv_engine *jv_create(void)
     return e;
 }
 void jv_destroy(jv_engine *e) { free(e); }
+void jv_seed(jv_engine *e,unsigned seed){e->noise_seed=seed ? seed:1;jv_bind(e);formant_nz=(int32_t)e->noise_seed;}
+void jv_bend(jv_engine *e,int ch,double v){if(ch>=0 && ch<16 && isfinite(v))e->bend_target[ch]=v<-1 ? -1:v>1 ? 1:v;}
 void jv_control(jv_engine *e, int index, double value)
 {
-    if(index<0 || index>=10 || !isfinite(value))return;
+    if(index<0 || index>=JV_CONTROL_COUNT || !isfinite(value))return;
     jv_bind(e);
     value=value<0 ? 0 : value>1 ? 1 : value;
     e->controls[index]=value;
@@ -93,6 +99,9 @@ void jv_note_on(jv_engine *e, int channel, int note, int vel, int chord, int not
         e->pan_position[slot]=unison ? (nv==1 ? 0 : 2.0f*sub/(nv-1)-1) : VP[slot-1];
         e->pan_current[slot]=e->pan_position[slot]*(float)e->controls[6];
         e->gain[slot]=unison ? 1.0f/sqrtf((float)nv) : 1;
+        e->right_voice[slot]=*v;memset(e->right_f5[slot],0,sizeof e->right_f5[slot]);
+        int32_t random=(int32_t)(e->noise_seed ^ age*0x9E3779B9u ^ (uint32_t)slot*0x85EBCA6Bu);
+        e->sibilance_position[slot]=(noise32(&random)>>8)*(2.0f/16777215.0f)-1;
     }
 }
 void jv_note_off(jv_engine *e, int channel, int note, int note_id)
@@ -123,10 +132,15 @@ int jv_active(jv_engine *e)
     return n;
 }
 unsigned jv_position(jv_engine *e){jv_bind(e);return sing[0].nsy;}
-void jv_render_stereo(jv_engine *e, float *left, float *right)
+void jv_render_input(jv_engine *e,const float *input_l,const float *input_r,float *left,float *right)
 {
     jv_bind(e);
     float mix_l[CTL]={0},mix_r[CTL]={0};
+    const float zero[CTL]={0};int external=e->controls[10]>=.5;
+    float sum_gain=0;
+    for(int k=1;k<NTRK;++k)if(trk[k].v[0].active)sum_gain+=e->gain[k];
+    float target_gain=.7f/(sum_gain>1 ? sum_gain:1),previous_gain=e->mix_gain;
+    for(int ch=0;ch<16;++ch)e->bend[ch]+=(e->bend_target[ch]-e->bend[ch])*.2;
     sing_block(&trk[0]); /* silent cursor follows articulation timing between notes */
     for (int k = 1; k < NTRK; ++k) {
         track_t *t = &trk[k];
@@ -135,34 +149,54 @@ void jv_render_stereo(jv_engine *e, float *left, float *right)
         sing_block(t);
         int32_t target = v->gate ? 32700 : 0;
         int32_t amp = v->env_out;
-        /* 5 ms onset; ~200 ms release. Articulation remains upstream's. */
-        int32_t next = v->gate ? amp + (target - amp + 3) / 4 : amp * 956 / 1000;
+        /* 5 ms onset; adjustable upstream release curve. */
+        uint32_t rel=ENV_EXP[(uint32_t)(e->controls[12]*127+.5)];
+        int32_t next = v->gate ? amp + (target - amp + 3) / 4 : amp-(int32_t)(((uint32_t)amp*rel+65535u)>>16);
         if (!v->gate && next < 8) { v->active = 0; continue; }
         vmod_t m = {0};
         m.inc = pitch_inc(v->pitch16);
-        double ratio=pow(2.0,e->detune_position[k]*e->controls[7]*40/1200);
+        double bend=e->bend[t->p[P_M1AMT]&15]*(2+(int)(e->controls[13]*10+.5));
+        double ratio=pow(2.0,bend/12+e->detune_position[k]*e->controls[7]*40/1200);
         m.fine=(int32_t)((ratio-1)*4096);
-        m.inc=(uint32_t)(m.inc*ratio);
-        m.pitch16 = v->pitch16;
+        m.inc=(uint32_t)fmin(m.inc*ratio,2147483647.0);
+        m.pitch16 = clamp(v->pitch16+(int)floor(bend*16+.5),0,2047);
         m.amp0 = amp * v->vel / 127;
         m.amp1 = next * v->vel / 127;
         m.envq15 = next;
         m.shape = 64 << 8;
-        int32_t mono[CTL]={0};
+        jv_sibilance_ratio=(uint32_t)(65536*(1+e->sibilance_position[k]*e->controls[11]*.03));
+        int32_t mono[CTL]={0},mono_r[CTL]={0};voice_t before=*v;
+        int32_t noise_before=formant_nz;
+        jv_carrier=external ? (input_l ? input_l:zero):NULL;
         formant_render(t, v, mono, CTL, &m);
+        if(external){
+            voice_t left_state=*v;int32_t left_f5[2];memcpy(left_f5,fmt_f5[k][0],sizeof left_f5);
+            int32_t noise_after=formant_nz;
+            *v=before;memcpy(v->ph,e->right_voice[k].ph,sizeof v->ph);memcpy(v->s,e->right_voice[k].s,sizeof v->s);v->vjit=e->right_voice[k].vjit;
+            memcpy(fmt_f5[k][0],e->right_f5[k],sizeof e->right_f5[k]);formant_nz=noise_before;
+            jv_carrier=input_r ? input_r:zero;formant_render(t,v,mono_r,CTL,&m);
+            e->right_voice[k]=*v;memcpy(e->right_f5[k],fmt_f5[k][0],sizeof e->right_f5[k]);
+            *v=left_state;memcpy(fmt_f5[k][0],left_f5,sizeof left_f5);formant_nz=noise_after;
+        }else{
+            memcpy(mono_r,mono,sizeof mono);e->right_voice[k]=*v;memcpy(e->right_f5[k],fmt_f5[k][0],sizeof e->right_f5[k]);
+        }
         float pan0=e->pan_current[k],pan1=e->pan_position[k]*(float)e->controls[6];
         for(int i=0;i<CTL;++i) {
-            float pan=pan0+(pan1-pan0)*(i+1)/CTL, x=mono[i]*e->gain[k]/65536.0f;
-            mix_l[i]+=x*(pan>0 ? 1-pan : 1);mix_r[i]+=x*(pan<0 ? 1+pan : 1);
+            float pan=pan0+(pan1-pan0)*(i+1)/CTL, gain=e->gain[k]/65536.0f;
+            mix_l[i]+=mono[i]*gain*(pan>0 ? 1-pan : 1);mix_r[i]+=mono_r[i]*gain*(pan<0 ? 1+pan : 1);
         }
         e->pan_current[k]=pan1;
         v->env_out = next;
     }
     for (int i = 0; i < CTL; ++i) {
-        left[i]=mix_l[i]/(1+fabsf(mix_l[i]));
-        right[i]=mix_r[i]/(1+fabsf(mix_r[i]));
+        float gain=previous_gain+(target_gain-previous_gain)*(i+1)/CTL;
+        left[i]=mix_l[i]*gain;
+        right[i]=mix_r[i]*gain;
     }
+    e->mix_gain=target_gain;
+    jv_carrier=NULL;
 }
+void jv_render_stereo(jv_engine *e,float *left,float *right){jv_render_input(e,NULL,NULL,left,right);}
 
 void jv_render(jv_engine *e, float *out) {
     float left[CTL],right[CTL];jv_render_stereo(e,left,right);

@@ -38,3 +38,10 @@ The SDK validator checks the VST3 ABI and lifecycle. Version 0.2 also tests
 multiline editing, unrestricted language changes, transport restart, automation
 gestures and event points, timbre controls, stereo spread, polyphonic detune
 and 1–8-layer unison.
+
+Version 0.3 adds stereo sidechain carrier input, fixed-rate input/output
+interpolation, release, per-channel pitch bend and sibilance randomization.
+Runtime tests cover state duplication into independent instances, host
+automation handlers, concurrent DSP, and two Win32 editor windows.
+No Studio One installation is bundled; its particular project routing
+requires verification in the user's DAW.
