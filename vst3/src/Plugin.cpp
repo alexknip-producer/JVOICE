@@ -32,7 +32,7 @@ class Plugin;
 #ifdef _WIN32
 class View : public CPluginView {
     Plugin& owner;
-    HWND window=nullptr,language=nullptr,linePick=nullptr,status=nullptr,text=nullptr,unison=nullptr,mono=nullptr,newspeak=nullptr,external=nullptr,bendRange=nullptr,glideDirection=nullptr;
+    HWND window=nullptr,language=nullptr,linePick=nullptr,status=nullptr,text=nullptr,unison=nullptr,mono=nullptr,newspeak=nullptr,external=nullptr,velo=nullptr,bendRange=nullptr,glideDirection=nullptr;
     HWND knobs[controlCount]{};
     HFONT font=nullptr;
     HINSTANCE module=nullptr;
@@ -57,11 +57,11 @@ class VoiceParameter : public RangeParameter {
 public:
     explicit VoiceParameter(int i):RangeParameter(STR16(""),firstControlID+i,nullptr,
         i==PhonemeGlide ? 1 : i==Smear ? -100 : i==ModRate ? .1 : i==MasterVolume ? -60 : i==ExtGain ? -24 : i==Shift ? -12 : i==SpeechRate ? 50 : i==Voices || i==Release ? 1 : i==PitchBendRange ? 1 : 0,
-        i==PhonemeGlide ? 1000 : i==Glide ? 10 : i==GlideDirection ? 2 : i==ModDepth ? 50 : i==ExtGain ? 24 : i==ModRate || i==MasterVolume || i==Shift ? 12 : i==SpeechRate ? 600 : i==Detune ? 40 : i==Unison || i==ExtInput || i==Mono || i==Newspeak ? 1 : i==Voices ? 8 : i==Release ? 10000 : i==PitchBendRange ? 12 : 100,
-        plainControl(i,controlDefaults[i]),i==GlideDirection ? 2 : i==Unison || i==ExtInput || i==Mono || i==Newspeak ? 1 : i==Voices ? 7 : i==PitchBendRange ? 11 : 0),index(i) {
+        i==PhonemeGlide ? 1000 : i==Glide ? 10 : i==GlideDirection ? 2 : i==ModDepth ? 50 : i==ExtGain ? 24 : i==ModRate || i==MasterVolume || i==Shift ? 12 : i==SpeechRate ? 600 : i==Detune ? 40 : i==Unison || i==ExtInput || i==Mono || i==Newspeak || i==Velo ? 1 : i==Voices ? 8 : i==Release ? 10000 : i==PitchBendRange ? 12 : 100,
+        plainControl(i,controlDefaults[i]),i==GlideDirection ? 2 : i==Unison || i==ExtInput || i==Mono || i==Newspeak || i==Velo ? 1 : i==Voices ? 7 : i==PitchBendRange ? 11 : 0),index(i) {
         UString(info.title,128).fromAscii(controlNames[i]);
-        UString(info.units,128).fromAscii(i==Glide ? "s" : i==ModRate ? "Hz" : i==MasterVolume || i==ExtGain ? "dB" : i==Shift ? "st" : i==Detune || i==ModDepth ? "ct" : i==Release ? "ms" : i==PitchBendRange ? "st" : i==GlideDirection ? "" : i==Voices || i==Unison || i==ExtInput || i==Mono || i==Newspeak ? "" : "%");
-        setPrecision(i==Glide ? 2 : i==GlideDirection ? 0 : i==Shift || i==Unison || i==ExtInput || i==Mono || i==Newspeak || i==Voices || i==Release || i==PitchBendRange ? 0:1);
+        UString(info.units,128).fromAscii(i==Glide ? "s" : i==ModRate ? "Hz" : i==MasterVolume || i==ExtGain ? "dB" : i==Shift ? "st" : i==Detune || i==ModDepth ? "ct" : i==Release ? "ms" : i==PitchBendRange ? "st" : i==GlideDirection ? "" : i==Voices || i==Unison || i==ExtInput || i==Mono || i==Newspeak || i==Velo ? "" : "%");
+        setPrecision(i==Glide ? 2 : i==GlideDirection ? 0 : i==Shift || i==Unison || i==ExtInput || i==Mono || i==Newspeak || i==Velo || i==Voices || i==Release || i==PitchBendRange ? 0:1);
         info.defaultNormalizedValue=controlDefaults[i];setNormalized(controlDefaults[i]);
     }
     ParamValue toPlain(ParamValue n) const override {return plainControl(index,n);}
@@ -258,7 +258,7 @@ public:
     void gestureValue(int i,double value) {
         value=std::clamp(value,0.0,1.0);
         if(i==Voices)value=std::round(value*7)/7;
-        if(i==Unison || i==ExtInput || i==Mono || i==Newspeak)value=value>=.5 ? 1:0;
+        if(i==Unison || i==ExtInput || i==Mono || i==Newspeak || i==Velo)value=value>=.5 ? 1:0;
         if(i==PitchBendRange)value=std::round(value*11)/11;
         if(i==GlideDirection)value=std::round(value*2)/2;
         setParamNormalized(firstControlID+i,value);performEdit(firstControlID+i,value);
@@ -289,7 +289,7 @@ public:
         Bank copy=snapshot();
         const uint32_t magic=0x31564A54;
         auto write=[&](const void* p,int n){int32 done=0;return stream->write(const_cast<void*>(p),n,&done)==kResultOk && done==n;};
-        uint32_t values[]={magic,13,uint32_t(copy.language),uint32_t(copy.selected)};
+        uint32_t values[]={magic,14,uint32_t(copy.language),uint32_t(copy.selected)};
         if(!write(values,sizeof values))return kResultFalse;
         for(auto& l:copy.lines) {
             uint32_t len=uint32_t(std::strlen(l.original.data()));
@@ -303,14 +303,14 @@ public:
         Bank copy;
         auto read=[&](void* p,int n){int32 done=0;return stream->read(p,n,&done)==kResultOk && done==n;};
         uint32_t values[4]{};
-        if(!read(values,sizeof values)||values[0]!=0x31564A54||(values[1]<1 || values[1]>13)||values[2]<1||values[2]>9||values[3]>15)return kResultFalse;
+        if(!read(values,sizeof values)||values[0]!=0x31564A54||(values[1]<1 || values[1]>14)||values[2]<1||values[2]>9||values[3]>15)return kResultFalse;
         copy.language=int(values[2]);copy.selected=std::min(int(values[3]),lineCount-1);
         for(auto& l:copy.lines) {
             uint32_t len=0;char text[textBytes]{};
             if(!read(&len,4)||len>=textBytes||!read(text,int(len))||!makeLine(std::string_view(text,len),copy.language,l))return kResultFalse;
         }
         auto restored=controlDefaults;
-        int nControls=values[1]==1 ? 0:values[1]==2 ? 10:values[1]==3 ? 14:values[1]==4 ? 16:values[1]==5 ? 20:values[1]==6 ? 22:values[1]<=8 ? 23:values[1]==9 ? 24:values[1]==10 ? 25:values[1]==11 ? 26:controlCount;
+        int nControls=values[1]==1 ? 0:values[1]==2 ? 10:values[1]==3 ? 14:values[1]==4 ? 16:values[1]==5 ? 20:values[1]==6 ? 22:values[1]<=8 ? 23:values[1]==9 ? 24:values[1]==10 ? 25:values[1]==11 ? 26:values[1]<=13 ? 27:controlCount;
         for(int i=0;i<nControls;++i){auto& v=restored[i];if(!read(&v,sizeof v)||!std::isfinite(v)||v<0||v>1)return kResultFalse;}
         if(values[1]<=12 && nControls>PitchBendRange)restored[PitchBendRange]=(1+std::round(restored[PitchBendRange]*10))/11;
         if(values[1]==8){double retiredVtrx;if(!read(&retiredVtrx,sizeof retiredVtrx)||!std::isfinite(retiredVtrx)||retiredVtrx<0||retiredVtrx>1)return kResultFalse;}
@@ -411,7 +411,7 @@ void View::paintKnob(HWND h,int i) {
     HDC screen=dc;HBITMAP bitmap=CreateCompatibleBitmap(screen,r.right,r.bottom);dc=CreateCompatibleDC(screen);auto oldBitmap=SelectObject(dc,bitmap);FillRect(dc,&r,GetSysColorBrush(COLOR_BTNFACE));
     bool enabled=IsWindowEnabled(h)!=FALSE;
     auto oldFont=SelectObject(dc,font);SetBkMode(dc,TRANSPARENT);SetTextColor(dc,enabled ? RGB(35,45,55):GetSysColor(COLOR_GRAYTEXT));
-    RECT label{0,0,r.right,24};auto title=wide(i==ExtGain ? "Ext. Gain":i==MasterVolume ? "Master Vol":controlNames[i]);DrawTextW(dc,title.c_str(),-1,&label,DT_CENTER|DT_SINGLELINE);
+    RECT label{0,0,r.right,24};auto title=wide(i==ExtGain ? "Ext. Gain":i==MasterVolume ? "Master Vol":i==ModDecouple ? "Mod Dec.":controlNames[i]);DrawTextW(dc,title.c_str(),-1,&label,DT_CENTER|DT_SINGLELINE);
     int cx=r.right/2,cy=52;auto pen=CreatePen(PS_SOLID,2,enabled ? RGB(75,105,125):GetSysColor(COLOR_GRAYTEXT));auto brush=CreateSolidBrush(enabled ? RGB(245,247,250):GetSysColor(COLOR_BTNFACE));
     auto oldPen=SelectObject(dc,pen),oldBrush=SelectObject(dc,brush);Ellipse(dc,cx-25,cy-25,cx+25,cy+25);
     double n=owner.control(i),angle=(135+n*270)*3.141592653589793/180;
@@ -463,11 +463,11 @@ tresult PLUGIN_API View::attached(void* parent,FIDString type) {
     unison=control(L"BUTTON",L"Unison",BS_AUTOCHECKBOX|WS_TABSTOP,732,53,80,28,25);
     mono=control(L"BUTTON",L"Mono",BS_AUTOCHECKBOX|WS_TABSTOP,816,53,70,28,29);
     control(L"STATIC",L"C-2 to C-1 (MIDI 0-12): select lines 1-13. DAW Play / seek restarts the selected line.",0,24,94,852,24,0);
-    const int firstRow[]={SpeechRate,Shift,Smear,Resonance,Breath,Buzz,Grain,Artic,Release};
-    const int secondRow[]={Image,Detune,Voices,Swarm,ModDepth,ModRate,PhonemeGlide,Glide,ExtGain,MasterVolume};
-    for(int row=0;row<2;++row){int n=row ? 10:9;const int* indices=row ? secondRow:firstRow;
+    const int firstRow[]={SpeechRate,Shift,Smear,Resonance,Breath,Buzz,Grain,Artic,Release,PhonemeGlide};
+    const int secondRow[]={Image,Detune,Voices,Swarm,ModDepth,ModRate,ModDecouple,Glide,ExtGain,MasterVolume};
+    for(int row=0;row<2;++row){int n=10;const int* indices=row ? secondRow:firstRow;
         for(int col=0;col<n;++col){int i=indices[col];knobs[i]=CreateWindowExW(0,knobClass,L"",WS_CHILD|WS_VISIBLE|WS_TABSTOP,
-            24+col*(row ? 85:95),row ? 242:126,row ? 81:91,110,window,reinterpret_cast<HMENU>(INT_PTR(2000+i)),module,this);}}
+            24+col*85,row ? 242:126,81,110,window,reinterpret_cast<HMENU>(INT_PTR(2000+i)),module,this);}}
     control(L"STATIC",L"Lyrics - one line per keyswitch. Up to 13 lines, 128 characters per line.",0,24,367,852,24,0);
     text=control(L"EDIT",L"",ES_MULTILINE|ES_WANTRETURN|ES_AUTOHSCROLL|ES_AUTOVSCROLL|WS_HSCROLL|WS_VSCROLL|WS_TABSTOP,24,395,852,225,1000);
     SendMessageW(text,EM_SETLIMITTEXT,lineCount*256+lineCount*2,0);
@@ -475,7 +475,7 @@ tresult PLUGIN_API View::attached(void* parent,FIDString type) {
     control(L"STATIC",L"Glide direction",0,320,638,120,24,0);
     glideDirection=control(L"COMBOBOX",L"",CBS_DROPDOWNLIST|WS_TABSTOP,450,632,130,160,31);
     for(auto* label:{L"Both",L"Up",L"Down"})SendMessageW(glideDirection,CB_ADDSTRING,0,reinterpret_cast<LPARAM>(label));
-    control(L"STATIC",L"Blank lines count too.",0,610,638,260,24,0);
+    velo=control(L"BUTTON",L"Velo",BS_AUTOCHECKBOX|WS_TABSTOP,610,632,90,28,32);
     status=control(L"STATIC",L"",0,24,685,852,26,0);
     seenRevision=0;refresh();SetTimer(window,1,80,nullptr);return CPluginView::attached(parent,type);
 }
@@ -495,7 +495,7 @@ void View::refresh() {
     }
     if(SendMessageW(linePick,CB_GETCURSEL,0,0)!=owner.currentLine())SendMessageW(linePick,CB_SETCURSEL,owner.currentLine(),0);
     auto check=[&](HWND h,int i){auto state=owner.control(i)>=.5 ? BST_CHECKED:BST_UNCHECKED;if(SendMessageW(h,BM_GETCHECK,0,0)!=state)SendMessageW(h,BM_SETCHECK,state,0);};
-    check(unison,Unison);check(mono,Mono);check(newspeak,Newspeak);check(external,ExtInput);
+    check(unison,Unison);check(mono,Mono);check(newspeak,Newspeak);check(external,ExtInput);check(velo,Velo);
     if(knobs[Swarm] && bool(IsWindowEnabled(knobs[Swarm]))!=(owner.control(Unison)>=.5))EnableWindow(knobs[Swarm],owner.control(Unison)>=.5);
     int range=int(std::round(owner.control(PitchBendRange)*11));if(!SendMessageW(bendRange,CB_GETDROPPEDSTATE,0,0) && SendMessageW(bendRange,CB_GETCURSEL,0,0)!=range)SendMessageW(bendRange,CB_SETCURSEL,range,0);
     int direction=int(std::round(owner.control(GlideDirection)*2));
@@ -511,6 +511,7 @@ void View::command(int id,int notification) {
     else if(id==23)owner.pick((owner.currentLine()+lineCount-1)%lineCount);
     else if(id==24)owner.pick((owner.currentLine()+1)%lineCount);
     else if(id==25 || id==28 || id==29){int i=id==25 ? Unison:id==29 ? Mono:ExtInput;HWND h=id==25 ? unison:id==29 ? mono:external;owner.gestureBegin(i);owner.gestureValue(i,SendMessageW(h,BM_GETCHECK,0,0)==BST_CHECKED ? 1:0);owner.gestureEnd(i);}
+    else if(id==32){owner.gestureBegin(Velo);owner.gestureValue(Velo,SendMessageW(velo,BM_GETCHECK,0,0)==BST_CHECKED ? 1:0);owner.gestureEnd(Velo);}
     else if(id==30){owner.gestureBegin(Newspeak);owner.gestureValue(Newspeak,SendMessageW(newspeak,BM_GETCHECK,0,0)==BST_CHECKED ? 1:0);owner.gestureEnd(Newspeak);}
     else if(id==27 && notification==CBN_SELCHANGE){owner.gestureBegin(PitchBendRange);owner.gestureValue(PitchBendRange,SendMessageW(bendRange,CB_GETCURSEL,0,0)/11.0);owner.gestureEnd(PitchBendRange);}
     else if(id==31 && notification==CBN_SELCHANGE){owner.gestureBegin(GlideDirection);owner.gestureValue(GlideDirection,SendMessageW(glideDirection,CB_GETCURSEL,0,0)/2.0);owner.gestureEnd(GlideDirection);}

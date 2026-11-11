@@ -229,19 +229,23 @@ static void str_cpy(char *d, const char *s, unsigned n) {
 static JV_TLS const float *jv_carrier;
 static JV_TLS const float *jv_carrier_gain;
 static JV_TLS const double *jv_control_values;
-typedef struct { uint32_t bits; float mix; } jv_grain_state;
+typedef struct { uint32_t bits; float mix, tail; } jv_grain_state;
 static JV_TLS jv_grain_state *jv_grain;
 /* Change texture smoothly; at zero the original noise remains bit-identical. */
 static inline int32_t jv_grain_noise(int32_t original) {
     float target=(float)jv_control_values[23],m=jv_grain->mix;
-    if(target<=0 && m<0.000001f){jv_grain->mix=0;return original;}
+    if(target<=0 && m<0.000001f){jv_grain->mix=0;jv_grain->tail=0;return original;}
     m+=(target-m)*0.0025f;jv_grain->mix=m;
     uint32_t x=jv_grain->bits;
     x=((x<<1)&0x7fffu)|(((x>>14)^(x>>13))&1u);jv_grain->bits=x ? x:1u;
     /* Dust: denser impulses at low settings, sparse at high settings. The
      * original full-band hiss stays present; only the impulse level fades in. */
-    uint32_t threshold=(uint32_t)(205.0f-193.0f*m);
-    float pulse=(x&1023u)<threshold ? ((x&1024u) ? 50000.0f:-50000.0f):0;
+    float d=1.0f-m;
+    uint32_t threshold=(uint32_t)(6.0f+3271.0f*d*d*d);
+    float pulse=jv_grain->tail*.35f;
+    if((x>>1)<threshold)pulse+=(x&1u) ? 180000.0f:-180000.0f;
+    if(fabsf(pulse)<1.0f)pulse=0;
+    jv_grain->tail=pulse;
     return (int32_t)(original+m*pulse);
 }
 /* +12 dB on external tonal excitation only. Keep headroom in the conversion:
@@ -264,6 +268,7 @@ context += '''    uint8_t cache_ready;
     double controls[JV_CONTROL_COUNT];
     double bend[16], bend_target[16];
     double mod_wheel[16], mod_target[16], mod_phase;
+    double mod_offset[NTRK];
     uint32_t noise_seed;
     jv_grain_state grain[NTRK];
     double glide_from[NTRK], glide_now[NTRK];

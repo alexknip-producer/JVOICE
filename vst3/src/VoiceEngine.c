@@ -151,12 +151,13 @@ void jv_note_on(jv_engine *e, int channel, int note, int vel, int chord, int not
         sing[slot] = sing[0];sing_x[slot] = sing_x[0];sing_io[slot] = sing_io[0];
         memset(fmt_f5[slot], 0, sizeof fmt_f5[slot]);sing_w[slot] = sing_w[0];
         voice_t *v = &t->v[0];memset(v, 0, sizeof *v);
-        v->note = (uint8_t)note;v->vel = (uint8_t)vel;v->active = v->gate = 1;
+        v->note = (uint8_t)note;v->vel = (uint8_t)(e->controls[28]>=.5 ? vel:100);v->active = v->gate = 1;
         v->pitch16 = v->pitch_cur = v->gfrom = note * 16;v->age = age;
         if(unison && sub)v->ph[0]=noise32(&formant_nz); /* decorrelate layered oscillators */
         e->ids[slot] = note_id;t->p[P_M1AMT] = (int16_t)channel;
         e->key_down[slot]=1;
         e->detune_position[slot]=unison ? (nv==1 ? 0 : 2.0f*sub/(nv-1)-1) : VP[slot-1];
+        e->mod_offset[slot]=unison ? (double)sub/nv:fmod((slot-1)*.6180339887498949,1.0);
         e->pan_position[slot]=unison ? (nv==1 ? 0 : 2.0f*sub/(nv-1)-1) : VP[slot-1];
         e->pan_current[slot]=e->pan_position[slot]*(float)e->controls[6];
         e->right_voice[slot]=*v;memset(e->right_f5[slot],0,sizeof e->right_f5[slot]);
@@ -250,7 +251,8 @@ void jv_render_input(jv_engine *e,const float *input_l,const float *input_r,floa
     }
     /* One continuous sine per instance: the wheel scales its depth, never a knob.
      * Native control clock keeps the speed identical at all host sample rates. */
-    double vibrato=sin(e->mod_phase*6.2831853071795864769)*e->controls[16]*.5;
+    double mod_phase=e->mod_phase;
+    double vibrato=sin(mod_phase*6.2831853071795864769)*e->controls[16]*.5;
     e->mod_phase+=(.1+11.9*e->controls[17])*CTL/FS;
     e->mod_phase-=floor(e->mod_phase);
     sing_block(&trk[0]); /* silent cursor follows articulation timing between notes */
@@ -289,7 +291,8 @@ void jv_render_input(jv_engine *e,const float *input_l,const float *input_r,floa
         m.inc = pitch_inc((uint32_t)pitch16);
         int channel=t->p[P_M1AMT]&15;
         double bend=e->bend[channel]*(1+(int)(e->controls[13]*11+.5));
-        double ratio=pow(2.0,(bend+vibrato*e->mod_wheel[channel]+played-pitch16/16.0)/12+e->detune_position[k]*e->controls[7]*40/1200);
+        double voice_vibrato=e->controls[27]>0 ? sin((mod_phase+e->mod_offset[k]*e->controls[27])*6.2831853071795864769)*e->controls[16]*.5:vibrato;
+        double ratio=pow(2.0,(bend+voice_vibrato*e->mod_wheel[channel]+played-pitch16/16.0)/12+e->detune_position[k]*e->controls[7]*40/1200);
         m.fine=(int32_t)((ratio-1)*4096);
         m.inc=(uint32_t)fmin(m.inc*ratio,2147483647.0);
         m.pitch16 = clamp((int)floor((played+bend)*16+.5),0,2047);
