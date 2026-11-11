@@ -35,6 +35,9 @@ int main(){
     assert(plainControl(MasterVolume,0)==-60 && plainControl(MasterVolume,1)==12);
     assert(plainControl(ExtGain,controlDefaults[ExtGain])==0);
     assert(plainControl(ExtGain,0)==-24 && plainControl(ExtGain,1)==24);
+    assert(plainControl(ModDepth,0)==0 && plainControl(ModDepth,1)==50 && plainControl(ModDepth,controlDefaults[ModDepth])==25);
+    assert(std::abs(plainControl(ModRate,controlDefaults[ModRate])-5)<1e-12);
+    assert(plainControl(ModRate,0)==.1 && plainControl(ModRate,1)==12);
     // Copy/paste state must never copy the editor's host handler or any live DSP storage.
     Run a,b,reference;auto* sa=new Spy;auto* sb=new Spy;a.p->setComponentHandler(sa);b.p->setComponentHandler(sb);
     a.p->setDocument("la luna");a.p->setParamNormalized(firstControlID+Shift,.3);
@@ -47,6 +50,19 @@ int main(){
     for(int k=0;k<200;++k){a.render();b.render();reference.render();for(int i=0;i<256;++i){assert(b.l[i]==reference.l[i]);assert(b.r[i]==reference.r[i]);}}
     assert(b.p->control(Shift)==.3 && reference.p->control(Shift)==.3);
     ParamID bendID=0;assert(a.p->getMidiControllerAssignment(0,3,kPitchBend,bendID)==kResultOk && bendID==4003);
+    // CC1 has its own per-channel ID. Moving it must not edit Mod Depth/Rate.
+    Run wheeled,unmodulated;auto* wheelSpy=new Spy;wheeled.p->setComponentHandler(wheelSpy);
+    ParamID wheelID=0;assert(wheeled.p->getMidiControllerAssignment(0,0,kCtrlModWheel,wheelID)==kResultOk && wheelID==4100);
+    assert(wheeled.p->getMidiControllerAssignment(0,16,kCtrlModWheel,wheelID)!=kResultOk);
+    for(auto* run:{&wheeled,&unmodulated}){run->p->setDocument("aaaa");run->start();run->note();}
+    double depth=wheeled.p->control(ModDepth),rate=wheeled.p->control(ModRate);
+    ParameterChanges wheelChanges;int32 wheelQueue=0,wheelPoint=0;wheelChanges.addParameterData(wheelID,wheelQueue)->addPoint(0,1,wheelPoint);
+    wheeled.data.inputParameterChanges=&wheelChanges;wheeled.render();wheeled.data.inputParameterChanges=nullptr;unmodulated.render();
+    double wheelDifference=0;
+    for(int k=0;k<150;++k){wheeled.render();unmodulated.render();for(int i=0;i<256;++i)wheelDifference+=std::abs(wheeled.l[i]-unmodulated.l[i]);}
+    assert(wheelDifference>.01 && wheelSpy->changes==0);
+    assert(wheeled.p->control(ModDepth)==depth && wheeled.p->control(ModRate)==rate);
+    wheelSpy->release();
     // Same cloned states processed concurrently must remain independent.
     auto future=std::async(std::launch::async,[&](){std::vector<float> samples;for(int k=0;k<40;++k){b.render();samples.insert(samples.end(),b.l,b.l+256);}return samples;});
     std::vector<float> expected;for(int k=0;k<40;++k){reference.render();expected.insert(expected.end(),reference.l,reference.l+256);}assert(future.get()==expected);
@@ -136,7 +152,40 @@ int main(){
     for(int k=0;k<100;++k){jv_render(e,ol);jv_render(other,orr);for(int i=0;i<JV_BLOCK;++i)assert(ol[i]==orr[i]);}
     jv_control(e,PitchBendRange,1);jv_bend(e,1,1);double bendDifference=0;
     for(int k=0;k<100;++k){jv_render(e,ol);jv_render(other,orr);for(int i=0;i<JV_BLOCK;++i)bendDifference+=std::abs(ol[i]-orr[i]);}assert(bendDifference>.01);
+    // Wheel zero and a different MIDI channel leave the carrier bit-identical.
+    jv_reset(e);jv_reset(other);
+    for(auto* engine:{e,other}){jv_control(engine,Buzz,1);jv_control(engine,Breath,0);jv_text(engine,"aaaa",2);jv_note_on(engine,2,69,100,0,1);}
+    jv_control(e,ModDepth,1);jv_control(e,ModRate,1);
+    for(int k=0;k<100;++k){jv_render(e,ol);jv_render(other,orr);for(int i=0;i<JV_BLOCK;++i)assert(ol[i]==orr[i]);}
+    jv_mod_wheel(e,3,1);
+    for(int k=0;k<100;++k){jv_render(e,ol);jv_render(other,orr);for(int i=0;i<JV_BLOCK;++i)assert(ol[i]==orr[i]);}
+    jv_mod_wheel(e,2,1);double modulationDifference=0;
+    for(int k=0;k<200;++k){jv_render(e,ol);jv_render(other,orr);for(int i=0;i<JV_BLOCK;++i){assert(std::isfinite(ol[i]));modulationDifference+=std::abs(ol[i]-orr[i]);}}assert(modulationDifference>.01);
+    // Depth zero disables modulation even with the wheel fully raised.
+    jv_reset(e);jv_reset(other);
+    for(auto* engine:{e,other}){jv_control(engine,Buzz,1);jv_control(engine,Breath,0);jv_control(engine,ModDepth,0);jv_text(engine,"aaaa",2);jv_note_on(engine,0,69,100,0,1);}
+    jv_mod_wheel(e,0,1);
+    for(int k=0;k<100;++k){jv_render(e,ol);jv_render(other,orr);for(int i=0;i<JV_BLOCK;++i)assert(ol[i]==orr[i]);}
+    // Rate changes the sound while both notes receive the same full wheel.
+    for(auto* engine:{e,other}){jv_reset(engine);jv_control(engine,Buzz,1);jv_control(engine,Breath,0);jv_text(engine,"aaaa",2);jv_note_on(engine,0,69,100,0,1);jv_mod_wheel(engine,0,1);}
+    jv_control(e,ModRate,0);jv_control(other,ModRate,1);modulationDifference=0;
+    for(int k=0;k<200;++k){jv_render(e,ol);jv_render(other,orr);for(int i=0;i<JV_BLOCK;++i)modulationDifference+=std::abs(ol[i]-orr[i]);}assert(modulationDifference>.01);
+    // Mono cuts previous release tails; old Note Off cannot release the new note.
+    jv_reset(e);jv_text(e,"la luna",2);jv_control(e,Mono,1);jv_control(e,Release,1);
+    jv_note_on(e,0,60,100,0,1);for(int k=0;k<20;++k)jv_render(e,ol);jv_note_off(e,0,60,1);assert(jv_active(e)==1);
+    jv_note_on(e,0,62,100,0,2);assert(jv_active(e)==1);jv_control(e,Release,0);jv_note_off(e,0,60,1);
+    for(int k=0;k<100;++k)jv_render(e,ol);assert(jv_active(e)==1);
+    jv_note_on(e,0,65,100,1,3);assert(jv_active(e)==1);jv_note_off(e,0,62,2);
+    for(int k=0;k<100;++k)jv_render(e,ol);assert(jv_active(e)==1);
+    // Enabling Mono during polyphonic release retains just the latest note.
+    jv_reset(e);jv_text(e,"la",2);for(int n=0;n<3;++n)jv_note_on(e,0,60+n,100,n>0,n);assert(jv_active(e)==3);
+    jv_control(e,Mono,1);assert(jv_active(e)==1);
+    // With Unison, Mono keeps one complete stack, not one oscillator.
+    jv_reset(e);jv_text(e,"la",2);jv_control(e,Mono,1);jv_control(e,Unison,1);jv_control(e,Voices,3.0/7);jv_control(e,Release,1);
+    jv_note_on(e,0,60,100,0,1);assert(jv_active(e)==4);jv_note_off(e,0,60,1);
+    jv_note_on(e,0,62,100,0,2);assert(jv_active(e)==4);jv_control(e,Release,0);jv_note_off(e,0,60,1);
+    for(int k=0;k<100;++k)jv_render(e,ol);assert(jv_active(e)==4);
     jv_destroy(other);
     jv_destroy(e);
-    std::cout<<"PASS: instance isolation, fixed clock, stereo carrier, retained hiss, release, linear polyphony and manual master without note-induced ducking\n";
+    std::cout<<"PASS: instance isolation, fixed clock, stereo carrier, release, linear manual gain, per-channel CC1 sine vibrato and independent depth/rate\n";
 }

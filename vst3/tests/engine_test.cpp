@@ -11,6 +11,9 @@ int main() {
     assert(voice::makeLine(u8"Привет, ёжик! Щука и любовь",4,line));
     assert(std::string(line.original.data()) == u8"Привет, ёжик! Щука и любовь");
     assert(std::string(line.sung.data()) == "privet, yozhik! shchuka i lyubov");
+    assert(voice::makeLine(u8"И Ы Е Э вечер эхо",4,line));
+    assert(std::string(line.sung.data()) == "i y e eh vecher ehkho");
+    assert(voice::makeLine(u8"Эхо",5,line));assert(std::string(line.sung.data())=="ekho");
     assert(voice::makeLine(u8"Über schöne Grüße",5,line));
     assert(std::string(line.sung.data()) == "ueber schoene gruesse");
     assert(voice::makeLine(u8"Été français",6,line));

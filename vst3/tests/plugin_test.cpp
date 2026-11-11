@@ -35,7 +35,7 @@ int main(){
         if(i==ReservedControl)continue;
         ParameterInfo info{};assert(p->getParameterInfoByTag(firstControlID+i,info)==kResultOk);
         assert(info.flags & ParameterInfo::kCanAutomate);
-        p->gestureBegin(i);p->gestureValue(i,i==Voices ? 1:i==Unison || i==ExtInput ? 0:.5);p->gestureEnd(i);
+        p->gestureBegin(i);p->gestureValue(i,i==Voices ? 1:i==Unison || i==ExtInput || i==Mono ? 0:.5);p->gestureEnd(i);
     }
     assert(spy->begins>=controlCount-1 && spy->edits>=controlCount-1 && spy->begins==spy->ends);
     ParameterInfo retired{};assert(p->getParameterInfoByTag(firstControlID+ReservedControl,retired)!=kResultOk);
@@ -58,6 +58,15 @@ int main(){
     for(int i=0;i<14;++i)assert(q->control(i)==(i==ReservedControl ? 0:.25));
     assert(q->control(MasterVolume)==controlDefaults[MasterVolume]);
     assert(q->control(ExtGain)==controlDefaults[ExtGain]);
+    assert(q->control(ModDepth)==controlDefaults[ModDepth] && q->control(ModRate)==controlDefaults[ModRate]);
+    assert(q->control(Mono)==0 && q->control(Smear)==.5);
+    // Version 4 gains survive; newly introduced modulation keeps its defaults.
+    ResizableMemoryIBStream v4;header[1]=4;v4.write(header,sizeof header,nullptr);
+    for(int i=0;i<16;++i){uint32_t len=2;v4.write(&len,4,nullptr);v4.write(const_cast<char*>("la"),len,nullptr);}
+    for(int i=0;i<16;++i){double value=.25;v4.write(&value,sizeof value,nullptr);}
+    v4.rewind();assert(q->setState(&v4)==kResultOk);
+    assert(q->control(MasterVolume)==.25 && q->control(ExtGain)==.25);
+    assert(q->control(ModDepth)==controlDefaults[ModDepth] && q->control(ModRate)==controlDefaults[ModRate]);
     assert(p->setActive(true)==kResultOk);assert(p->setProcessing(true)==kResultOk);
     float left[256]{},right[256]{};float* channels[]={left,right};AudioBusBuffers output{};
     output.numChannels=2;output.channelBuffers32=channels;EventList events;
@@ -73,9 +82,9 @@ int main(){
     p->process(data);assert(p->syllablePosition()==1); // no reset on every playing block
     context.state=0;p->process(data);context.state=ProcessContext::kPlaying;note.noteOn.noteId=4;events.addEvent(note);p->process(data);assert(p->syllablePosition()==1);events.clear();
     ParameterChanges automation;
-    for(int i=0;i<controlCount;++i){int32 qi=0,pi=0;auto id=firstControlID+i;auto* queue=automation.addParameterData(id,qi);queue->addPoint(100,i==Unison || i==ExtInput ? 0:i==Voices ? 1:.7,pi);}
+    for(int i=0;i<controlCount;++i){int32 qi=0,pi=0;auto id=firstControlID+i;auto* queue=automation.addParameterData(id,qi);queue->addPoint(100,i==Unison || i==ExtInput || i==Mono ? 0:i==Voices ? 1:.7,pi);}
     data.inputParameterChanges=&automation;p->process(data);data.inputParameterChanges=nullptr;
-    for(int i=0;i<controlCount;++i)assert(std::abs(p->control(i)-(i==Unison || i==ExtInput || i==ReservedControl ? 0:i==Voices ? 1:.7))<1e-9);
+    for(int i=0;i<controlCount;++i)assert(std::abs(p->control(i)-(i==Unison || i==ExtInput || i==Mono || i==ReservedControl ? 0:i==Voices ? 1:.7))<1e-9);
     double energy=0;for(int b=0;b<40;++b){p->process(data);for(float x:left){assert(std::isfinite(x));energy+=x*x;}}assert(energy>.01);
     for(int id=1;id<=4;++id){Event off{};off.type=Event::kNoteOffEvent;off.noteOff.pitch=60;off.noteOff.noteId=id;events.addEvent(off);}
     p->process(data);events.clear();for(int b=0;b<400;++b)p->process(data);for(float x:left)assert(x==0);
@@ -96,9 +105,10 @@ int main(){
     auto language=GetDlgItem(editor,20);SendMessageW(language,CB_SETCURSEL,1,0);
     SendMessageW(editor,WM_COMMAND,MAKEWPARAM(20,CBN_SELCHANGE),0);assert(p->snapshot().language==2);
     assert(std::string(p->snapshot().lines[0].original.data())==u8"Проверка русского текста");
-    for(int i=0;i<controlCount;++i)if(i!=Unison && i!=ExtInput && i!=PitchBendRange && i!=ReservedControl){auto knob=GetDlgItem(editor,2000+i);assert(knob);SendMessageW(knob,WM_KEYDOWN,VK_RIGHT,0);}
+    for(int i=0;i<controlCount;++i)if(i!=Unison && i!=ExtInput && i!=Mono && i!=PitchBendRange && i!=ReservedControl){auto knob=GetDlgItem(editor,2000+i);assert(knob);SendMessageW(knob,WM_KEYDOWN,VK_RIGHT,0);}
     assert(!GetDlgItem(editor,2000+ReservedControl));
     auto toggle=GetDlgItem(editor,25);SendMessageW(toggle,BM_SETCHECK,BST_CHECKED,0);SendMessageW(editor,WM_COMMAND,MAKEWPARAM(25,BN_CLICKED),0);assert(p->control(Unison)==1);
+    auto monoToggle=GetDlgItem(editor,29);assert(monoToggle);SendMessageW(monoToggle,BM_SETCHECK,BST_CHECKED,0);SendMessageW(editor,WM_COMMAND,MAKEWPARAM(29,BN_CLICKED),0);assert(p->control(Mono)==1);
     ShowWindow(parent,SW_SHOW);UpdateWindow(parent);MSG msg{};
     while(PeekMessageW(&msg,nullptr,0,0,PM_REMOVE)){TranslateMessage(&msg);DispatchMessageW(&msg);}Sleep(300);
     HDC dc=GetDC(editor),mem=CreateCompatibleDC(dc);HBITMAP bmp=CreateCompatibleBitmap(dc,900,720);auto oldBmp=SelectObject(mem,bmp);

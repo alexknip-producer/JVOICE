@@ -54,3 +54,14 @@ The experimental frication randomization has been removed from the DSP, editor
 and host parameter list; its old parameter ID is retired without renumbering.
 Ext. Input Gain (-24..+24 dB, default 0 dB) adjusts only the tonal input, with
 a fixed +12 dB calibration relative to 0.3.0 at the new zero position.
+
+Version 0.3.2 adds CC1 sine vibrato with independent Mod Depth (0..50 cents,
+default 25) and Mod Rate (0.1..12 Hz, default 5). Tests cover CC1 routing,
+channel isolation, zero-wheel/depth bypass, audible modulation/rate changes,
+wheel input leaving knobs and host edit gestures untouched, and v4 migration.
+Mono replaces the previous note including release tails, or one complete unison
+stack. Tests cover retrigger, chord priority, old Note Off and enabling Mono live.
+Russian-only vowel targets come from src/RussianVowels.csv. A dedicated phonetics
+test checks tokenization, held formants and unchanged profiles for other languages.
+Smear morphs vowel targets along A-I-E-A-O-U before native coarticulation;
+centre is an exact bypass. Tests check held U -> A -> U without a new note.

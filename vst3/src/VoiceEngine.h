@@ -3,13 +3,14 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
-enum { JV_BLOCK = 64, JV_SAMPLE_RATE = 44100, JV_CONTROL_COUNT = 16 };
+enum { JV_BLOCK = 64, JV_SAMPLE_RATE = 44100, JV_CONTROL_COUNT = 20 };
 typedef struct jv_engine jv_engine;
 jv_engine *jv_create(void);
 void jv_destroy(jv_engine *);
 void jv_reset(jv_engine *);
 void jv_seed(jv_engine *, unsigned seed);
 void jv_bend(jv_engine *, int channel, double bipolar);
+void jv_mod_wheel(jv_engine *, int channel, double normalized);
 void jv_text(jv_engine *, const char *utf8, int language);
 /* index: CONS rank, SHIFT, Q, BREATH, BUZZ, ARTIC; value normalized 0..1. */
 void jv_control(jv_engine *, int index, double value);

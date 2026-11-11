@@ -19,6 +19,9 @@ void jv_reset(jv_engine *e)
     e->controls[12]=72.0/127;
     e->controls[14]=60.0/72; /* Master Volume: 0 dB. */
     e->controls[15]=.5; /* External input gain: 0 dB above the +12 dB calibration. */
+    e->controls[16]=.5; /* Wheel fully up: +/-25 cents by default, +/-50 maximum. */
+    e->controls[17]=49.0/119; /* 5 Hz sine LFO. */
+    e->controls[19]=.5; /* Smear centre leaves each vowel unchanged. */
     e->mix_gain=.7f;
     e->external_gain=1;
     const preset_t *p = &FORMANT_PRESETS[9]; /* SINGER EN */
@@ -38,6 +41,7 @@ jv_engine *jv_create(void)
 void jv_destroy(jv_engine *e) { free(e); }
 void jv_seed(jv_engine *e,unsigned seed){e->noise_seed=seed ? seed:1;jv_bind(e);formant_nz=(int32_t)e->noise_seed;}
 void jv_bend(jv_engine *e,int ch,double v){if(ch>=0 && ch<16 && isfinite(v))e->bend_target[ch]=v<-1 ? -1:v>1 ? 1:v;}
+void jv_mod_wheel(jv_engine *e,int ch,double v){if(ch>=0 && ch<16 && isfinite(v))e->mod_target[ch]=v<0 ? 0:v>1 ? 1:v;}
 void jv_control(jv_engine *e, int index, double value)
 {
     if(index<0 || index>=JV_CONTROL_COUNT || index==11 || !isfinite(value))return;
@@ -45,6 +49,11 @@ void jv_control(jv_engine *e, int index, double value)
     value=value<0 ? 0 : value>1 ? 1 : value;
     e->controls[index]=value;
     if(index==9){int cap=1+(int)(value*7+.5);for(int k=cap+1;k<NTRK;++k)trk[k].v[0].active=trk[k].v[0].gate=0;}
+    if(index==18 && value>=.5){
+        uint32_t newest=0;
+        for(int k=1;k<NTRK;++k)if(trk[k].v[0].active && trk[k].v[0].age>newest)newest=trk[k].v[0].age;
+        for(int k=1;k<NTRK;++k)if(trk[k].v[0].age!=newest)trk[k].v[0].active=trk[k].v[0].gate=0;
+    }
     if(index>=6)return;
     int param, raw=(int)(value*127+.5);
     switch(index) {
@@ -70,6 +79,7 @@ void jv_text(jv_engine *e, const char *s, int lang)
 void jv_note_on(jv_engine *e, int channel, int note, int vel, int chord, int note_id)
 {
     jv_bind(e);
+    if(e->controls[18]>=.5)jv_panic(e); /* New note replaces the old note and its release, including unison layers. */
 
     if (!chord || !sing[0].live) {
         trk[0].v[0].active = trk[0].v[0].gate = 1;
@@ -143,7 +153,16 @@ void jv_render_input(jv_engine *e,const float *input_l,const float *input_r,floa
     for(int i=0;i<CTL;++i)carrier_gain[i]=e->external_gain+(external_target-e->external_gain)*(i+1)/CTL;
     jv_carrier_gain=carrier_gain;
     e->external_gain=external_target;
-    for(int ch=0;ch<16;++ch)e->bend[ch]+=(e->bend_target[ch]-e->bend[ch])*.2;
+    for(int ch=0;ch<16;++ch){
+        e->bend[ch]+=(e->bend_target[ch]-e->bend[ch])*.2;
+        e->mod_wheel[ch]+=(e->mod_target[ch]-e->mod_wheel[ch])*.2;
+        if(fabs(e->mod_wheel[ch]-e->mod_target[ch])<1e-9)e->mod_wheel[ch]=e->mod_target[ch];
+    }
+    /* One continuous sine per instance: the wheel scales its depth, never a knob.
+     * Native control clock keeps the speed identical at all host sample rates. */
+    double vibrato=sin(e->mod_phase*6.2831853071795864769)*e->controls[16]*.5;
+    e->mod_phase+=(.1+11.9*e->controls[17])*CTL/FS;
+    e->mod_phase-=floor(e->mod_phase);
     sing_block(&trk[0]); /* silent cursor follows articulation timing between notes */
     for (int k = 1; k < NTRK; ++k) {
         track_t *t = &trk[k];
@@ -158,8 +177,9 @@ void jv_render_input(jv_engine *e,const float *input_l,const float *input_r,floa
         if (!v->gate && next < 8) { v->active = 0; continue; }
         vmod_t m = {0};
         m.inc = pitch_inc(v->pitch16);
-        double bend=e->bend[t->p[P_M1AMT]&15]*(2+(int)(e->controls[13]*10+.5));
-        double ratio=pow(2.0,bend/12+e->detune_position[k]*e->controls[7]*40/1200);
+        int channel=t->p[P_M1AMT]&15;
+        double bend=e->bend[channel]*(2+(int)(e->controls[13]*10+.5));
+        double ratio=pow(2.0,(bend+vibrato*e->mod_wheel[channel])/12+e->detune_position[k]*e->controls[7]*40/1200);
         m.fine=(int32_t)((ratio-1)*4096);
         m.inc=(uint32_t)fmin(m.inc*ratio,2147483647.0);
         m.pitch16 = clamp(v->pitch16+(int)floor(bend*16+.5),0,2047);

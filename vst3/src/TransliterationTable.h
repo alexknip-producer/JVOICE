@@ -2,6 +2,8 @@
  * Russian mapping from preview web/editor.html, lyricText().
  * Kept separate so pronunciation can be adjusted without touching the DSP.
  * Both cases use these same replacements. Empty entries drop hard/soft signs.
+ * RU overrides э -> eh in TextBank.h to distinguish it from е -> e.
+ * Russian vowel targets are editable in RussianVowels.csv.
  */
 #pragma once
 #include <array>
