@@ -29,6 +29,8 @@ struct Run {
     ~Run(){p->setProcessing(false);p->setActive(false);p->terminate();p->release();}
 };
 int main(){
+    assert(std::abs(plainControl(PhonemeGlide,0)-1)<1e-12 && plainControl(PhonemeGlide,.5)==100 && plainControl(PhonemeGlide,1)==1000);
+    assert(plainControl(Glide,0)==0 && plainControl(Glide,1)==10);
     assert(plainControl(SpeechRate,1)==600 && plainControl(SpeechRate,controlDefaults[SpeechRate])==100);
     assert(plainControl(PitchBendRange,0)==2 && plainControl(PitchBendRange,1)==12);
     assert(plainControl(MasterVolume,controlDefaults[MasterVolume])==0);

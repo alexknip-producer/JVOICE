@@ -79,9 +79,39 @@ void jv_text(jv_engine *e, const char *s, int lang)
     memset(&sing_w[0], 0, sizeof sing_w[0]);
     memset(&sing_io[0], 0, sizeof sing_io[0]);
 }
+/* Snapshot the preceding chord before allocating the next one. Simultaneous
+ * note-ons choose distinct nearest prior pitches where possible. */
+static double jv_glide_start(jv_engine *e,int channel,int note,int chord)
+{
+    if(channel<0 || channel>=16)return note;
+    if(!chord || !e->glide_epoch)++e->glide_epoch;
+    if(e->glide_group[channel]!=e->glide_epoch){
+        e->glide_group[channel]=e->glide_epoch;
+        e->glide_source_count[channel]=e->glide_source_used[channel]=0;
+        uint32_t ages[8];int count=0;
+        for(int k=1;k<NTRK && count<8;++k){voice_t *v=&trk[k].v[0];
+            if(!v->active || trk[k].p[P_M1AMT]!=channel)continue;
+            int duplicate=0;for(int j=0;j<count;++j)if(ages[j]==v->age)duplicate=1;
+            if(!duplicate){ages[count]=v->age;e->glide_sources[channel][count++]=e->glide_now[k];}
+        }
+        if(!count && e->glide_last_valid[channel])e->glide_sources[channel][count++]=e->glide_last[channel];
+        e->glide_source_count[channel]=(uint8_t)count;
+    }
+    int count=e->glide_source_count[channel],best=-1;double distance=1e9;
+    for(int pass=0;pass<2 && best<0;++pass)for(int i=0;i<count;++i){
+        if(!pass && (e->glide_source_used[channel]&(1u<<i)))continue;
+        double d=fabs(e->glide_sources[channel][i]-note);
+        if(d<distance){distance=d;best=i;}
+    }
+    double start=best<0 ? note:e->glide_sources[channel][best];
+    if(best>=0)e->glide_source_used[channel]|=(uint8_t)(1u<<best);
+    e->glide_last[channel]=note;e->glide_last_valid[channel]=1;
+    return start;
+}
 void jv_note_on(jv_engine *e, int channel, int note, int vel, int chord, int note_id)
 {
     jv_bind(e);
+    double start_pitch=jv_glide_start(e,channel,note,chord);
     if(e->controls[18]>=.5){
         /* Replace the old stack, then remove the output discontinuity over 3 ms. */
         if(jv_active(e) || e->declick_remaining)e->declick_pending=1;
@@ -124,6 +154,15 @@ void jv_note_on(jv_engine *e, int channel, int note, int vel, int chord, int not
         e->right_voice[slot]=*v;memset(e->right_f5[slot],0,sizeof e->right_f5[slot]);
         e->lateral_hold[slot]=0;
         e->envelope[slot]=0;
+        e->glide_from[slot]=e->glide_now[slot]=start_pitch;
+        e->glide_elapsed[slot]=0;
+        double seconds=e->controls[24]*e->controls[24]*10.0;
+        if(unison && nv>1 && e->controls[25]>0){
+            double position=2.0*sub/(nv-1)-1.0;
+            seconds=fmin(10.0,seconds*pow(4.0,position*e->controls[25]));
+        }
+        e->glide_duration[slot]=(uint32_t)(seconds*FS+.5);
+        if(!e->glide_duration[slot])e->glide_now[slot]=note;
     }
 }
 void jv_note_off(jv_engine *e, int channel, int note, int note_id)
@@ -152,6 +191,8 @@ void jv_panic(jv_engine *e)
     for (int k = 1; k < NTRK; ++k) memset(trk[k].v, 0, sizeof trk[k].v);
     e->declick_pending=e->declick_remaining=0;
     e->last_output[0]=e->last_output[1]=0;
+    memset(e->glide_last_valid,0,sizeof e->glide_last_valid);
+    memset(e->glide_group,0,sizeof e->glide_group);e->glide_epoch=0;
     memset(e->lateral_hold,0,sizeof e->lateral_hold);
 }
 int jv_active(jv_engine *e)
@@ -208,13 +249,21 @@ void jv_render_input(jv_engine *e,const float *input_l,const float *input_r,floa
         int finished=!v->gate && !next && output_amp<8;
         if(finished)output_amp=0;
         vmod_t m = {0};
-        m.inc = pitch_inc(v->pitch16);
+        double played=v->note;
+        if(e->glide_elapsed[k]<e->glide_duration[k]){
+            double phase=(double)e->glide_elapsed[k]/e->glide_duration[k];
+            played=e->glide_from[k]+(v->note-e->glide_from[k])*phase;
+            e->glide_elapsed[k]=e->glide_elapsed[k]+CTL<e->glide_duration[k] ? e->glide_elapsed[k]+CTL:e->glide_duration[k];
+        }
+        e->glide_now[k]=played;
+        int32_t pitch16=clamp((int32_t)floor(played*16),0,2047);
+        m.inc = pitch_inc((uint32_t)pitch16);
         int channel=t->p[P_M1AMT]&15;
         double bend=e->bend[channel]*(2+(int)(e->controls[13]*10+.5));
-        double ratio=pow(2.0,(bend+vibrato*e->mod_wheel[channel])/12+e->detune_position[k]*e->controls[7]*40/1200);
+        double ratio=pow(2.0,(bend+vibrato*e->mod_wheel[channel]+played-pitch16/16.0)/12+e->detune_position[k]*e->controls[7]*40/1200);
         m.fine=(int32_t)((ratio-1)*4096);
         m.inc=(uint32_t)fmin(m.inc*ratio,2147483647.0);
-        m.pitch16 = clamp(v->pitch16+(int)floor(bend*16+.5),0,2047);
+        m.pitch16 = clamp((int)floor((played+bend)*16+.5),0,2047);
         m.amp0 = old_output * v->vel / 127;
         m.amp1 = output_amp * v->vel / 127;
         m.envq15 = output_amp;

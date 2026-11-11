@@ -19,7 +19,7 @@ int main(){
     auto* spy=new EditSpy;p->setComponentHandler(spy);spy->release();
     ProcessSetup setup{kRealtime,kSample32,256,48000};assert(p->setupProcessing(setup)==kResultOk);
     assert(p->snapshot().language==5);
-    assert(document(p->snapshot())=="pulsare quasare die sonne der mond die sterne");
+    assert(document(p->snapshot())=="pulsare kvasare die sonne der mond die schterne");
     assert(p->snapshot().lines[1].original[0]==0);
     assert(p->setLanguage(4));
     assert(p->setDocument(u8"Привет, мир\r\n\r\nПой со мной"));
@@ -115,11 +115,19 @@ int main(){
     auto language=GetDlgItem(editor,20);SendMessageW(language,CB_SETCURSEL,1,0);
     SendMessageW(editor,WM_COMMAND,MAKEWPARAM(20,CBN_SELCHANGE),0);assert(p->snapshot().language==2);
     assert(std::string(p->snapshot().lines[0].original.data())==u8"Проверка русского текста");
+    auto swarmKnob=GetDlgItem(editor,2000+Swarm);assert(swarmKnob && !IsWindowEnabled(swarmKnob));
     for(int i=0;i<controlCount;++i)if(i!=Unison && i!=ExtInput && i!=Mono && i!=Newspeak && i!=PitchBendRange && i!=ReservedControl && i!=ReservedThickness){auto knob=GetDlgItem(editor,2000+i);assert(knob);SendMessageW(knob,WM_KEYDOWN,VK_RIGHT,0);}
     assert(!GetDlgItem(editor,2000+ReservedControl));
     auto toggle=GetDlgItem(editor,25);SendMessageW(toggle,BM_SETCHECK,BST_CHECKED,0);SendMessageW(editor,WM_COMMAND,MAKEWPARAM(25,BN_CLICKED),0);assert(p->control(Unison)==1);
+    SendMessageW(editor,WM_TIMER,1,0);assert(IsWindowEnabled(swarmKnob));
     auto monoToggle=GetDlgItem(editor,29);assert(monoToggle);SendMessageW(monoToggle,BM_SETCHECK,BST_CHECKED,0);SendMessageW(editor,WM_COMMAND,MAKEWPARAM(29,BN_CLICKED),0);assert(p->control(Mono)==1);
     ShowWindow(parent,SW_SHOW);UpdateWindow(parent);MSG msg{};
+    auto bend=GetDlgItem(editor,27);assert(bend);
+    SendMessageW(bend,CB_SHOWDROPDOWN,TRUE,0);assert(SendMessageW(bend,CB_GETDROPPEDSTATE,0,0));
+    SendMessageW(bend,CB_SETCURSEL,7,0);SendMessageW(editor,WM_TIMER,1,0);
+    assert(SendMessageW(bend,CB_GETCURSEL,0,0)==7);
+    SendMessageW(editor,WM_COMMAND,MAKEWPARAM(27,CBN_SELCHANGE),0);assert(std::abs(p->control(PitchBendRange)-.7)<1e-9);
+    SendMessageW(bend,CB_SHOWDROPDOWN,FALSE,0);
     while(PeekMessageW(&msg,nullptr,0,0,PM_REMOVE)){TranslateMessage(&msg);DispatchMessageW(&msg);}Sleep(300);
     HDC dc=GetDC(editor),mem=CreateCompatibleDC(dc);HBITMAP bmp=CreateCompatibleBitmap(dc,900,720);auto oldBmp=SelectObject(mem,bmp);
     BitBlt(mem,0,0,900,720,dc,0,0,SRCCOPY);SelectObject(mem,oldBmp);

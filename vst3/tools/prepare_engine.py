@@ -154,7 +154,7 @@ needle = '    for (j = 0; j < 6u; j++) {'
 assert sing.count(needle)==1
 sing = sing.replace(needle, '''    double jv_alpha=0;
     if(fabs(jv_control_values[21]-.5)>1e-12){
-        double value=jv_control_values[21],timescale=pow(value<=.5 ? 4.0:10.0,2*value-1);
+        double value=jv_control_values[21],timescale=pow(value<=.5 ? 100.0:10.0,2*value-1);
         jv_alpha=1-pow(1-ldexp(1.0,-(int)sh),1/timescale);
     }
 ''' + needle)
@@ -266,6 +266,11 @@ context += '''    uint8_t cache_ready;
     double mod_wheel[16], mod_target[16], mod_phase;
     uint32_t noise_seed;
     jv_grain_state grain[NTRK];
+    double glide_from[NTRK], glide_now[NTRK];
+    uint32_t glide_elapsed[NTRK], glide_duration[NTRK];
+    double glide_last[16], glide_sources[16][8];
+    uint8_t glide_last_valid[16], glide_source_count[16], glide_source_used[16];
+    uint32_t glide_epoch, glide_group[16];
     voice_t right_voice[NTRK];
     int32_t right_f5[NTRK][2];
     float mix_gain;

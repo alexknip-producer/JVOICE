@@ -124,5 +124,27 @@ int main(void) {
     jv_reset(e);jv_control(e,12,0);jv_text(e,"al",LG_RU);jv_note_on(e,0,60,100,0,1);for(int k=0;k<100;++k)jv_render(e,out);
     jv_note_off(e,0,60,1);for(int k=0;k<10;++k)jv_render(e,out);assert(jv_active(e)==1 && sing_phon(sing_view(&trk[1]))==PH_L);
     for(int k=0;k<100;++k)jv_render(e,out);assert(jv_active(e)==0);
-    jv_destroy(e);puts("PASS: vowel/Smear targets, RU soft consonants and trills, isolated S/G and Newspeak in all nine languages");
+    // Polyphonic glide maps the nearest previous chord tones independently.
+    jv_reset(e);jv_control(e,24,sqrt(.1));jv_text(e,"aaaa",LG_RU);
+    jv_note_on(e,0,60,100,0,1);jv_note_on(e,0,67,100,1,2);
+    for(int k=0;k<20;++k)jv_render(e,out);
+    jv_note_off(e,0,60,1);jv_note_off(e,0,67,2);
+    jv_note_on(e,0,62,100,0,3);jv_note_on(e,0,69,100,1,4);
+    assert(e->glide_from[3]==60 && e->glide_from[4]==67);
+    for(int k=0;k<345;++k)jv_render(e,out);
+    assert(e->glide_now[3]>60.9 && e->glide_now[3]<61.1 && e->glide_now[4]>67.9 && e->glide_now[4]<68.1);
+    for(int k=0;k<350;++k)jv_render(e,out);
+    assert(e->glide_now[3]==62 && e->glide_now[4]==69);
+    // Mono and Unison start from the previous pitch, including release tails.
+    for(int mode=0;mode<2;++mode){jv_reset(e);jv_control(e,24,sqrt(.1));jv_control(e,mode ? 8:18,1);
+        if(mode)jv_control(e,9,2.0/7);jv_text(e,"aaaa",LG_RU);jv_note_on(e,0,60,100,0,1);
+        for(int k=0;k<20;++k)jv_render(e,out);jv_note_off(e,0,60,1);jv_note_on(e,0,64,100,0,2);
+        for(int k=1;k<=(mode ? 3:1);++k)assert(e->glide_from[k]==60);
+    }
+    jv_reset(e);jv_control(e,8,1);jv_control(e,9,2.0/7);jv_control(e,24,sqrt(.1));jv_control(e,25,1);
+    jv_text(e,"aaaa",LG_RU);jv_note_on(e,0,60,100,0,1);for(int k=0;k<20;++k)jv_render(e,out);
+    jv_note_on(e,0,64,100,0,2);
+    assert(e->glide_from[1]==60 && e->glide_from[2]==60 && e->glide_from[3]==60);
+    assert(e->glide_duration[1]==FS/4 && e->glide_duration[2]==FS && e->glide_duration[3]==FS*4);
+    jv_destroy(e);puts("PASS: phonetics, consonants, Slur and polyphonic Glide");
 }
