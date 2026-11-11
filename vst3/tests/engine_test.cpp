@@ -10,7 +10,7 @@ int main() {
     voice::Line line;
     assert(voice::makeLine(u8"Привет, ёжик! Щука и любовь",4,line));
     assert(std::string(line.original.data()) == u8"Привет, ёжик! Щука и любовь");
-    assert(std::string(line.sung.data()) == "privet, yozhik! shchuka i lyubov");
+    assert(std::string(line.sung.data()) == "privet, yozhik! shchuka i lyubov'");
     assert(voice::makeLine(u8"И Ы Е Э вечер эхо",4,line));
     assert(std::string(line.sung.data()) == "i y e eh vecher ehkho");
     assert(voice::makeLine(u8"Эхо",5,line));assert(std::string(line.sung.data())=="ekho");

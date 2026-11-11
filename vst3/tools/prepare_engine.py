@@ -2,7 +2,7 @@
 """Adapt the pinned firmware sources without changing hardware firmware.
 
 Mutable firmware globals become thread-local pointers to per-plugin storage.
-The oscillator and language algorithms are copied verbatim at build time.
+Pinned sources are copied at build time; desktop phonetic adaptations follow.
 """
 from pathlib import Path
 import csv
@@ -23,6 +23,28 @@ core = core.replace('static track_t trk[NTRK];', 'static JV_TLS track_t *trk;')
 core = core.replace('static song_t song;', 'static JV_TLS song_t *song_ptr;\n#define song (*song_ptr)')
 core = re.sub(r'#define RING_PUBLISH\(\).*', '#define RING_PUBLISH() ((void)0)', core)
 sing = (root / 'firmware/src/sing.c').read_text()
+consonants = list(csv.DictReader((root / 'vst3/src/RussianConsonants.csv').open(encoding='utf-8')))
+assert len(consonants) == 16
+# Append codes without moving dictionary phonemes; all still fit below SYB.
+lyric_path = out / 'felucca_lyrics.h'
+lyric_header = lyric_path.read_text()
+lyric_header = lyric_header.replace(', PH_COUNT };', ', ' + ', '.join(c['code'] for c in consonants) + ', PH_COUNT };')
+names = ', '.join('"' + ('sc' if c['code']=='PH_RU_SHCH' else c['code'][-1].lower()+"'") + '"' for c in consonants)
+lyric_header = re.sub(r'(static const char PH_NAME\[PH_COUNT\]\[3\] = \{[^\n]*)(\};)', lambda m:m[1]+', '+names+m[2], lyric_header)
+lyric_path.write_text(lyric_header)
+sing = sing.replace('PH_COUNT == 46', 'PH_COUNT == 62')
+phoneme_table = re.search(r'static const phon_t PHON\[PH_COUNT\] = \{.*?\n\};', sing, re.S)[0]
+rows = ''
+soft_cases = ''
+for c in consonants:
+    assert re.fullmatch(r'PH_RU_[A-Z]+', c['code'])
+    fields = [v.strip() for v in re.search(r'\['+c['base']+r'\] = \{([^}]+)\}', phoneme_table)[1].split(',')]
+    fields[:3] = [c['F1_Hz'],c['F2_Hz'],c['F3_Hz']]
+    fields[6:9] = [str(int(c['noise_Hz'])//50),str(int(c['noise_width_Hz'])//50),c['duration_ms']]
+    fields[10] = 'PL_PAL'
+    rows += '    ['+c['code']+'] = {'+', '.join(fields)+'},\n'
+    if c['code']!='PH_RU_SHCH':soft_cases += 'case '+c['base']+': return '+c['code']+';\n'
+sing = sing.replace(phoneme_table, phoneme_table[:-3]+'\n'+rows+'};')
 vowels = list(csv.DictReader((root / 'vst3/src/RussianVowels.csv').open(encoding='utf-8')))
 assert len({v['phoneme'] for v in vowels}) == len(vowels)
 for v in vowels:
@@ -39,7 +61,9 @@ profile = 'static const struct { uint8_t code; phon_t target; } JV_RU_VOWELS[] =
 for v in vowels:
     profile += f'    {{{v["phoneme"]}, {{{v["F1_Hz"]}, {v["F2_Hz"]}, {v["F3_Hz"]}, PC_VOW, 255, 0, 0, 0, 0, 16, {"PL_RND" if v["rounded"] == "1" else "PL_NONE"}}}}},\n'
 profile += '''};
+static const phon_t JV_RU_CH={250,2250,2900,PC_AFF,0,0,0,0,45,16,PL_PAL};
 static const phon_t *jv_phon(uint32_t lang, uint32_t code) {
+    if (lang == LG_RU && code == PH_CH) return &JV_RU_CH;
     if (lang == LG_RU) for (uint32_t j = 0; j < sizeof JV_RU_VOWELS / sizeof *JV_RU_VOWELS; ++j)
         if (JV_RU_VOWELS[j].code == code) return &JV_RU_VOWELS[j].target;
     return &PHON[code];
@@ -62,12 +86,59 @@ static void jv_smear(uint32_t lang, int32_t *f) {
     for(int j=0;j<3;++j)f[j]=(int32_t)lround(f[j]*((left[j]+(right[j]-left[j])*fraction)/origin[j]));
 }
 '''
+profile += 'static uint32_t jv_ru_soft(uint32_t code) { switch(code) {\n'+soft_cases+'default: return code;\n} }\n'
 needle = 'static int ph_vowel(uint32_t c)'
 assert sing.count(needle) == 1 and sing.count('P = &PHON[c];') == 2 and sing.count('Q = &PHON[nxt];') == 1
 sing = sing.replace(needle, profile + needle).replace('P = &PHON[c];', 'P = jv_phon(lang, c);').replace('Q = &PHON[nxt];', 'Q = jv_phon(lang, nxt);')
 needle = '    if (F) {'
 assert sing.count(needle) == 1
 sing = sing.replace(needle, '    if (k == PC_VOW) jv_smear(lang, tF);\n' + needle)
+# Independent consonants are one articulation unit, with no inserted vowel.
+needle = '    if (!g)\n        return 0;'
+assert sing.count(needle) == 1
+sing = sing.replace(needle, '    if (!g && m) { *ns=1; for(k=0;k<m;++k)out[k]=(uint8_t)(tc[k] | (k ? 0:SYB)); return m; }\n'+needle)
+needle = 'static uint32_t sy_word(uint32_t lang, const char *w, uint32_t n, uint8_t *out, uint32_t *ns)'
+assert sing.count(needle)==1
+sing = sing.replace(needle, '#include "WordReaders.h"\nstatic uint32_t jv_word_base(uint32_t lang, const char *w, uint32_t n, uint8_t *out, uint32_t *ns)')
+needle = '    if (lang == LG_JA)\n        return sy_ja(w, n, out, ns);'
+sing = sing.replace(needle, '    if(lang==LG_RU){m=jv_ru_tokens(w,n,tc,tk);return sy_syl(tc,tk,m,out,ns);}\n    m=jv_bare_tokens(lang,w,n,tc,tk);if(m)return sy_syl(tc,tk,m,out,ns);\n'+needle)
+needle = '/* --------------------------------------------------------------------------------------- the generator --- */'
+sing = sing.replace(needle, '''static uint32_t sy_word(uint32_t lang,const char *w,uint32_t n,uint8_t *out,uint32_t *ns) {
+    uint32_t count=jv_word_base(lang,w,n,out,ns);
+    if(jv_control_values && jv_control_values[20]>=.5){for(uint32_t j=0;j<count;++j)out[j]|=SYB;*ns=count;}
+    return count;
+}
+''' + needle)
+needle = '    for (i = 0; i < n; i++)\n        out[i] = e[2u + i];'
+assert sing.count(needle)==1
+sing = sing.replace(needle, needle+'\n    if(jv_control_values[20]>=.5){for(i=0;i<n;++i)out[i]|=SYB;*ns=n;}')
+# Preserve Russian soft/hard separators during normalization.
+sing = sing.replace("(c=='\\''&&lang==LG_GN)", "(c=='\\''&&(lang==LG_GN||lang==LG_RU))")
+# The extension state is copied with each articulation track, never global.
+sing = sing.replace('uint8_t ph[SY_N], np, nu, cd;', 'uint16_t jv_trill_tick;\n    uint8_t ph[SY_N], np, nu, cd;')
+sing = sing.replace('static void sy_enter(sing_t *s, uint32_t lang)', '#include "ConsonantArticulation.h"\nstatic void sy_enter(sing_t *s, uint32_t lang)')
+sing = sing.replace('if (s->i == s->nu) {', 'if (s->i == s->nu && !jv_timed_nucleus(s,P->cls)) {')
+sing = sing.replace('PHON[ph_fric(c)].dur', 'PHON[jv_fric(lang,c)].dur')
+sing = sing.replace('F = &PHON[ph_fric(c)];', 'F = jv_phon(lang,jv_fric(lang,c));')
+sing = sing.replace('if (s->i > s->nu && !s->cdon && s->i >= s->cd)', 'if (s->i > s->nu && !s->cdon && s->i >= s->cd && !jv_vowelless(s))')
+sing = sing.replace('Q = jv_phon(lang, nxt);', 'Q = jv_phon(lang, nxt);\n    if(jv_vowelless(s) && !Q->f1)Q=&PHON[PH_AX];\n    if(k!=PC_TRL)s->jv_trill_tick=0;')
+needle = 'tv = (s->tb / sy_ms(20)) & 1u ? 32767 - ((24000 * a15) >> 15) : 32767;'
+assert sing.count(needle)==1
+sing = sing.replace(needle, 'tv = (s->jv_trill_tick++ % sy_ms(32)) < sy_ms(9) ? 32767-((28000*a15)>>15):32767;')
+# A relative time control keeps the exact native integer updates at centre.
+needle = '    for (j = 0; j < 6u; j++) {'
+assert sing.count(needle)==1
+sing = sing.replace(needle, '''    double jv_alpha=0;
+    if(fabs(jv_control_values[21]-.5)>1e-12){
+        double timescale=pow(16.0,jv_control_values[21]-.5);
+        jv_alpha=1-pow(1-ldexp(1.0,-(int)sh),1/timescale);
+    }
+''' + needle)
+needle = '        *a = (int16_t)(*a + (d >> sh) + (d > 0 && (d >> sh) == 0));'
+assert sing.count(needle)==1
+sing = sing.replace(needle, '''        int32_t step=jv_alpha>0 ? (int32_t)lround(d*jv_alpha):(d >> sh)+(d>0 && (d >> sh)==0);
+        if(jv_alpha>0 && !step && d)step=d>0 ? 1:-1;
+        *a=(int16_t)(*a+step);''')
 # 128 Unicode codepoints require at most 512 UTF-8 bytes, plus terminator.
 sing = sing.replace('#define LYR_LEN 64u', '#define LYR_LEN 513u')
 sing = sing.replace('uint8_t to, tl;', 'uint16_t to, tl;')

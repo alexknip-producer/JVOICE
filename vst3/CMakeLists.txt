@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.25)
-project(JiantVoice VERSION 0.3.2 LANGUAGES C CXX)
+project(JiantVoice VERSION 0.3.3 LANGUAGES C CXX)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_C_STANDARD 11)
 set(CMAKE_C_STANDARD_REQUIRED ON)
@@ -7,7 +7,8 @@ set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 find_package(Python3 REQUIRED COMPONENTS Interpreter)
 set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS
     ${CMAKE_CURRENT_SOURCE_DIR}/tools/prepare_engine.py
-    ${CMAKE_CURRENT_SOURCE_DIR}/src/RussianVowels.csv)
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/RussianVowels.csv
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/RussianConsonants.csv)
 execute_process(COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/tools/prepare_engine.py
     ${CMAKE_CURRENT_BINARY_DIR}/generated COMMAND_ERROR_IS_FATAL ANY)
 add_library(voice_engine STATIC src/VoiceEngine.c)

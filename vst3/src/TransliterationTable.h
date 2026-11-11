@@ -4,6 +4,7 @@
  * Both cases use these same replacements. Empty entries drop hard/soft signs.
  * RU overrides э -> eh in TextBank.h to distinguish it from е -> e.
  * Russian vowel targets are editable in RussianVowels.csv.
+ * RU additionally preserves ь as an apostrophe and ъ as two apostrophes.
  */
 #pragma once
 #include <array>

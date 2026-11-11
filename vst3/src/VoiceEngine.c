@@ -21,6 +21,7 @@ void jv_reset(jv_engine *e)
     e->controls[15]=.5; /* External input gain: 0 dB above the +12 dB calibration. */
     e->controls[16]=.5; /* Wheel fully up: +/-25 cents by default, +/-50 maximum. */
     e->controls[17]=49.0/119; /* 5 Hz sine LFO. */
+    e->controls[21]=.5; /* Phoneme Glide: native transition times at centre. */
     e->controls[19]=.5; /* Smear centre leaves each vowel unchanged. */
     e->mix_gain=.7f;
     e->external_gain=1;

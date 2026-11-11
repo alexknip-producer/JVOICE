@@ -65,3 +65,9 @@ Russian-only vowel targets come from src/RussianVowels.csv. A dedicated phonetic
 test checks tokenization, held formants and unchanged profiles for other languages.
 Smear morphs vowel targets along A-I-E-A-O-U before native coarticulation;
 centre is an exact bypass. Tests check held U -> A -> U without a new note.
+
+0.3.3 adds Russian soft consonant profiles/readers, sustained Russian trills,
+universal consonant-only articulation, Newspeak phoneme stepping and a neutral
+Phoneme Glide time multiplier. Focused phonetics checks exercise those paths.
+Other language tables remain upstream's; English/German standalone tokens use
+the common reader before dictionary letter names or automatic inserted vowels.

@@ -16,6 +16,10 @@ are preserved by the source generator. CMUdict retains its BSD notice; see
 is not vendored; build against the SDK commit in BUILDING.md.
 
 The desktop adapter uses independent articulation for eight notes, a desktop
-envelope and output soft limiter. This is an initial port, not a bit-for-bit
+envelope, linear voice summation and a manual master gain. This is a port, not a bit-for-bit
 render of the entire FM-1 signal chain. Firmware reverb, delay, modulation and
 hardware interfaces are not linked into the plugin.
+
+JVoice's Russian consonant/vowel profiles and contextual reader are desktop
+adaptations. Standalone consonants and phoneme stepping run in the common
+articulation engine. Original firmware files remain unchanged.

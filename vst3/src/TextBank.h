@@ -58,6 +58,8 @@ inline bool makeLine(std::string_view utf8, int language, Line& line) {
         { // Transliteration is independent of the selected pronunciation language.
             if (c >= U'А' && c <= U'Я') c += 32;
             if (c == U'Ё') c = U'ё';
+            if (language == 4 && c == U'ь') { latin += "'"; continue; }
+            if (language == 4 && c == U'ъ') { latin += "''"; continue; }
             // RU needs a distinct vowel token; other languages keep their old transliteration.
             if (language == 4 && c == U'э') { latin += "eh"; continue; }
             if (c == U'ё') { latin += russianLatin[6]; continue; }
