@@ -22,7 +22,7 @@ int main(void) {
       assert(jv_grain_noise(12345)==12345);
       int hits[2]={0};for(int level=0;level<2;++level){
           controls[23]=level ? .9:.1;dust.mix=(float)controls[23];dust.bits=1;
-          for(int n=0;n<32767;++n)if(jv_grain_noise(0))++hits[level];
+          dust.tail=0;for(int n=0;n<32767;++n){jv_grain_noise(10000);if(dust.tail==1)++hits[level];}
       }
       assert(hits[0]>hits[1]*3 && hits[1]>0);
     }

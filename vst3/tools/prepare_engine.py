@@ -238,15 +238,15 @@ static inline int32_t jv_grain_noise(int32_t original) {
     m+=(target-m)*0.0025f;jv_grain->mix=m;
     uint32_t x=jv_grain->bits;
     x=((x<<1)&0x7fffu)|(((x>>14)^(x>>13))&1u);jv_grain->bits=x ? x:1u;
-    /* Dust: denser impulses at low settings, sparse at high settings. The
-     * original full-band hiss stays present; only the impulse level fades in. */
+    /* Dust excites short broadband bursts of the actual hiss, rather than
+     * one-sample impulses that largely disappear in the formant filter. */
     float d=1.0f-m;
-    uint32_t threshold=(uint32_t)(6.0f+3271.0f*d*d*d);
-    float pulse=jv_grain->tail*.35f;
-    if((x>>1)<threshold)pulse+=(x&1u) ? 180000.0f:-180000.0f;
-    if(fabsf(pulse)<1.0f)pulse=0;
-    jv_grain->tail=pulse;
-    return (int32_t)(original+m*pulse);
+    uint32_t threshold=(uint32_t)(16.0f+1100.0f*d*d*d);
+    float burst=jv_grain->tail*.985f;
+    if((x>>1)<threshold)burst=1.0f;
+    if(burst<0.0001f)burst=0;
+    jv_grain->tail=burst;
+    return (int32_t)(original*(1.0f+5.0f*m*burst));
 }
 /* +12 dB on external tonal excitation only. Keep headroom in the conversion:
  * a normal full-scale input must not clip at the old int16 carrier boundary. */

@@ -77,9 +77,9 @@ int main() {
     for(double amount:{.3,.7,1.0}){
         jv_seed(a,1234);jv_seed(b,1234);jv_reset(a);jv_reset(b);
         jv_control(b,voice::Grain,amount);jv_text(a,"sh",4);jv_text(b,"sh",4);
-        jv_note_on(a,0,60,100,0,1);jv_note_on(b,0,60,100,0,1);double difference=0,energy=0;
-        for(int k=0;k<100;++k){jv_render(a,x);jv_render(b,y);for(int i=0;i<JV_BLOCK;++i){assert(std::isfinite(y[i]));difference+=std::abs(x[i]-y[i]);energy+=y[i]*y[i];}}
-        assert(difference>.01 && energy>.0001);
+        jv_note_on(a,0,60,100,0,1);jv_note_on(b,0,60,100,0,1);double difference=0,energy=0,base=0;
+        for(int k=0;k<700;++k){jv_render(a,x);jv_render(b,y);for(int i=0;i<JV_BLOCK;++i){assert(std::isfinite(y[i]));difference+=(x[i]-y[i])*(x[i]-y[i]);base+=x[i]*x[i];energy+=y[i]*y[i];}}
+        assert(difference>base*(amount==1.0 ? .1:.02) && energy>.0001);
     }
     for(int nv=1;nv<=8;++nv) {
         jv_reset(a);jv_text(a,"la",2);jv_control(a,voice::Voices,(nv-1)/7.0);jv_control(a,voice::Unison,1);
