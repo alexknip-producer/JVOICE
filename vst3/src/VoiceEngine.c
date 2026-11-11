@@ -50,7 +50,7 @@ void jv_control(jv_engine *e, int index, double value)
     jv_bind(e);
     value=value<0 ? 0 : value>1 ? 1 : value;
     e->controls[index]=value;
-    if(index==9){int cap=1+(int)(value*7+.5);for(int k=cap+1;k<NTRK;++k)trk[k].v[0].active=trk[k].v[0].gate=0;}
+    if(index==9){int cap=1+(int)(value*7+.5);for(int k=cap+1;k<NTRK;++k){if(trk[k].v[0].active)e->declick_pending=1;trk[k].v[0].active=trk[k].v[0].gate=0;}}
     if(index==18 && value>=.5){
         uint32_t newest=0;
         for(int k=1;k<NTRK;++k)if(trk[k].v[0].active && trk[k].v[0].age>newest)newest=trk[k].v[0].age;
@@ -104,6 +104,9 @@ void jv_note_on(jv_engine *e, int channel, int note, int vel, int chord, int not
             if(trk[k].v[0].age<trk[slot].v[0].age)slot=k;
         }
         track_t *t = &trk[slot];
+        /* Replacing a sounding unison layer (or a stolen poly voice) removes
+         * its current waveform. Apply the same short stereo correction as Mono. */
+        if(t->v[0].active)e->declick_pending=1;
         memcpy(t->p, trk[0].p, sizeof t->p);
         memcpy(lyr_txt[slot], lyr_txt[0], LYR_LEN);
         lyr_gen[slot] = lyr_gen[0];

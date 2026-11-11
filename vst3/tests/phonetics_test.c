@@ -100,6 +100,17 @@ int main(void) {
             assert(fabsf(left[0]-l)<1e-6f && fabsf(right[0]-r)<1e-6f);assert(jv_active(e)==(unison?8:1));}
         for(int k=0;k<4;++k)jv_render_input(e,in,zero,left,right);assert(e->declick_remaining==0);
     }
+    // Unison also replaces sounding voices when its voice pool is full.
+    for(int external=0;external<2;++external)for(int count=2;count<=8;count+=6)for(int released=0;released<2;++released){
+        jv_reset(e);jv_control(e,8,1);jv_control(e,9,(count-1)/7.0);jv_control(e,6,.8);jv_control(e,10,external);
+        jv_text(e,"aaaa",LG_RU);float in[JV_BLOCK],zero[JV_BLOCK]={0},left[JV_BLOCK],right[JV_BLOCK];
+        for(int j=0;j<JV_BLOCK;++j)in[j]=.1f*sinf(j*.17f);
+        jv_note_on(e,0,60,100,0,1);for(int k=0;k<30;++k)jv_render_input(e,in,zero,left,right);
+        if(released){jv_note_off(e,0,60,1);jv_render_input(e,in,zero,left,right);}
+        float l=left[JV_BLOCK-1],r=right[JV_BLOCK-1];jv_note_on(e,0,62,100,0,2);jv_render_input(e,in,zero,left,right);
+        assert(fabsf(left[0]-l)<1e-6f && fabsf(right[0]-r)<1e-6f);
+        for(int k=0;k<4;++k)jv_render_input(e,in,zero,left,right);assert(e->declick_remaining==0);
+    }
     // Short Release still lets a final Russian lateral articulate.
     jv_reset(e);jv_control(e,12,0);jv_text(e,"al",LG_RU);jv_note_on(e,0,60,100,0,1);for(int k=0;k<100;++k)jv_render(e,out);
     jv_note_off(e,0,60,1);for(int k=0;k<10;++k)jv_render(e,out);assert(jv_active(e)==1 && sing_phon(sing_view(&trk[1]))==PH_L);
