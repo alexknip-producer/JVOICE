@@ -7,7 +7,7 @@ namespace voice {
 // Slot 11 is retired; preserve subsequent parameter IDs and saved-state offsets.
 enum Control { SpeechRate, Shift, Resonance, Breath, Buzz, Artic, Image, Detune, Unison, Voices, ExtInput, ReservedControl, Release, PitchBendRange, MasterVolume, ExtGain, ModDepth, ModRate, Mono, Smear, Newspeak, PhonemeGlide, ReservedThickness, RoboMode, controlCount };
 inline constexpr unsigned firstControlID = 10;
-inline constexpr const char* controlNames[] = {"Speech Rate", "Shift", "Q", "Breath", "Buzz", "Artic", "Image", "Detune", "Unison", "Voices", "Ext. input", "", "Release", "Pitch Bend Range", "Master Volume", "Ext. Input Gain", "Mod Depth", "Mod Rate", "Mono", "Smear", "Newspeak", "Phoneme Glide", "", "Robo Mode"};
+inline constexpr const char* controlNames[] = {"Speech Rate", "Shift", "Q", "Breath", "Buzz", "Artic", "Image", "Detune", "Unison", "Voices", "Ext. input", "", "Release", "Pitch Bend Range", "Master Volume", "Ext. Input Gain", "Mod Depth", "Mod Rate", "Mono", "Smear", "Newspeak", "Phoneme Glide", "", "Vtrx Mode"};
 inline constexpr std::array<double,controlCount> controlDefaults = {32.0/127, .5, 72.0/127, .05, 1, 1, 0, 0, 0, 1, 0, 0, 72.0/127, 0, 60.0/72, .5, .5, 49.0/119, 0, .5, 0, .5, .5, 0};
 inline double plainControl(int i,double n) {
     n=std::clamp(n,0.0,1.0);

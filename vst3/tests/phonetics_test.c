@@ -56,7 +56,18 @@ int main(void) {
     // Robo uses the same Russian vowel targets and soft-consonant parser.
     jv_reset(e);jv_control(e,23,1);jv_text(e,"y",LG_RU);jv_note_on(e,0,60,100,0,1);
     for(int k=0;k<200;++k)jv_render(e,out);
-    s=sing_view(&trk[1]);for(int j=0;j<3;++j)assert(abs(s->f[j]-yTargets[j])<10);
+    int iRef[]={PHON[PH_I].f1,PHON[PH_I].f2,PHON[PH_I].f3};
+    s=sing_view(&trk[1]);for(int j=0;j<3;++j)assert(abs(s->f[j]-(JV_VTRX[PH_I][j]+yTargets[j]-iRef[j]))<10);
+    assert(abs(s->f[1]-yTargets[1])>30);
+    // At the same pitch and settings Vtrx must produce a different waveform.
+    float reference[JV_BLOCK];double difference=0,energy=0;
+    for(int mode=0;mode<2;++mode){
+        jv_reset(e);jv_seed(e,123);jv_control(e,23,mode);jv_text(e,"a",LG_RU);jv_note_on(e,0,60,100,0,1);
+        for(int k=0;k<150;++k)jv_render(e,out);
+        if(!mode)for(int j=0;j<JV_BLOCK;++j)reference[j]=out[j];
+        else for(int j=0;j<JV_BLOCK;++j){double d=out[j]-reference[j];difference+=d*d;energy+=reference[j]*reference[j];}
+    }
+    assert(energy>1e-8 && difference>energy*.01);
     count=jv_ru_tokens("lya",3,codes,kinds);assert(count==2 && codes[0]==PH_RU_L && codes[1]==PH_AE);
     jv_text(e,"r'",LG_RU);jv_note_on(e,0,62,100,0,2);int lo=32767,hi=0;
     for(int k=0;k<160;++k){jv_render(e,out);int v=sing_view(&trk[2])->gv;if(v<lo)lo=v;if(v>hi)hi=v;}

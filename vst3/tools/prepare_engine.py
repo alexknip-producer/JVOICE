@@ -67,7 +67,27 @@ profile = 'static const struct { uint8_t code; phon_t target; } JV_RU_VOWELS[] =
 for v in vowels:
     profile += f'    {{{v["phoneme"]}, {{{v["F1_Hz"]}, {v["F2_Hz"]}, {v["F3_Hz"]}, PC_VOW, 255, 0, 0, 0, 0, 16, {"PL_RND" if v["rounded"] == "1" else "PL_NONE"}}}}},\n'
 profile += '};\nstatic const struct { uint8_t code; phon_t target; } JV_RU_CONSONANTS[] = {\n'+overrides
-profile += '''};
+profile += '};\n'
+vtrx = list(csv.DictReader((root / 'vst3/src/VtrxFormants.csv').open(encoding='utf-8')))
+profile += 'static const int16_t JV_VTRX[PH_COUNT][3] = {\n'
+for v in vtrx:
+    assert re.fullmatch(r'PH_[A-Z]+', v['phoneme'])
+    profile += '    ['+v['phoneme']+'] = {'+', '.join(v[f'F{i}_Hz'] for i in range(1,4))+'},\n'
+profile += '};\nstatic uint32_t jv_vtrx_base(uint32_t c) {switch(c) {\n'
+for v in added_consonants:
+    profile += 'case '+v['code']+': return '+v['base']+';\n'
+profile += '''default:return c;}}
+static void jv_vtrx_formants(uint32_t lang, uint32_t code, const phon_t *p, int32_t *f) {
+    if(jv_control_values[23]<.5 || !p->f1)return;
+    uint32_t base=jv_vtrx_base(code);
+    if(lang==LG_RU && code==PH_UH)base=PH_I; /* Russian y is a distinct high vowel. */
+    if(lang==LG_RU && code==PH_E)base=PH_EH;
+    if(!JV_VTRX[base][0])return;
+    const phon_t *ref=&PHON[base];
+    f[0]=JV_VTRX[base][0]+(int32_t)p->f1-ref->f1;
+    f[1]=JV_VTRX[base][1]+(int32_t)p->f2-ref->f2;
+    f[2]=JV_VTRX[base][2]+(int32_t)p->f3-ref->f3;
+}
 static const phon_t JV_RU_CH={250,2250,2900,PC_AFF,0,0,0,0,45,16,PL_PAL};
 static const phon_t *jv_phon(uint32_t lang, uint32_t code) {
     if (lang == LG_RU && code == PH_CH) return &JV_RU_CH;
@@ -102,6 +122,9 @@ sing = sing.replace(needle, profile + needle).replace('P = &PHON[c];', 'P = jv_p
 needle = '    if (F) {'
 assert sing.count(needle) == 1
 sing = sing.replace(needle, '    if (k == PC_VOW) jv_smear(lang, tF);\n' + needle)
+needle = '    tbm = P->bwm;'
+assert sing.count(needle)==1
+sing = sing.replace(needle, '    jv_vtrx_formants(lang, c, P, tF);\n'+needle)
 # Keep the firmware's ordinary syllabifier unchanged. Consonant-only tokens
 # take an explicit path before it, separate from normal words.
 needle = 'static uint32_t sy_word(uint32_t lang, const char *w, uint32_t n, uint8_t *out, uint32_t *ns)'

@@ -428,7 +428,7 @@ tresult PLUGIN_API View::attached(void* parent,FIDString type) {
         SendMessageW(h,WM_SETFONT,reinterpret_cast<WPARAM>(font),TRUE);return h;
     };
     control(L"STATIC",L"JVoice - construction demo",0,24,16,260,26,0);
-    robo=control(L"BUTTON",L"Robo",BS_AUTOCHECKBOX|WS_TABSTOP,286,12,92,28,31);
+    robo=control(L"BUTTON",L"Vtrx",BS_AUTOCHECKBOX|WS_TABSTOP,286,12,92,28,31);
     newspeak=control(L"BUTTON",L"Newspeak",BS_AUTOCHECKBOX|WS_TABSTOP,384,12,138,28,30);
     external=control(L"BUTTON",L"Ext. input",BS_AUTOCHECKBOX|WS_TABSTOP,540,12,115,28,28);
     control(L"STATIC",L"Pitch bend",0,666,17,90,24,0);
@@ -507,5 +507,5 @@ bool InitModule(){return true;}
 bool DeinitModule(){return true;}
 BEGIN_FACTORY_DEF("", "https://github.com/alexknip-producer/JVOICE", "")
 DEF_CLASS2(INLINE_UID_FROM_FUID(voice::classID),PClassInfo::kManyInstances,kVstAudioEffectClass,
-    "JVoice",0,"Instrument|Synth", "0.3.7",kVstVersionString,voice::Plugin::create)
+    "JVoice",0,"Instrument|Synth", "0.3.8",kVstVersionString,voice::Plugin::create)
 END_FACTORY
