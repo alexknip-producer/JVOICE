@@ -55,6 +55,23 @@ int main(void) {
     assert(PHON[PH_RU_L].f2>PHON[PH_L].f2 && PHON[PH_RU_S].ff>PHON[PH_S].ff);
     for(int lang=LG_ES;lang<LG_N;++lang){bare_sound(e,lang,"s",0);bare_sound(e,lang,"g",1);}
     bare_sound(e,LG_RU,"sh",0);bare_sound(e,LG_RU,"m",0);bare_sound(e,LG_RU,"l'",0);
+    // "sounds": keep the original word path and the timed n-d-z coda audible;
+    // after z, the articulation must go to silence rather than another vowel.
+    jv_reset(e);jv_control(e,4,1);jv_text(e,"sounds",LG_EN);jv_note_on(e,0,60,100,0,1);
+    int saw_n=0,saw_d=0,saw_z=0,ended=0;double end_energy=0;
+    for(int k=0;k<700;++k){if(k==250)jv_note_off(e,0,60,1);jv_render(e,out);
+        const sing_t *word=sing_view(&trk[1]);int phon=sing_phon(word);assert(!word->jv_consonant_unit);
+        if(k>250 && phon==PH_N)saw_n=1;
+        if(k>250 && phon==PH_D){saw_d=1;assert(trk[1].v[0].env_out>12000);}
+        if(k>250 && phon==PH_Z){saw_z=1;assert(trk[1].v[0].env_out>12000);}
+        if(saw_z && phon==PH_SIL)ended=1;
+        if(ended){assert(phon==PH_SIL);if(k>500)for(int j=0;j<JV_BLOCK;++j)end_energy+=out[j]*out[j];}
+    }
+    assert(saw_n && saw_d && saw_z && ended && end_energy<1e-5);
+    // The next independent voice must start at its own S, not repeat -nds.
+    jv_reset(e);jv_text(e,"sounds",LG_EN);jv_note_on(e,0,60,100,0,1);
+    for(int k=0;k<100;++k)jv_render(e,out);jv_note_off(e,0,60,1);jv_note_on(e,0,62,100,0,2);
+    const sing_t *next_word=sing_view(&trk[2]);assert(next_word->np==6 && next_word->ph[0]==PH_S);
     // Russian R and R' produce ongoing repeated closures rather than one tap.
     for(int soft=0;soft<2;++soft){jv_reset(e);jv_text(e,soft?"r'":"r",LG_RU);jv_note_on(e,0,60,100,0,1);int low=32767,high=0;
         for(int k=0;k<160;++k){jv_render(e,out);int gain=sing_view(&trk[1])->gv;if(gain<low)low=gain;if(gain>high)high=gain;}assert(high>20000 && low<high/2);}

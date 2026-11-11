@@ -1,8 +1,7 @@
 /* SPDX-License-Identifier: GPL-3.0-only */
-static int jv_vowelless(const sing_t *s) {
-    for(uint32_t i=0;i<s->np;++i)if(ph_vowel(s->ph[i]))return 0;
-    return s->np!=0;
-}
+/* This flag describes only an explicitly isolated consonant unit. Normal
+ * word syllables follow the original VOICE articulation state machine. */
+static int jv_vowelless(const sing_t *s) { return s->jv_consonant_unit; }
 static int jv_timed_nucleus(const sing_t *s,uint32_t cls) {
     return jv_vowelless(s) && (cls==PC_PLO || cls==PC_AFF);
 }

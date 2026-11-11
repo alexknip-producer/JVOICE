@@ -120,6 +120,7 @@ void jv_note_on(jv_engine *e, int channel, int note, int vel, int chord, int not
         e->pan_current[slot]=e->pan_position[slot]*(float)e->controls[6];
         e->right_voice[slot]=*v;memset(e->right_f5[slot],0,sizeof e->right_f5[slot]);
         e->lateral_hold[slot]=0;
+        e->envelope[slot]=0;
     }
 }
 void jv_note_off(jv_engine *e, int channel, int note, int note_id)
@@ -186,12 +187,18 @@ void jv_render_input(jv_engine *e,const float *input_l,const float *input_r,floa
         if (!v->active) continue;
         sing_block(t);
         int32_t target = v->gate ? 32700 : 0;
-        int32_t amp = v->env_out;
+        int32_t amp = e->envelope[k], old_output=v->env_out;
         /* 5 ms onset; adjustable upstream release curve. */
         uint32_t rel=ENV_EXP[(uint32_t)(e->controls[12]*127+.5)];
         int32_t next = v->gate ? amp + (target - amp + 3) / 4 : amp-(int32_t)(((uint32_t)amp*rel+65535u)>>16);
         if(!v->gate && e->lateral_hold[k]){next=amp;--e->lateral_hold[k];}
-        int finished=!v->gate && next<8;if(finished)next=0;
+        if(!v->gate && next<8)next=0;
+        e->envelope[k]=next;
+        /* Firmware's amp hook keeps timed coda consonants connected to the
+         * held vowel while the underlying release envelope continues. */
+        int32_t output_amp=formant_amp(t,v,next);
+        int finished=!v->gate && !next && output_amp<8;
+        if(finished)output_amp=0;
         vmod_t m = {0};
         m.inc = pitch_inc(v->pitch16);
         int channel=t->p[P_M1AMT]&15;
@@ -200,9 +207,9 @@ void jv_render_input(jv_engine *e,const float *input_l,const float *input_r,floa
         m.fine=(int32_t)((ratio-1)*4096);
         m.inc=(uint32_t)fmin(m.inc*ratio,2147483647.0);
         m.pitch16 = clamp(v->pitch16+(int)floor(bend*16+.5),0,2047);
-        m.amp0 = amp * v->vel / 127;
-        m.amp1 = next * v->vel / 127;
-        m.envq15 = next;
+        m.amp0 = old_output * v->vel / 127;
+        m.amp1 = output_amp * v->vel / 127;
+        m.envq15 = output_amp;
         m.shape = 64 << 8;
         int32_t mono[CTL]={0},mono_r[CTL]={0};voice_t before=*v;
         int32_t noise_before=formant_nz;
@@ -225,7 +232,7 @@ void jv_render_input(jv_engine *e,const float *input_l,const float *input_r,floa
             mix_l[i]+=mono[i]*gain*(pan>0 ? 1-pan : 1);mix_r[i]+=mono_r[i]*gain*(pan<0 ? 1+pan : 1);
         }
         e->pan_current[k]=pan1;
-        v->env_out = next;
+        v->env_out = output_amp;
         if(finished)v->active=0; /* Render the final ramp before retiring the voice. */
     }
     for (int i = 0; i < CTL; ++i) {

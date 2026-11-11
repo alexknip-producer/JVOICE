@@ -64,3 +64,11 @@ static uint32_t jv_bare_tokens(uint32_t lang,const char *w,uint32_t n,uint8_t *t
     for(uint32_t i=0;i<m;++i)tk[i]=TK_C;
     return m;
 }
+
+/* A consonant token is a single articulation, never a fabricated vowel. */
+static uint32_t jv_consonant_word(const uint8_t *tc,uint32_t m,uint8_t *out,uint32_t *ns) {
+    if(!m)return 0;
+    for(uint32_t i=0;i<m;++i)if(ph_vowel(tc[i]))return 0;
+    for(uint32_t i=0;i<m;++i)out[i]=(uint8_t)(tc[i] | (i ? 0:SYB));
+    *ns=1;return m;
+}

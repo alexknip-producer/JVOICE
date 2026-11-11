@@ -78,3 +78,9 @@ Thickness independently of CONS. Phoneme Glide reaches 1000% at neutral 100%.
 TransportTracker restarts the lyric cursor on project-position discontinuities
 while keeping contiguous playback/stopped blocks stable. Focused checks cover
 these changes, including stereo/external/unison Mono retriggers.
+
+0.3.5 separates consonant-only units from the original word syllabifier and
+restores the firmware's timed-coda amplitude hook. The focused phonetics check
+exercises the English word "sounds", including its n-d-z ending and silence.
+The lyric cursor does not carry an old coda into a new independent voice; the
+preceding voice renders its own ending instead.

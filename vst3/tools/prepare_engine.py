@@ -102,15 +102,13 @@ sing = sing.replace(needle, profile + needle).replace('P = &PHON[c];', 'P = jv_p
 needle = '    if (F) {'
 assert sing.count(needle) == 1
 sing = sing.replace(needle, '    if (k == PC_VOW) jv_smear(lang, tF);\n' + needle)
-# Independent consonants are one articulation unit, with no inserted vowel.
-needle = '    if (!g)\n        return 0;'
-assert sing.count(needle) == 1
-sing = sing.replace(needle, '    if (!g && m) { *ns=1; for(k=0;k<m;++k)out[k]=(uint8_t)(tc[k] | (k ? 0:SYB)); return m; }\n'+needle)
+# Keep the firmware's ordinary syllabifier unchanged. Consonant-only tokens
+# take an explicit path before it, separate from normal words.
 needle = 'static uint32_t sy_word(uint32_t lang, const char *w, uint32_t n, uint8_t *out, uint32_t *ns)'
 assert sing.count(needle)==1
 sing = sing.replace(needle, '#include "WordReaders.h"\nstatic uint32_t jv_word_base(uint32_t lang, const char *w, uint32_t n, uint8_t *out, uint32_t *ns)')
 needle = '    if (lang == LG_JA)\n        return sy_ja(w, n, out, ns);'
-sing = sing.replace(needle, '    if(lang==LG_RU){m=jv_ru_tokens(w,n,tc,tk);return sy_syl(tc,tk,m,out,ns);}\n    m=jv_bare_tokens(lang,w,n,tc,tk);if(m)return sy_syl(tc,tk,m,out,ns);\n'+needle)
+sing = sing.replace(needle, '    if(lang==LG_RU){m=jv_ru_tokens(w,n,tc,tk);uint32_t bare=jv_consonant_word(tc,m,out,ns);return bare ? bare:sy_syl(tc,tk,m,out,ns);}\n    m=jv_bare_tokens(lang,w,n,tc,tk);if(m)return jv_consonant_word(tc,m,out,ns);\n'+needle)
 needle = '/* --------------------------------------------------------------------------------------- the generator --- */'
 sing = sing.replace(needle, '''static uint32_t sy_word(uint32_t lang,const char *w,uint32_t n,uint8_t *out,uint32_t *ns) {
     uint32_t count=jv_word_base(lang,w,n,out,ns);
@@ -124,8 +122,20 @@ sing = sing.replace(needle, needle+'\n    if(jv_control_values[20]>=.5){for(i=0;
 # Preserve Russian soft/hard separators during normalization.
 sing = sing.replace("(c=='\\''&&lang==LG_GN)", "(c=='\\''&&(lang==LG_GN||lang==LG_RU))")
 # The extension state is copied with each articulation track, never global.
-sing = sing.replace('uint8_t ph[SY_N], np, nu, cd;', 'uint16_t jv_trill_tick;\n    uint8_t ph[SY_N], np, nu, cd;')
+sing = sing.replace('uint8_t ph[SY_N], np, nu, cd;', 'uint16_t jv_trill_tick;\n    uint8_t jv_consonant_unit;\n    uint8_t ph[SY_N], np, nu, cd;')
+needle = '    n = sy_take(lang, s, &sing_w[(uint32_t)(t - trk) % NTRK], s->wsy, ph + nc, &nu, &cd);'
+assert sing.count(needle)==1
+sing = sing.replace(needle, needle+'''
+    s->jv_consonant_unit=n!=0;
+    for(k=0;k<n;++k)if(ph_vowel(ph[nc+k]))s->jv_consonant_unit=0;
+    if(s->jv_consonant_unit && nc){memmove(ph,ph+nc,n);nc=0;}
+''')
 sing = sing.replace('static void sy_enter(sing_t *s, uint32_t lang)', '#include "ConsonantArticulation.h"\nstatic void sy_enter(sing_t *s, uint32_t lang)')
+# The desktop cursor creates independent voices: the preceding voice already
+# owns its release coda, so carrying it into the new voice would pronounce it twice.
+needle = 'if (s->i <= s->nu && s->cd < s->np)'
+assert sing.count(needle)==1
+sing = sing.replace(needle, 'if (t != &trk[0] && s->i <= s->nu && s->cd < s->np)')
 sing = sing.replace('if (s->i == s->nu) {', 'if (s->i == s->nu && !jv_timed_nucleus(s,P->cls)) {')
 needle = '    if (P->cls != PC_VOW)'
 assert sing.count(needle)==1
@@ -228,6 +238,7 @@ context += '''    uint8_t cache_ready;
     int32_t right_f5[NTRK][2];
     float mix_gain;
     float external_gain;
+    int32_t envelope[NTRK];
     float last_output[2], declick_offset[2];
     unsigned declick_remaining;
     uint8_t declick_pending;
