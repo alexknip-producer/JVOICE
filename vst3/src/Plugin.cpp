@@ -56,8 +56,8 @@ class VoiceParameter : public RangeParameter {
     int index;
 public:
     explicit VoiceParameter(int i):RangeParameter(STR16(""),firstControlID+i,nullptr,
-        i==PhonemeGlide || i==Thickness ? 25 : i==Smear ? -100 : i==ModRate ? .1 : i==MasterVolume ? -60 : i==ExtGain ? -24 : i==Shift ? -12 : i==SpeechRate ? 50 : i==Voices || i==Release ? 1 : i==PitchBendRange ? 2 : 0,
-        i==PhonemeGlide ? 1000 : i==Thickness ? 400 : i==ModDepth ? 50 : i==ExtGain ? 24 : i==ModRate || i==MasterVolume || i==Shift ? 12 : i==SpeechRate ? 600 : i==Detune ? 40 : i==Unison || i==ExtInput || i==Mono || i==Newspeak ? 1 : i==Voices ? 8 : i==Release ? 10000 : i==PitchBendRange ? 12 : 100,
+        i==PhonemeGlide ? 25 : i==Smear ? -100 : i==ModRate ? .1 : i==MasterVolume ? -60 : i==ExtGain ? -24 : i==Shift ? -12 : i==SpeechRate ? 50 : i==Voices || i==Release ? 1 : i==PitchBendRange ? 2 : 0,
+        i==PhonemeGlide ? 1000 : i==ModDepth ? 50 : i==ExtGain ? 24 : i==ModRate || i==MasterVolume || i==Shift ? 12 : i==SpeechRate ? 600 : i==Detune ? 40 : i==Unison || i==ExtInput || i==Mono || i==Newspeak ? 1 : i==Voices ? 8 : i==Release ? 10000 : i==PitchBendRange ? 12 : 100,
         plainControl(i,controlDefaults[i]),i==Unison || i==ExtInput || i==Mono || i==Newspeak ? 1 : i==Voices ? 7 : i==PitchBendRange ? 10 : 0),index(i) {
         UString(info.title,128).fromAscii(controlNames[i]);
         UString(info.units,128).fromAscii(i==ModRate ? "Hz" : i==MasterVolume || i==ExtGain ? "dB" : i==Shift ? "st" : i==Detune || i==ModDepth ? "ct" : i==Release ? "ms" : i==PitchBendRange ? "st" : i==Voices || i==Unison || i==ExtInput || i==Mono || i==Newspeak ? "" : "%");
@@ -91,7 +91,7 @@ public:
         addAudioInput(STR16("Sidechain"),SpeakerArr::kStereo,kAux,0);
         addEventInput(STR16("MIDI input"),16);
         parameters.addParameter(STR16("Text line"),nullptr,lineCount-1,0,ParameterInfo::kCanAutomate,1);
-        for(int i=0;i<controlCount;++i)if(i!=ReservedControl)parameters.addParameter(new VoiceParameter(i));
+        for(int i=0;i<controlCount;++i)if(i!=ReservedControl && i!=ReservedThickness)parameters.addParameter(new VoiceParameter(i));
         for(int ch=0;ch<16;++ch) for(int cc : {120,123})
             parameters.addParameter(STR16("MIDI panic"),nullptr,0,0,ParameterInfo::kIsHidden,100+ch*128+cc);
         for(int ch=0;ch<16;++ch)parameters.addParameter(STR16("Pitch bend"),nullptr,0,.5,ParameterInfo::kIsHidden,4000+ch);
@@ -236,7 +236,7 @@ public:
         return SingleComponentEffect::getParamNormalized(id);
     }
     tresult PLUGIN_API setParamNormalized(ParamID id,ParamValue v) override {
-        if(id==firstControlID+ReservedControl)return kResultFalse;
+        if((id==firstControlID+ReservedControl || id==firstControlID+ReservedThickness))return kResultFalse;
         if(!std::isfinite(v))return kInvalidArgument;
         if(id>=firstControlID && id<firstControlID+controlCount){int i=int(id-firstControlID);double before=controls[i].exchange(std::clamp(v,0.0,1.0));
             if(i==Newspeak && (before>=.5)!=(v>=.5))requestedLine.store(selected.load());}
@@ -311,7 +311,7 @@ private:
     void applyParameter(ParamID id,double v) {
         if(!std::isfinite(v))return;v=std::clamp(v,0.0,1.0);
         if(id==1)selectLine(int(v*(lineCount-1)+.5));
-        else if(id>=firstControlID && id<firstControlID+controlCount){int i=int(id-firstControlID);if(i==ReservedControl)return;double before=controls[i].exchange(v);jv_control(engine,i,v);if(i==Newspeak && (before>=.5)!=(v>=.5))selectLine(selected.load());}
+        else if(id>=firstControlID && id<firstControlID+controlCount){int i=int(id-firstControlID);if(i==ReservedControl || i==ReservedThickness)return;double before=controls[i].exchange(v);jv_control(engine,i,v);if(i==Newspeak && (before>=.5)!=(v>=.5))selectLine(selected.load());}
         else if(id>=4000 && id<4016)jv_bend(engine,int(id-4000),2*v-1);
         else if(id>=4100 && id<4116)jv_mod_wheel(engine,int(id-4100),v);
         else if(id>=100){jv_panic(engine);held.fill(0);}
@@ -445,11 +445,11 @@ tresult PLUGIN_API View::attached(void* parent,FIDString type) {
     unison=control(L"BUTTON",L"Unison",BS_AUTOCHECKBOX|WS_TABSTOP,732,53,80,28,25);
     mono=control(L"BUTTON",L"Mono",BS_AUTOCHECKBOX|WS_TABSTOP,816,53,70,28,29);
     control(L"STATIC",L"C-2 to C-1 (MIDI 0-12): select lines 1-13. DAW Play / seek restarts the selected line.",0,24,94,852,24,0);
-    const int firstRow[]={SpeechRate,Shift,Smear,Resonance,Breath,Buzz,Artic,Thickness,Release};
+    const int firstRow[]={SpeechRate,Shift,Smear,Resonance,Breath,Buzz,Artic,Release};
     const int secondRow[]={Image,Detune,Voices,ModDepth,ModRate,PhonemeGlide,ExtGain,MasterVolume};
-    for(int row=0;row<2;++row){int n=row ? 8:9;const int* indices=row ? secondRow:firstRow;
+    for(int row=0;row<2;++row){int n=8;const int* indices=row ? secondRow:firstRow;
         for(int col=0;col<n;++col){int i=indices[col];knobs[i]=CreateWindowExW(0,knobClass,L"",WS_CHILD|WS_VISIBLE|WS_TABSTOP,
-            24+col*(row ? 107:95),row ? 242:126,row ? 103:90,110,window,reinterpret_cast<HMENU>(INT_PTR(2000+i)),module,this);}}
+            24+col*107,row ? 242:126,103,110,window,reinterpret_cast<HMENU>(INT_PTR(2000+i)),module,this);}}
     control(L"STATIC",L"Lyrics - one line per keyswitch. Up to 13 lines, 128 characters per line.",0,24,367,852,24,0);
     text=control(L"EDIT",L"",ES_MULTILINE|ES_WANTRETURN|ES_AUTOHSCROLL|ES_AUTOVSCROLL|WS_HSCROLL|WS_VSCROLL|WS_TABSTOP,24,395,852,225,1000);
     SendMessageW(text,EM_SETLIMITTEXT,lineCount*256+lineCount*2,0);
@@ -505,5 +505,5 @@ bool InitModule(){return true;}
 bool DeinitModule(){return true;}
 BEGIN_FACTORY_DEF("", "https://github.com/alexknip-producer/JVOICE", "")
 DEF_CLASS2(INLINE_UID_FROM_FUID(voice::classID),PClassInfo::kManyInstances,kVstAudioEffectClass,
-    "JVoice",0,"Instrument|Synth", "0.3.5",kVstVersionString,voice::Plugin::create)
+    "JVoice",0,"Instrument|Synth", "0.3.6",kVstVersionString,voice::Plugin::create)
 END_FACTORY

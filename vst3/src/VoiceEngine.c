@@ -23,7 +23,6 @@ void jv_reset(jv_engine *e)
     e->controls[16]=.5; /* Wheel fully up: +/-25 cents by default, +/-50 maximum. */
     e->controls[17]=49.0/119; /* 5 Hz sine LFO. */
     e->controls[21]=.5; /* Phoneme Glide: native transition times at centre. */
-    e->controls[22]=.5; /* Thickness: native plosive/affricate duration. */
     e->controls[19]=.5; /* Smear centre leaves each vowel unchanged. */
     e->mix_gain=.7f;
     e->external_gain=1;
@@ -47,7 +46,7 @@ void jv_bend(jv_engine *e,int ch,double v){if(ch>=0 && ch<16 && isfinite(v))e->b
 void jv_mod_wheel(jv_engine *e,int ch,double v){if(ch>=0 && ch<16 && isfinite(v))e->mod_target[ch]=v<0 ? 0:v>1 ? 1:v;}
 void jv_control(jv_engine *e, int index, double value)
 {
-    if(index<0 || index>=JV_CONTROL_COUNT || index==11 || !isfinite(value))return;
+    if(index<0 || index>=JV_CONTROL_COUNT || (index==11 || index==22) || !isfinite(value))return;
     jv_bind(e);
     value=value<0 ? 0 : value>1 ? 1 : value;
     e->controls[index]=value;
@@ -197,6 +196,11 @@ void jv_render_input(jv_engine *e,const float *input_l,const float *input_r,floa
         /* Firmware's amp hook keeps timed coda consonants connected to the
          * held vowel while the underlying release envelope continues. */
         int32_t output_amp=formant_amp(t,v,next);
+        const sing_t *articulation=sing_view(t);
+        if(!v->gate && !articulation->jv_consonant_unit && articulation->cdon &&
+           articulation->cd<articulation->np && articulation->i<articulation->np &&
+           (articulation->i<=articulation->nu || articulation->tb) && v->s[7]>output_amp)
+            output_amp=v->s[7];
         int finished=!v->gate && !next && output_amp<8;
         if(finished)output_amp=0;
         vmod_t m = {0};

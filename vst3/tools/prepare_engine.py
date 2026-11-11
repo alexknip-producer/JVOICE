@@ -137,9 +137,11 @@ needle = 'if (s->i <= s->nu && s->cd < s->np)'
 assert sing.count(needle)==1
 sing = sing.replace(needle, 'if (t != &trk[0] && s->i <= s->nu && s->cd < s->np)')
 sing = sing.replace('if (s->i == s->nu) {', 'if (s->i == s->nu && !jv_timed_nucleus(s,P->cls)) {')
-needle = '    if (P->cls != PC_VOW)'
+# A final sonorant in a released word needs a finite articulation time even
+# when the host envelope has already reached zero.
+needle = '        ms = 0;                                          /* the last of a coda, voiced: held */'
 assert sing.count(needle)==1
-sing = sing.replace(needle, '    if(P->cls==PC_PLO || P->cls==PC_AFF)ms=(uint32_t)lround(ms*pow(16.0,jv_control_values[22]-.5));\n'+needle)
+sing = sing.replace(needle, '        ms = 80u;                                        /* final sonorant articulation */')
 sing = sing.replace('PHON[ph_fric(c)].dur', 'PHON[jv_fric(lang,c)].dur')
 sing = sing.replace('F = &PHON[ph_fric(c)];', 'F = jv_phon(lang,jv_fric(lang,c));')
 sing = sing.replace('if (s->i > s->nu && !s->cdon && s->i >= s->cd)', 'if (s->i > s->nu && !s->cdon && s->i >= s->cd && !jv_vowelless(s))')

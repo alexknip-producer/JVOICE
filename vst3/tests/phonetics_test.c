@@ -68,6 +68,15 @@ int main(void) {
         if(ended){assert(phon==PH_SIL);if(k>500)for(int j=0;j<JV_BLOCK;++j)end_energy+=out[j]*out[j];}
     }
     assert(saw_n && saw_d && saw_z && ended && end_energy<1e-5);
+    // Releasing during the initial consonant with minimum Release must still
+    // reach the ending; the final voiced consonant must not disappear either.
+    for(int word=0;word<2;++word){
+        jv_reset(e);jv_control(e,12,0);jv_text(e,word ? "al":"sounds",word ? LG_RU:LG_EN);
+        jv_note_on(e,0,60,100,0,1);for(int k=0;k<3;++k)jv_render(e,out);jv_note_off(e,0,60,1);
+        int heard=0;for(int k=0;k<700;++k){jv_render(e,out);const sing_t *p=sing_view(&trk[1]);
+            if((word ? sing_phon(p)==PH_L:sing_phon(p)==PH_Z) && trk[1].v[0].env_out>100)heard=1;}
+        assert(heard && !jv_active(e));
+    }
     // The next independent voice must start at its own S, not repeat -nds.
     jv_reset(e);jv_text(e,"sounds",LG_EN);jv_note_on(e,0,60,100,0,1);
     for(int k=0;k<100;++k)jv_render(e,out);jv_note_off(e,0,60,1);jv_note_on(e,0,62,100,0,2);
@@ -95,9 +104,5 @@ int main(void) {
     jv_reset(e);jv_control(e,12,0);jv_text(e,"al",LG_RU);jv_note_on(e,0,60,100,0,1);for(int k=0;k<100;++k)jv_render(e,out);
     jv_note_off(e,0,60,1);for(int k=0;k<10;++k)jv_render(e,out);assert(jv_active(e)==1 && sing_phon(sing_view(&trk[1]))==PH_L);
     for(int k=0;k<100;++k)jv_render(e,out);assert(jv_active(e)==0);
-    int widths[2];
-    for(int thick=0;thick<2;++thick){jv_reset(e);jv_control(e,22,thick);jv_text(e,"g",LG_RU);jv_note_on(e,0,60,100,0,1);int k=0;
-        while(k<1000 && sing_phon(sing_view(&trk[1]))!=PH_SIL){jv_render(e,out);++k;}widths[thick]=k;}
-    assert(widths[0]>0 && widths[1]>4*widths[0]);
     jv_destroy(e);puts("PASS: vowel/Smear targets, RU soft consonants and trills, isolated S/G and Newspeak in all nine languages");
 }
