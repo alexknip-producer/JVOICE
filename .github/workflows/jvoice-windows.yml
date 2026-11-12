@@ -35,7 +35,7 @@ jobs:
       - name: Upload VST3 and instructions
         uses: actions/upload-artifact@v4
         with:
-          name: JVoice-0.5.0-win-x64
+          name: JVoice-0.6.0-win-x64
           path: |
             vst3/build/JVoice.vst3
             vst3/USAGE.ru.md
@@ -46,3 +46,4 @@ jobs:
             vst3/PHONETICS.ru.md
             LICENSE
             LICENSES/BSD-2-Clause-CMUdict.txt
+            vst3/third_party/ott/LICENSE

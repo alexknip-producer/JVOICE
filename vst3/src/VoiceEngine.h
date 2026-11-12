@@ -3,7 +3,7 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
-enum { JV_BLOCK = 64, JV_SAMPLE_RATE = 44100, JV_CONTROL_COUNT = 32 };
+enum { JV_BLOCK = 64, JV_SAMPLE_RATE = 44100, JV_CONTROL_COUNT = 33 };
 typedef struct jv_engine jv_engine;
 jv_engine *jv_create(void);
 void jv_destroy(jv_engine *);

@@ -127,7 +127,7 @@ int main(){
     Run live(321),offline(321,kOffline,kSample64);
     double dl[256]{},dr[256]{},diL[256]{},diR[256]{};double* dout[]={dl,dr};double* din[]={diL,diR};
     offline.bus.channelBuffers64=dout;offline.input.channelBuffers64=din;offline.data.symbolicSampleSize=kSample64;offline.data.processMode=kOffline;
-    for(auto* run:{&live,&offline}){run->p->setDocument("aaaa");run->p->setParamNormalized(firstControlID+ExtInput,1);run->p->setParamNormalized(firstControlID+Breath,0);
+    for(auto* run:{&live,&offline}){run->p->setDocument("aaaa");run->p->setParamNormalized(firstControlID+ExtInput,1);run->p->setParamNormalized(firstControlID+Breath,0);run->p->setParamNormalized(firstControlID+Squash,.4);
         assert(run->p->setBusArrangements(&stereo,1,&stereo,1)==kResultOk);run->data.numInputs=1;run->data.inputs=&run->input;run->start();run->note();}
     double eLive=0,eOffline=0,difference=0;int frame=0;
     for(int block=0;block<160;++block){int n=block%4==0 ? 31:block%4==1 ? 127:block%4==2 ? 64:256;live.data.numSamples=offline.data.numSamples=n;
@@ -146,10 +146,10 @@ int main(){
     jv_note_on(single,0,60,127,0,1);for(int n=0;n<8;++n)jv_note_on(e,0,60,127,n>0,n);
     float referenceMono[JV_BLOCK];double linearEnergy=0;
     for(int k=0;k<200;++k){jv_render(e,ol);jv_render(single,referenceMono);for(int i=0;i<JV_BLOCK;++i){assert(std::isfinite(ol[i]));assert(std::abs(ol[i]-8*referenceMono[i])<1e-6);linearEnergy+=ol[i]*ol[i];}}assert(linearEnergy>.01);
-    // Manual master is a linear dB multiplier, also for external carrier and hiss.
-    for(bool external:{false,true}){
+    // Master is after Squash and remains a linear multiplier with either input.
+    for(bool external:{false,true})for(bool squash:{false,true}){
         jv_reset(e);jv_reset(single);
-        for(auto* engine:{e,single}){jv_control(engine,ExtInput,external);jv_text(engine,"sa",1);jv_note_on(engine,0,60,100,0,1);}
+        for(auto* engine:{e,single}){jv_control(engine,ExtInput,external);jv_control(engine,Squash,squash);jv_text(engine,"sa",1);jv_note_on(engine,0,60,100,0,1);}
         jv_control(e,MasterVolume,normalizedControl(MasterVolume,-12));
         for(int k=0;k<100;++k){std::fill(il,il+JV_BLOCK,.05f);jv_render_input(e,il,il,ol,orr);jv_render_input(single,il,il,referenceMono,ir);
             if(k)for(int i=0;i<JV_BLOCK;++i)assert(std::abs(ol[i]-referenceMono[i]*std::pow(10.f,-12.f/20))<1e-6);}

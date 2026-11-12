@@ -55,20 +55,33 @@ int main(void) {
     jv_control(e,28,1);jv_note_on(e,0,62,30,0,2);assert(trk[2].v[0].vel==30);
     jv_reset(e);jv_control(e,8,1);jv_control(e,9,1.0/31);jv_note_on(e,0,60,80,0,1);
     assert(e->mod_offset[1]==0 && e->mod_offset[2]==.5);
-    // Bloom sweeps the five unison layers symmetrically and works live.
+    // Bloom alternates positive and negative offsets across stereo positions.
     jv_reset(e);jv_control(e,8,1);jv_control(e,9,4.0/31);jv_text(e,"aaaa",LG_RU);jv_note_on(e,0,60,100,0,1);
-    for(int k=1;k<=5;++k)assert(e->formant_offset16[k]==(3-k)*96 && trk[k].v[0].note==60);
+    {int offsets[]={192,-192,0,96,-96};for(int k=1;k<=5;++k)assert(e->formant_offset16[k]==offsets[k-1] && trk[k].v[0].note==60);}
+    jv_reset(e);jv_control(e,8,1);jv_control(e,9,3.0/31);jv_text(e,"aaaa",LG_RU);jv_note_on(e,0,60,100,0,1);
     {float samples[JV_BLOCK];jv_render(e,samples);assert(jv_formant_offset16==0);
-     jv_control(e,31,1.0/6);jv_render(e,samples);assert(jv_formant_offset16==-32);
-     jv_control(e,31,1.0/3);jv_render(e,samples);assert(jv_formant_offset16==-64);
+     jv_control(e,31,1.0/6);jv_render(e,samples);assert(jv_formant_offset16==-11);
+     jv_control(e,31,1.0/3);jv_render(e,samples);assert(jv_formant_offset16==-21);
      jv_control(e,31,0);jv_render(e,samples);assert(jv_formant_offset16==0);}
     jv_reset(e);jv_control(e,8,1);jv_control(e,9,1);jv_text(e,"aaaa",LG_RU);jv_note_on(e,0,60,100,0,1);
-    assert(e->formant_offset16[1]==192 && e->formant_offset16[32]==-192);
+    assert(e->formant_offset16[1]==192 && e->formant_offset16[2]==-192);
     for(int k=1;k<=32;++k)assert(abs(e->formant_offset16[k])<=192);
+    {int lp=0,ln=0,rp=0,rn=0;for(int k=1;k<=32;++k){
+        if(e->pan_position[k]<0){lp+=e->formant_offset16[k]>0;ln+=e->formant_offset16[k]<0;}
+        if(e->pan_position[k]>0){rp+=e->formant_offset16[k]>0;rn+=e->formant_offset16[k]<0;}}
+     assert(lp && ln && rp && rn);}
     jv_reset(e);jv_control(e,31,1.0/6);jv_text(e,"aaaa",LG_RU);
     for(int k=0;k<3;++k)jv_note_on(e,0,60+k,100,k>0,k);
     assert(e->formant_offset16[1]==0 && e->formant_offset16[2]==192 && e->formant_offset16[3]==-192);
     {float samples[JV_BLOCK];jv_render(e,samples);assert(jv_formant_offset16==-32);}
+    // Unison gain depends on the selected stack, not the envelope or number
+    // of currently active notes. Normal polyphony remains unity.
+    jv_reset(e);jv_control(e,8,1);jv_control(e,9,0);{float samples[JV_BLOCK];jv_render(e,samples);assert(e->unison_gain==1);}
+    jv_control(e,9,1);{float samples[JV_BLOCK];jv_render(e,samples);assert(fabsf(e->unison_gain-powf(10.f,-12.f/20))<1e-6f);}
+    jv_control(e,8,0);{float samples[JV_BLOCK];jv_render(e,samples);assert(e->unison_gain==1);}
+    {float samples[JV_BLOCK];jv_reset(e);jv_render(e,samples);assert(!e->squash_active);
+     jv_control(e,32,.5);jv_render(e,samples);assert(e->squash_active);
+     jv_control(e,32,0);jv_render(e,samples);assert(!e->squash_active);}
     // Sub adds a layer for 1–3, then replaces up to eight layers, always
     // preserving the MIDI note for note-off and sustain of the whole stack.
     { const int counts[]={1,2,3,4,5,6,32};
@@ -77,6 +90,10 @@ int main(void) {
         jv_text(e,"aaaa",LG_RU);jv_sustain(e,0,1);jv_note_on(e,0,60,100,0,1);assert(jv_active(e)==total);
         int subs=0;for(int k=1;k<=total;++k){assert(trk[k].v[0].note==60);subs+=e->octave_offset[k]==-12;}
         assert(subs==sub_count);if(count==2)assert(e->pan_position[3]==0);
+        if(count==4 || count==6 || count==32){int lp=0,ln=0,rp=0,rn=0;for(int k=1;k<=total;++k){
+            if(e->pan_position[k]<0){lp+=e->formant_offset16[k]>0;ln+=e->formant_offset16[k]<0;}
+            if(e->pan_position[k]>0){rp+=e->formant_offset16[k]>0;rn+=e->formant_offset16[k]<0;}}
+            assert(lp && ln && rp && rn);}
         jv_note_off(e,0,60,1);for(int k=1;k<=total;++k)assert(trk[k].v[0].gate);
         jv_sustain(e,0,0);for(int k=1;k<=total;++k)assert(!trk[k].v[0].gate);
       }

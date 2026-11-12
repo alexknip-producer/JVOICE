@@ -289,7 +289,7 @@ public:
         Bank copy=snapshot();
         const uint32_t magic=0x31564A54;
         auto write=[&](const void* p,int n){int32 done=0;return stream->write(const_cast<void*>(p),n,&done)==kResultOk && done==n;};
-        uint32_t values[]={magic,17,uint32_t(copy.language),uint32_t(copy.selected)};
+        uint32_t values[]={magic,18,uint32_t(copy.language),uint32_t(copy.selected)};
         if(!write(values,sizeof values))return kResultFalse;
         for(auto& l:copy.lines) {
             uint32_t len=uint32_t(std::strlen(l.original.data()));
@@ -303,14 +303,14 @@ public:
         Bank copy;
         auto read=[&](void* p,int n){int32 done=0;return stream->read(p,n,&done)==kResultOk && done==n;};
         uint32_t values[4]{};
-        if(!read(values,sizeof values)||values[0]!=0x31564A54||(values[1]<1 || values[1]>17)||values[2]<1||values[2]>9||values[3]>15)return kResultFalse;
+        if(!read(values,sizeof values)||values[0]!=0x31564A54||(values[1]<1 || values[1]>18)||values[2]<1||values[2]>9||values[3]>15)return kResultFalse;
         copy.language=int(values[2]);copy.selected=std::min(int(values[3]),lineCount-1);
         for(auto& l:copy.lines) {
             uint32_t len=0;char text[textBytes]{};
             if(!read(&len,4)||len>=textBytes||!read(text,int(len))||!makeLine(std::string_view(text,len),copy.language,l))return kResultFalse;
         }
         auto restored=controlDefaults;
-        int nControls=values[1]==1 ? 0:values[1]==2 ? 10:values[1]==3 ? 14:values[1]==4 ? 16:values[1]==5 ? 20:values[1]==6 ? 22:values[1]<=8 ? 23:values[1]==9 ? 24:values[1]==10 ? 25:values[1]==11 ? 26:values[1]<=13 ? 27:values[1]==14 ? 29:values[1]==15 ? 30:values[1]==16 ? 31:controlCount;
+        int nControls=values[1]==1 ? 0:values[1]==2 ? 10:values[1]==3 ? 14:values[1]==4 ? 16:values[1]==5 ? 20:values[1]==6 ? 22:values[1]<=8 ? 23:values[1]==9 ? 24:values[1]==10 ? 25:values[1]==11 ? 26:values[1]<=13 ? 27:values[1]==14 ? 29:values[1]==15 ? 30:values[1]==16 ? 31:values[1]==17 ? 32:controlCount;
         for(int i=0;i<nControls;++i){auto& v=restored[i];if(!read(&v,sizeof v)||!std::isfinite(v)||v<0||v>1)return kResultFalse;}
         if(values[1]<=16 && nControls>FormantDecouple && restored[FormantDecouple]>=.5)restored[Bloom]=1.0/6;
         if(values[1]<=14 && nControls>Voices)restored[Voices]=std::round(restored[Voices]*7)/31;
@@ -472,14 +472,15 @@ tresult PLUGIN_API View::attached(void* parent,FIDString type) {
         for(int col=0;col<n;++col){int i=indices[col];knobs[i]=CreateWindowExW(0,knobClass,L"",WS_CHILD|WS_VISIBLE|WS_TABSTOP,
             24+col*85,row ? 242:126,81,110,window,reinterpret_cast<HMENU>(INT_PTR(2000+i)),module,this);}}
     control(L"STATIC",L"Lyrics - one line per keyswitch. Up to 13 lines, 128 characters per line.",0,24,367,852,24,0);
-    text=control(L"EDIT",L"",ES_MULTILINE|ES_WANTRETURN|ES_AUTOHSCROLL|ES_AUTOVSCROLL|WS_HSCROLL|WS_VSCROLL|WS_TABSTOP,24,395,852,225,1000);
+    text=control(L"EDIT",L"",ES_MULTILINE|ES_WANTRETURN|ES_AUTOHSCROLL|ES_AUTOVSCROLL|WS_HSCROLL|WS_VSCROLL|WS_TABSTOP,24,395,852,200,1000);
     SendMessageW(text,EM_SETLIMITTEXT,lineCount*256+lineCount*2,0);
     control(L"BUTTON",L"Select cursor line",WS_TABSTOP,24,632,275,32,26);
     control(L"STATIC",L"Glide direction",0,320,638,120,24,0);
     glideDirection=control(L"COMBOBOX",L"",CBS_DROPDOWNLIST|WS_TABSTOP,450,632,130,160,31);
     for(auto* label:{L"Both",L"Up",L"Down"})SendMessageW(glideDirection,CB_ADDSTRING,0,reinterpret_cast<LPARAM>(label));
     velo=control(L"BUTTON",L"Velo",BS_AUTOCHECKBOX|WS_TABSTOP,610,632,90,28,32);
-    status=control(L"STATIC",L"",0,24,685,852,26,0);
+    knobs[Squash]=CreateWindowExW(0,knobClass,L"",WS_CHILD|WS_VISIBLE|WS_TABSTOP,750,600,110,110,window,reinterpret_cast<HMENU>(INT_PTR(2000+Squash)),module,this);
+    status=control(L"STATIC",L"",0,24,685,690,26,0);
     seenRevision=0;refresh();SetTimer(window,1,80,nullptr);return CPluginView::attached(parent,type);
 }
 tresult PLUGIN_API View::removed() {
@@ -536,5 +537,5 @@ bool InitModule(){return true;}
 bool DeinitModule(){return true;}
 BEGIN_FACTORY_DEF("", "https://github.com/alexknip-producer/JVOICE", "")
 DEF_CLASS2(INLINE_UID_FROM_FUID(voice::classID),PClassInfo::kManyInstances,kVstAudioEffectClass,
-    "JVoice",0,"Instrument|Synth", "0.4.3",kVstVersionString,voice::Plugin::create)
+    "JVoice",0,"Instrument|Synth", "0.6.0",kVstVersionString,voice::Plugin::create)
 END_FACTORY

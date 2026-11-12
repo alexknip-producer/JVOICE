@@ -23,3 +23,7 @@ hardware interfaces are not linked into the plugin.
 JVoice's Russian consonant/vowel profiles and contextual reader are desktop
 adaptations. Standalone consonants and phoneme stepping run in the common
 articulation engine. Original firmware files remain unchanged.
+
+Squash vendors the independent OTT-style DSP core by Rui-727 (MIT), commit
+`312e32c7d77122c083b27b64040990a50107df47`; its license is in
+`vst3/third_party/ott/LICENSE`. It is not Xfer OTT.

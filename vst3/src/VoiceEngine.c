@@ -1,5 +1,6 @@
 /* SPDX-License-Identifier: GPL-3.0-only */
 #include "VoiceEngine.h"
+#include "ott_dsp.h"
 #include "engine_generated.inc"
 _Static_assert(CTL == JV_BLOCK, "Desktop block size must match pinned preview");
 _Static_assert(FS == JV_SAMPLE_RATE, "FM-1 DSP must remain at 44100 Hz");
@@ -12,7 +13,9 @@ enum { JV_DECLICK_FRAMES = 132 }; /* 3 ms at the native clock. */
 void jv_reset(jv_engine *e)
 {
     uint32_t seed=e->noise_seed ? e->noise_seed : 0x2545F491;
-    memset(e, 0, sizeof *e);e->noise_seed=seed;
+    ott_dsp_t *squash_left=e->squash_left,*squash_right=e->squash_right;
+    memset(e, 0, sizeof *e);e->noise_seed=seed;e->squash_left=squash_left;e->squash_right=squash_right;
+    ott_dsp_reset(squash_left);ott_dsp_reset(squash_right);
     jv_bind(e);
     formant_nz = (int32_t)seed;
     sing_init();
@@ -27,6 +30,7 @@ void jv_reset(jv_engine *e)
     e->controls[21]=.5; /* Phoneme Glide: native transition times at centre. */
     e->controls[19]=.5; /* Smear centre leaves each vowel unchanged. */
     e->mix_gain=.7f;
+    e->unison_gain=1;
     e->external_gain=1;
     const preset_t *p = &FORMANT_PRESETS[9]; /* SINGER EN */
     for (int k = 0; k < NTRK; ++k) {
@@ -39,10 +43,12 @@ void jv_reset(jv_engine *e)
 jv_engine *jv_create(void)
 {
     jv_engine *e = calloc(1, sizeof *e);
-    if (e) jv_reset(e);
+    if(e){e->squash_left=ott_dsp_new(FS);e->squash_right=ott_dsp_new(FS);
+        if(!e->squash_left || !e->squash_right){ott_dsp_free(e->squash_left);ott_dsp_free(e->squash_right);free(e);return NULL;}
+        jv_reset(e);}
     return e;
 }
-void jv_destroy(jv_engine *e) { free(e); }
+void jv_destroy(jv_engine *e) { if(e){ott_dsp_free(e->squash_left);ott_dsp_free(e->squash_right);free(e);} }
 void jv_seed(jv_engine *e,unsigned seed){e->noise_seed=seed ? seed:1;jv_bind(e);formant_nz=(int32_t)e->noise_seed;}
 void jv_bend(jv_engine *e,int ch,double v){if(ch>=0 && ch<16 && isfinite(v))e->bend_target[ch]=v<-1 ? -1:v>1 ? 1:v;}
 void jv_mod_wheel(jv_engine *e,int ch,double v){if(ch>=0 && ch<16 && isfinite(v))e->mod_target[ch]=v<0 ? 0:v>1 ? 1:v;}
@@ -141,6 +147,16 @@ void jv_note_on(jv_engine *e, int channel, int note, int vel, int chord, int not
     const uint32_t age=++e->age;
     static const float VP[8]={-1,1,-.5f,.5f,-.75f,.75f,-.25f,.25f};
     static const float FP[9]={0,1,-1,.5f,-.5f,.75f,-.75f,.25f,-.25f};
+    int formant_rank[32]={0};
+    if(unison && nv>1){
+        float positions[32];int order[32];
+        for(int j=0;j<nv;++j){int low=j>=main_count,n=low ? sub_count:main_count,i=low ? j-main_count:j;
+            positions[j]=n==1 ? 0:2.0f*i/(n-1)-1;order[j]=j;}
+        for(int j=1;j<nv;++j){int k=j;while(k>0 && positions[order[k]]<positions[order[k-1]]){int t=order[k];order[k]=order[k-1];order[k-1]=t;--k;}}
+        for(int j=0;j<nv;++j){int rank;if((nv&1) && j==nv/2)rank=nv/2;
+            else {int i=j-((nv&1) && j>nv/2);rank=(i&1) ? nv-1-i/2:i/2;}
+            formant_rank[order[j]]=rank;}
+    }
     for(int sub=0;sub<nv;++sub) {
         const int is_sub=sub>=main_count;
         const int group_count=is_sub ? sub_count:main_count, group_index=is_sub ? sub-main_count:sub;
@@ -165,7 +181,8 @@ void jv_note_on(jv_engine *e, int channel, int note, int vel, int chord, int not
         e->ids[slot] = note_id;t->p[P_M1AMT] = (int16_t)channel;
         e->key_down[slot]=1;
         e->octave_offset[slot]=is_sub ? -12:0;
-        e->formant_offset16[slot]=unison ? (nv>1 ? (int16_t)lround((1.0-2.0*sub/(nv-1))*12.0*16):0):(int16_t)lround(FP[(slot-1)%9]*12.0*16);
+        int rank=formant_rank[sub];
+        e->formant_offset16[slot]=unison ? (nv>1 ? (int16_t)lround((1.0-2.0*rank/(nv-1))*12.0*16):0):(int16_t)lround(FP[(slot-1)%9]*12.0*16);
         e->detune_position[slot]=unison ? (group_count==1 ? 0 : 2.0f*group_index/(group_count-1)-1) : VP[(slot-1)%8];
         e->mod_offset[slot]=unison ? (double)sub/nv:fmod((slot-1)*.6180339887498949,1.0);
         e->pan_position[slot]=unison ? (group_count==1 ? 0 : 2.0f*group_index/(group_count-1)-1) : VP[(slot-1)%8];
@@ -228,6 +245,7 @@ void jv_panic(jv_engine *e)
     jv_bind(e);
     for (int k = 1; k < NTRK; ++k) memset(trk[k].v, 0, sizeof trk[k].v);
     e->declick_pending=e->declick_remaining=0;
+    if(e->squash_active){ott_dsp_reset(e->squash_left);ott_dsp_reset(e->squash_right);e->squash_active=0;}
     e->last_output[0]=e->last_output[1]=0;
     memset(e->glide_last_valid,0,sizeof e->glide_last_valid);
     memset(e->glide_group,0,sizeof e->glide_group);e->glide_epoch=0;
@@ -248,8 +266,12 @@ void jv_render_input(jv_engine *e,const float *input_l,const float *input_r,floa
     jv_bind(e);
     float mix_l[CTL]={0},mix_r[CTL]={0};
     const float zero[CTL]={0};int external=e->controls[10]>=.5;
-    /* Manual master only. Notes, release tails and unison never change gain. */
+    /* Unison attenuation follows the configured stack, never note activity. */
     float target_gain=.7f*(float)pow(10.0,(e->controls[14]*72-60)/20),previous_gain=e->mix_gain;
+    int configured=1+(int)(e->controls[9]*31+.5);
+    if(e->controls[8]>=.5 && e->controls[29]>=.5 && configured<4)++configured;
+    float unison_target=e->controls[8]>=.5 ? powf(10.0f,-.6f*(configured-1)/31.0f):1.0f;
+    float unison_previous=e->unison_gain;
     float carrier_gain[CTL];
     for(int i=0;i<CTL;++i)carrier_gain[i]=1.0f;
     jv_carrier_gain=carrier_gain;
@@ -338,8 +360,18 @@ void jv_render_input(jv_engine *e,const float *input_l,const float *input_r,floa
         v->env_out = output_amp;
         if(finished)v->active=0; /* Render the final ramp before retiring the voice. */
     }
+    float squash=(float)e->controls[32];
+    if(squash>0){
+        float dry_l[CTL],dry_r[CTL],wet_l[CTL],wet_r[CTL];
+        for(int i=0;i<CTL;++i){float scale=.7f*(unison_previous+(unison_target-unison_previous)*(i+1)/CTL);dry_l[i]=mix_l[i]*scale;dry_r[i]=mix_r[i]*scale;}
+        ott_dsp_process_stereo(e->squash_left,e->squash_right,dry_l,dry_r,wet_l,wet_r,CTL);
+        for(int i=0;i<CTL;++i){mix_l[i]=dry_l[i]+squash*(wet_l[i]-dry_l[i]);mix_r[i]=dry_r[i]+squash*(wet_r[i]-dry_r[i]);}
+        e->squash_active=1;
+    }else if(e->squash_active){ott_dsp_reset(e->squash_left);ott_dsp_reset(e->squash_right);e->squash_active=0;}
     for (int i = 0; i < CTL; ++i) {
         float gain=previous_gain+(target_gain-previous_gain)*(i+1)/CTL;
+        if(squash>0)gain/=.7f;
+        else gain*=unison_previous+(unison_target-unison_previous)*(i+1)/CTL;
         left[i]=mix_l[i]*gain;
         right[i]=mix_r[i]*gain;
         if(e->declick_pending){
@@ -354,6 +386,7 @@ void jv_render_input(jv_engine *e,const float *input_l,const float *input_r,floa
         e->last_output[0]=left[i];e->last_output[1]=right[i];
     }
     e->mix_gain=target_gain;
+    e->unison_gain=unison_target;
     jv_carrier=NULL;
     jv_carrier_gain=NULL;
     jv_grain=NULL;
