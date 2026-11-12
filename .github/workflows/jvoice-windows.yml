@@ -1,14 +1,14 @@
 name: JVOICE Windows x64
 on:
   push:
-    branches: [voice-vst3-preview]
+    branches: [builds/windows-063]
     paths: ['vst3/**', '.github/workflows/jvoice-windows.yml']
   workflow_dispatch:
 permissions:
   contents: read
 jobs:
   build:
-    runs-on: windows-latest
+    runs-on: windows-2022
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
