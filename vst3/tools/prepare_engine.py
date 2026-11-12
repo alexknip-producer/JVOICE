@@ -186,6 +186,9 @@ sing = sing.replace('static int16_t sy_cx;', 'static JV_TLS int16_t sy_cx;')
 sing = sing.replace('static uint8_t lyb_ok __attribute__((section(".pool")));',
                     'static JV_TLS uint8_t *lyb_ok_ptr;\n#define lyb_ok (*lyb_ok_ptr)')
 formant = (root / 'firmware/src/eng_formant.c').read_text().replace('#include "sing.c"', sing)
+# Per-layer formant Shift, in sixteenths of a semitone, independent of pitch.
+assert formant.count('fmt_ratio(p[P_E3] * 16 +')==2
+formant = formant.replace('fmt_ratio(p[P_E3] * 16 +', 'fmt_ratio(p[P_E3] * 16 + jv_formant_offset16 +')
 # The embedded renderer rounds each quiet sample twice to an integer before
 # applying the release. Retain 12 fractional output bits on the desktop;
 # the rest of the voice model and its nominal gain are unchanged.
@@ -229,6 +232,7 @@ static void str_cpy(char *d, const char *s, unsigned n) {
 static JV_TLS const float *jv_carrier;
 static JV_TLS const float *jv_carrier_gain;
 static JV_TLS const double *jv_control_values;
+static JV_TLS int32_t jv_formant_offset16;
 typedef struct { uint32_t bits; float mix, tail; } jv_grain_state;
 static JV_TLS jv_grain_state *jv_grain;
 /* Change texture smoothly; at zero the original noise remains bit-identical. */
@@ -288,6 +292,7 @@ context += '''    uint8_t cache_ready;
     uint16_t lateral_hold[NTRK];
     float detune_position[NTRK], pan_position[NTRK], pan_current[NTRK];
     int8_t octave_offset[NTRK];
+    int16_t formant_offset16[NTRK];
 };
 static void jv_bind(struct jv_engine *e) {
     jv_control_values = e->controls;

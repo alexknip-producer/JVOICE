@@ -35,7 +35,7 @@ int main(){
         if(i==ReservedControl || i==ReservedThickness)continue;
         ParameterInfo info{};assert(p->getParameterInfoByTag(firstControlID+i,info)==kResultOk);
         assert(info.flags & ParameterInfo::kCanAutomate);
-        p->gestureBegin(i);p->gestureValue(i,i==Voices ? 1:i==Unison || i==ExtInput || i==Mono || i==Newspeak || i==Velo || i==Sub ? 0:.5);p->gestureEnd(i);
+        p->gestureBegin(i);p->gestureValue(i,i==Voices ? 1:i==Unison || i==ExtInput || i==Mono || i==Newspeak || i==Velo || i==Sub || i==FormantDecouple ? 0:.5);p->gestureEnd(i);
     }
     assert(spy->begins>=controlCount-2 && spy->edits>=controlCount-2 && spy->begins==spy->ends);
     ParameterInfo retired{};assert(p->getParameterInfoByTag(firstControlID+ReservedControl,retired)!=kResultOk);
@@ -99,9 +99,9 @@ int main(){
     context.projectTimeSamples+=48000;render();assert(p->syllablePosition()==0);
     render();assert(p->syllablePosition()==0); // unchanged stopped position is stable
     ParameterChanges automation;
-    for(int i=0;i<controlCount;++i){if(i==ReservedThickness)continue;int32 qi=0,pi=0;auto id=firstControlID+i;auto* queue=automation.addParameterData(id,qi);queue->addPoint(100,i==Unison || i==ExtInput || i==Mono || i==Newspeak || i==Velo || i==Sub ? 0:i==Voices ? 1:.7,pi);}
+    for(int i=0;i<controlCount;++i){if(i==ReservedThickness)continue;int32 qi=0,pi=0;auto id=firstControlID+i;auto* queue=automation.addParameterData(id,qi);queue->addPoint(100,i==Unison || i==ExtInput || i==Mono || i==Newspeak || i==Velo || i==Sub || i==FormantDecouple ? 0:i==Voices ? 1:.7,pi);}
     data.inputParameterChanges=&automation;render();data.inputParameterChanges=nullptr;
-    for(int i=0;i<controlCount;++i)if(i!=ReservedThickness)assert(std::abs(p->control(i)-(i==Unison || i==ExtInput || i==Mono || i==Newspeak || i==Velo || i==Sub || i==ReservedControl ? 0:i==Voices ? 1:.7))<1e-9);
+    for(int i=0;i<controlCount;++i)if(i!=ReservedThickness)assert(std::abs(p->control(i)-(i==Unison || i==ExtInput || i==Mono || i==Newspeak || i==Velo || i==Sub || i==FormantDecouple || i==ReservedControl ? 0:i==Voices ? 1:.7))<1e-9);
     double energy=0;for(int b=0;b<40;++b){render();for(float x:left){assert(std::isfinite(x));energy+=x*x;}}assert(energy>.01);
     for(int id=1;id<=5;++id){Event off{};off.type=Event::kNoteOffEvent;off.noteOff.pitch=60;off.noteOff.noteId=id;events.addEvent(off);}
     render();events.clear();for(int b=0;b<400;++b)render();for(float x:left)assert(x==0);
@@ -124,10 +124,12 @@ int main(){
     assert(std::string(p->snapshot().lines[0].original.data())==u8"Проверка русского текста");
     auto swarmKnob=GetDlgItem(editor,2000+Swarm);assert(swarmKnob && !IsWindowEnabled(swarmKnob));
     auto subToggle=GetDlgItem(editor,33);assert(subToggle && !IsWindowEnabled(subToggle));
-    for(int i=0;i<controlCount;++i)if(i!=Unison && i!=ExtInput && i!=Mono && i!=Newspeak && i!=Velo && i!=Sub && i!=PitchBendRange && i!=GlideDirection && i!=ReservedControl && i!=ReservedThickness){auto knob=GetDlgItem(editor,2000+i);assert(knob);SendMessageW(knob,WM_KEYDOWN,VK_RIGHT,0);}
+    auto formantToggle=GetDlgItem(editor,34);assert(formantToggle && !IsWindowEnabled(formantToggle));
+    for(int i=0;i<controlCount;++i)if(i!=Unison && i!=ExtInput && i!=Mono && i!=Newspeak && i!=Velo && i!=Sub && i!=FormantDecouple && i!=PitchBendRange && i!=GlideDirection && i!=ReservedControl && i!=ReservedThickness){auto knob=GetDlgItem(editor,2000+i);assert(knob);SendMessageW(knob,WM_KEYDOWN,VK_RIGHT,0);}
     assert(!GetDlgItem(editor,2000+ReservedControl));
     auto toggle=GetDlgItem(editor,25);SendMessageW(toggle,BM_SETCHECK,BST_CHECKED,0);SendMessageW(editor,WM_COMMAND,MAKEWPARAM(25,BN_CLICKED),0);assert(p->control(Unison)==1);
-    SendMessageW(editor,WM_TIMER,1,0);assert(IsWindowEnabled(swarmKnob) && IsWindowEnabled(subToggle));
+    SendMessageW(editor,WM_TIMER,1,0);assert(IsWindowEnabled(swarmKnob) && IsWindowEnabled(subToggle) && IsWindowEnabled(formantToggle));
+    SendMessageW(formantToggle,BM_SETCHECK,BST_CHECKED,0);SendMessageW(editor,WM_COMMAND,MAKEWPARAM(34,BN_CLICKED),0);assert(p->control(FormantDecouple)==1);
     SendMessageW(subToggle,BM_SETCHECK,BST_CHECKED,0);SendMessageW(editor,WM_COMMAND,MAKEWPARAM(33,BN_CLICKED),0);assert(p->control(Sub)==1);
     auto monoToggle=GetDlgItem(editor,29);assert(monoToggle);SendMessageW(monoToggle,BM_SETCHECK,BST_CHECKED,0);SendMessageW(editor,WM_COMMAND,MAKEWPARAM(29,BN_CLICKED),0);assert(p->control(Mono)==1);
     ShowWindow(parent,SW_SHOW);UpdateWindow(parent);MSG msg{};

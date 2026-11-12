@@ -164,6 +164,8 @@ void jv_note_on(jv_engine *e, int channel, int note, int vel, int chord, int not
         e->ids[slot] = note_id;t->p[P_M1AMT] = (int16_t)channel;
         e->key_down[slot]=1;
         e->octave_offset[slot]=is_sub ? -12:0;
+        double formant_width=fmin(12.0,(nv-1)*.5);
+        e->formant_offset16[slot]=unison && nv>1 ? (int16_t)lround((1.0-2.0*sub/(nv-1))*formant_width*16):0;
         e->detune_position[slot]=unison ? (group_count==1 ? 0 : 2.0f*group_index/(group_count-1)-1) : VP[(slot-1)%8];
         e->mod_offset[slot]=unison ? (double)sub/nv:fmod((slot-1)*.6180339887498949,1.0);
         e->pan_position[slot]=unison ? (group_count==1 ? 0 : 2.0f*group_index/(group_count-1)-1) : VP[(slot-1)%8];
@@ -311,6 +313,7 @@ void jv_render_input(jv_engine *e,const float *input_l,const float *input_r,floa
         m.shape = 64 << 8;
         int32_t mono[CTL]={0},mono_r[CTL]={0};voice_t before=*v;
         int32_t noise_before=formant_nz;
+        jv_formant_offset16=e->controls[8]>=.5 && e->controls[30]>=.5 ? e->formant_offset16[k]:0;
         jv_grain=&e->grain[k];jv_grain_state grain_before=*jv_grain;
         jv_carrier=external ? (input_l ? input_l:zero):NULL;
         formant_render(t, v, mono, CTL, &m);

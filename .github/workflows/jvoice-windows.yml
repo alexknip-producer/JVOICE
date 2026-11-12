@@ -35,7 +35,7 @@ jobs:
       - name: Upload VST3 and instructions
         uses: actions/upload-artifact@v4
         with:
-          name: JVoice-0.4.7-win-x64
+          name: JVoice-0.4.8-win-x64
           path: |
             vst3/build/JVoice.vst3
             vst3/USAGE.ru.md
