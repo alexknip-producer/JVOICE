@@ -23,7 +23,9 @@ jobs:
       - name: Configure and build
         shell: pwsh
         run: |
-          cmake -S vst3 -B vst3/build -A x64 "-DVST3_SDK_ROOT=$env:RUNNER_TEMP/vst3sdk"
+          $sdkPath = (Join-Path $env:RUNNER_TEMP 'vst3sdk').Replace('\', '/')
+          cmake -S vst3 -B vst3/build -A x64 "-DVST3_SDK_ROOT=$sdkPath"
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           cmake --build vst3/build --config Release --parallel 2
       - name: Tests
         shell: pwsh
