@@ -140,6 +140,7 @@ void jv_note_on(jv_engine *e, int channel, int note, int vel, int chord, int not
     const int cap=unison ? nv:requested;
     const uint32_t age=++e->age;
     static const float VP[8]={-1,1,-.5f,.5f,-.75f,.75f,-.25f,.25f};
+    static const float FP[9]={0,1,-1,.5f,-.5f,.75f,-.75f,.25f,-.25f};
     for(int sub=0;sub<nv;++sub) {
         const int is_sub=sub>=main_count;
         const int group_count=is_sub ? sub_count:main_count, group_index=is_sub ? sub-main_count:sub;
@@ -164,8 +165,7 @@ void jv_note_on(jv_engine *e, int channel, int note, int vel, int chord, int not
         e->ids[slot] = note_id;t->p[P_M1AMT] = (int16_t)channel;
         e->key_down[slot]=1;
         e->octave_offset[slot]=is_sub ? -12:0;
-        double formant_width=fmin(2.0,(nv-1)*.5);
-        e->formant_offset16[slot]=unison && nv>1 ? (int16_t)lround((1.0-2.0*sub/(nv-1))*formant_width*16):0;
+        e->formant_offset16[slot]=unison ? (nv>1 ? (int16_t)lround((1.0-2.0*sub/(nv-1))*12.0*16):0):(int16_t)lround(FP[(slot-1)%9]*12.0*16);
         e->detune_position[slot]=unison ? (group_count==1 ? 0 : 2.0f*group_index/(group_count-1)-1) : VP[(slot-1)%8];
         e->mod_offset[slot]=unison ? (double)sub/nv:fmod((slot-1)*.6180339887498949,1.0);
         e->pan_position[slot]=unison ? (group_count==1 ? 0 : 2.0f*group_index/(group_count-1)-1) : VP[(slot-1)%8];
@@ -250,10 +250,9 @@ void jv_render_input(jv_engine *e,const float *input_l,const float *input_r,floa
     const float zero[CTL]={0};int external=e->controls[10]>=.5;
     /* Manual master only. Notes, release tails and unison never change gain. */
     float target_gain=.7f*(float)pow(10.0,(e->controls[14]*72-60)/20),previous_gain=e->mix_gain;
-    float external_target=(float)pow(10.0,(e->controls[15]*48-24)/20),carrier_gain[CTL];
-    for(int i=0;i<CTL;++i)carrier_gain[i]=e->external_gain+(external_target-e->external_gain)*(i+1)/CTL;
+    float carrier_gain[CTL];
+    for(int i=0;i<CTL;++i)carrier_gain[i]=1.0f;
     jv_carrier_gain=carrier_gain;
-    e->external_gain=external_target;
     for(int ch=0;ch<16;++ch){
         e->bend[ch]+=(e->bend_target[ch]-e->bend[ch])*.2;
         e->mod_wheel[ch]+=(e->mod_target[ch]-e->mod_wheel[ch])*.2;
@@ -313,7 +312,7 @@ void jv_render_input(jv_engine *e,const float *input_l,const float *input_r,floa
         m.shape = 64 << 8;
         int32_t mono[CTL]={0},mono_r[CTL]={0};voice_t before=*v;
         int32_t noise_before=formant_nz;
-        jv_formant_offset16=e->controls[8]>=.5 && e->controls[30]>=.5 ? e->formant_offset16[k]:0;
+        jv_formant_offset16=(int32_t)lround(e->formant_offset16[k]*e->controls[31]);
         jv_grain=&e->grain[k];jv_grain_state grain_before=*jv_grain;
         jv_carrier=external ? (input_l ? input_l:zero):NULL;
         formant_render(t, v, mono, CTL, &m);

@@ -32,13 +32,14 @@ int main(){
     for(int lang=1;lang<=9;++lang){assert(p->setLanguage(lang));assert(std::string(p->snapshot().lines[0].original.data())==u8"Привет, мир");}
     assert(p->setLanguage(4));
     for(int i=0;i<controlCount;++i){
-        if(i==ReservedControl || i==ReservedThickness)continue;
+        if(i==ReservedControl || i==ReservedThickness || i==ExtGain || i==FormantDecouple)continue;
         ParameterInfo info{};assert(p->getParameterInfoByTag(firstControlID+i,info)==kResultOk);
         assert(info.flags & ParameterInfo::kCanAutomate);
         p->gestureBegin(i);p->gestureValue(i,i==Voices ? 1:i==Unison || i==ExtInput || i==Mono || i==Newspeak || i==Velo || i==Sub || i==FormantDecouple ? 0:.5);p->gestureEnd(i);
     }
-    assert(spy->begins>=controlCount-2 && spy->edits>=controlCount-2 && spy->begins==spy->ends);
+    assert(spy->begins>=controlCount-4 && spy->edits>=controlCount-4 && spy->begins==spy->ends);
     ParameterInfo retired{};assert(p->getParameterInfoByTag(firstControlID+ReservedControl,retired)!=kResultOk);
+    assert(p->getParameterInfoByTag(firstControlID+ExtGain,retired)!=kResultOk && p->getParameterInfoByTag(firstControlID+FormantDecouple,retired)!=kResultOk);
     ResizableMemoryIBStream stream;assert(p->getState(&stream)==kResultOk);
     auto* q=new Plugin;assert(q->initialize(nullptr)==kResultOk);stream.rewind();assert(q->setState(&stream)==kResultOk);
     auto bank=q->snapshot();assert(bank.selected==12 && bank.language==4);
@@ -65,6 +66,11 @@ int main(){
     for(int i=0;i<29;++i){double value=i==Voices ? 1:controlDefaults[i];v14.write(&value,sizeof value,nullptr);}
     v14.rewind();assert(q->setState(&v14)==kResultOk);
     assert(plainControl(Voices,q->control(Voices))==8 && q->control(Sub)==0);
+    // The previous Decouple checkbox maps to the equivalent ±2 Bloom setting.
+    ResizableMemoryIBStream v16;header[1]=16;v16.write(header,sizeof header,nullptr);
+    for(int i=0;i<16;++i){uint32_t len=2;v16.write(&len,4,nullptr);v16.write(const_cast<char*>("la"),len,nullptr);}
+    for(int i=0;i<31;++i){double value=i==FormantDecouple ? 1:controlDefaults[i];v16.write(&value,sizeof value,nullptr);}
+    v16.rewind();assert(q->setState(&v16)==kResultOk && std::abs(q->control(Bloom)-1.0/6)<1e-9);
     // Projects saved by the removed Vtrx experiment retain their text and controls.
     ResizableMemoryIBStream v8;header[1]=8;v8.write(header,sizeof header,nullptr);
     for(int i=0;i<16;++i){const char* word=i==0 ? "hello":"la";uint32_t len=uint32_t(std::strlen(word));v8.write(&len,4,nullptr);v8.write(const_cast<char*>(word),len,nullptr);}
@@ -99,9 +105,9 @@ int main(){
     context.projectTimeSamples+=48000;render();assert(p->syllablePosition()==0);
     render();assert(p->syllablePosition()==0); // unchanged stopped position is stable
     ParameterChanges automation;
-    for(int i=0;i<controlCount;++i){if(i==ReservedThickness)continue;int32 qi=0,pi=0;auto id=firstControlID+i;auto* queue=automation.addParameterData(id,qi);queue->addPoint(100,i==Unison || i==ExtInput || i==Mono || i==Newspeak || i==Velo || i==Sub || i==FormantDecouple ? 0:i==Voices ? 1:.7,pi);}
+    for(int i=0;i<controlCount;++i){if(i==ReservedThickness || i==ExtGain || i==FormantDecouple)continue;int32 qi=0,pi=0;auto id=firstControlID+i;auto* queue=automation.addParameterData(id,qi);queue->addPoint(100,i==Unison || i==ExtInput || i==Mono || i==Newspeak || i==Velo || i==Sub || i==FormantDecouple ? 0:i==Voices ? 1:.7,pi);}
     data.inputParameterChanges=&automation;render();data.inputParameterChanges=nullptr;
-    for(int i=0;i<controlCount;++i)if(i!=ReservedThickness)assert(std::abs(p->control(i)-(i==Unison || i==ExtInput || i==Mono || i==Newspeak || i==Velo || i==Sub || i==FormantDecouple || i==ReservedControl ? 0:i==Voices ? 1:.7))<1e-9);
+    for(int i=0;i<controlCount;++i)if(i!=ReservedThickness && i!=ExtGain && i!=FormantDecouple)assert(std::abs(p->control(i)-(i==Unison || i==ExtInput || i==Mono || i==Newspeak || i==Velo || i==Sub || i==FormantDecouple || i==ReservedControl ? 0:i==Voices ? 1:.7))<1e-9);
     double energy=0;for(int b=0;b<40;++b){render();for(float x:left){assert(std::isfinite(x));energy+=x*x;}}assert(energy>.01);
     for(int id=1;id<=5;++id){Event off{};off.type=Event::kNoteOffEvent;off.noteOff.pitch=60;off.noteOff.noteId=id;events.addEvent(off);}
     render();events.clear();for(int b=0;b<400;++b)render();for(float x:left)assert(x==0);
@@ -124,12 +130,11 @@ int main(){
     assert(std::string(p->snapshot().lines[0].original.data())==u8"Проверка русского текста");
     auto swarmKnob=GetDlgItem(editor,2000+Swarm);assert(swarmKnob && !IsWindowEnabled(swarmKnob));
     auto subToggle=GetDlgItem(editor,33);assert(subToggle && !IsWindowEnabled(subToggle));
-    auto formantToggle=GetDlgItem(editor,34);assert(formantToggle && !IsWindowEnabled(formantToggle));
-    for(int i=0;i<controlCount;++i)if(i!=Unison && i!=ExtInput && i!=Mono && i!=Newspeak && i!=Velo && i!=Sub && i!=FormantDecouple && i!=PitchBendRange && i!=GlideDirection && i!=ReservedControl && i!=ReservedThickness){auto knob=GetDlgItem(editor,2000+i);assert(knob);SendMessageW(knob,WM_KEYDOWN,VK_RIGHT,0);}
+    auto bloomKnob=GetDlgItem(editor,2000+Bloom);assert(bloomKnob && IsWindowEnabled(bloomKnob));
+    for(int i=0;i<controlCount;++i)if(i!=Unison && i!=ExtInput && i!=Mono && i!=Newspeak && i!=Velo && i!=Sub && i!=FormantDecouple && i!=PitchBendRange && i!=GlideDirection && i!=ReservedControl && i!=ReservedThickness && i!=ExtGain){auto knob=GetDlgItem(editor,2000+i);assert(knob);SendMessageW(knob,WM_KEYDOWN,VK_RIGHT,0);}
     assert(!GetDlgItem(editor,2000+ReservedControl));
     auto toggle=GetDlgItem(editor,25);SendMessageW(toggle,BM_SETCHECK,BST_CHECKED,0);SendMessageW(editor,WM_COMMAND,MAKEWPARAM(25,BN_CLICKED),0);assert(p->control(Unison)==1);
-    SendMessageW(editor,WM_TIMER,1,0);assert(IsWindowEnabled(swarmKnob) && IsWindowEnabled(subToggle) && IsWindowEnabled(formantToggle));
-    SendMessageW(formantToggle,BM_SETCHECK,BST_CHECKED,0);SendMessageW(editor,WM_COMMAND,MAKEWPARAM(34,BN_CLICKED),0);assert(p->control(FormantDecouple)==1);
+    SendMessageW(editor,WM_TIMER,1,0);assert(IsWindowEnabled(swarmKnob) && IsWindowEnabled(subToggle) && IsWindowEnabled(bloomKnob));
     SendMessageW(subToggle,BM_SETCHECK,BST_CHECKED,0);SendMessageW(editor,WM_COMMAND,MAKEWPARAM(33,BN_CLICKED),0);assert(p->control(Sub)==1);
     auto monoToggle=GetDlgItem(editor,29);assert(monoToggle);SendMessageW(monoToggle,BM_SETCHECK,BST_CHECKED,0);SendMessageW(editor,WM_COMMAND,MAKEWPARAM(29,BN_CLICKED),0);assert(p->control(Mono)==1);
     ShowWindow(parent,SW_SHOW);UpdateWindow(parent);MSG msg{};

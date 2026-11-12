@@ -169,20 +169,6 @@ int main(){
         jv_control(e,ExtGain,1);std::fill(il,il+JV_BLOCK,0);
         for(int k=0;k<150;++k){jv_render_input(e,il,il,ol,orr);jv_render_input(single,il,il,referenceMono,ir);for(int i=0;i<JV_BLOCK;++i)assert(ol[i]==referenceMono[i]);}
     }
-    // +6.0206 dB at the input knob equals twice the external source amplitude.
-    jv_reset(e);jv_reset(single);
-    for(auto* engine:{e,single}){jv_control(engine,ExtInput,1);jv_control(engine,Buzz,1);jv_control(engine,Breath,0);jv_text(engine,"aaaa",2);}
-    jv_control(e,ExtGain,normalizedControl(ExtGain,20*std::log10(2.0)));
-    // Settle the intentional gain ramp before exciting the integer resonators.
-    std::fill(il,il+JV_BLOCK,0);jv_render_input(e,il,il,ol,orr);jv_render_input(single,il,il,referenceMono,ir);
-    for(auto* engine:{e,single})jv_note_on(engine,0,60,100,0,1);
-    double gainError=0,gainEnergy=0;
-    float twice[JV_BLOCK];
-    for(int k=0;k<400;++k){for(int i=0;i<JV_BLOCK;++i){il[i]=float(.01*std::sin(2*3.141592653589793*220*(k*JV_BLOCK+i)/JV_SAMPLE_RATE));twice[i]=il[i]*2;}
-        jv_render_input(e,il,il,ol,orr);jv_render_input(single,twice,twice,referenceMono,ir);
-        if(k>200)for(int i=0;i<JV_BLOCK;++i){gainError+=std::pow(ol[i]-referenceMono[i],2);gainEnergy+=referenceMono[i]*referenceMono[i];}}
-    if(!(gainEnergy>1e-6 && gainError/gainEnergy<1e-4))std::cerr<<"Input gain energy "<<gainEnergy<<", relative squared error "<<gainError/gainEnergy<<"\n";
-    assert(gainEnergy>1e-6 && gainError/gainEnergy<1e-4);
     jv_destroy(single);
     auto* other=jv_create();jv_reset(e);
     jv_reset(e);jv_reset(other);

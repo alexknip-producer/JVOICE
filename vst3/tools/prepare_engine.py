@@ -252,12 +252,12 @@ static inline int32_t jv_grain_noise(int32_t original) {
     jv_grain->tail=burst;
     return (int32_t)(original*(1.0f-m*(1.0f-burst)));
 }
-/* +12 dB on external tonal excitation only. Keep headroom in the conversion:
+/* +18 dB on external tonal excitation only. Keep headroom in the conversion:
  * a normal full-scale input must not clip at the old int16 carrier boundary. */
 static inline int32_t jv_excitation(float sample, int32_t voicing, float gain) {
     if (!isfinite(sample)) sample = 0;
     sample = fmaxf(-4.0f, fminf(4.0f, sample));
-    return (int32_t)(((int64_t)(sample * (12000.0f * 3.981071706f) * gain) * voicing) >> 15);
+    return (int32_t)(((int64_t)(sample * (12000.0f * 7.943282347f) * gain) * voicing) >> 15);
 }
 #include "felucca_tables.h"
 '''

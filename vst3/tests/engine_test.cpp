@@ -84,7 +84,7 @@ int main() {
     // Formant Decouple audibly changes unison layers with no pitch detuning.
     jv_seed(a,1234);jv_seed(b,1234);jv_reset(a);jv_reset(b);
     for(auto* e:{a,b}){jv_control(e,voice::Unison,1);jv_control(e,voice::Voices,4.0/31);jv_text(e,"aaaa",2);}
-    jv_control(b,voice::FormantDecouple,1);jv_note_on(a,0,60,100,0,1);jv_note_on(b,0,60,100,0,1);
+    jv_control(b,voice::Bloom,1.0/6);jv_note_on(a,0,60,100,0,1);jv_note_on(b,0,60,100,0,1);
     {double difference=0;for(int k=0;k<200;++k){jv_render(a,x);jv_render(b,y);for(int i=0;i<JV_BLOCK;++i)difference+=std::abs(x[i]-y[i]);}assert(difference>.01);}
     for(int nv=1;nv<=8;++nv) {
         jv_reset(a);jv_text(a,"la",2);jv_control(a,voice::Voices,(nv-1)/31.0);jv_control(a,voice::Unison,1);
