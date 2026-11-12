@@ -1,4 +1,4 @@
-# JVoice 0.4.10 — work in progress
+# JVoice 0.5.0 — work in progress
 
 VST3-инструмент для Windows x64. Интерфейс полностью на английском.
 
