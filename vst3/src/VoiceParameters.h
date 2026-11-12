@@ -11,7 +11,7 @@ inline constexpr const char* controlNames[] = {"Speech Rate", "Shift", "Q", "Bre
 inline constexpr std::array<double,controlCount> controlDefaults = {32.0/127, 17.0/24, 72.0/127, .05, 1, 1, 0, 0, 0, 7.0/31, 0, 0, .37628749457997646, 1.0/11, 60.0/72, .5, .5, 49.0/119, 0, .5, 0, .5, .5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
 inline double plainControl(int i,double n) {
     n=std::clamp(n,0.0,1.0);
-    if(i==SpeechRate){double rank=n*127;return rank<32 ? 50+rank*50/32 : 100+(rank-32)*500/95;}
+    if(i==SpeechRate){double rank=n*127;return rank<32 ? 10+rank*90/32 : 100+(rank-32)*500/95;}
     if(i==Detune)return n*40;
     if(i==MasterVolume)return n*72-60;
     if(i==ExtGain)return n*48-24;
@@ -28,7 +28,7 @@ inline double plainControl(int i,double n) {
     return i==Shift ? n*24-12 : n*100;
 }
 inline double normalizedControl(int i,double p) {
-    if(i==SpeechRate)return std::clamp((p<100 ? (p-50)*32/50 : 32+(p-100)*95/500)/127,0.0,1.0);
+    if(i==SpeechRate)return std::clamp((p<100 ? (p-10)*32/90 : 32+(p-100)*95/500)/127,0.0,1.0);
     if(i==Detune)return std::clamp(p/40,0.0,1.0);
     if(i==MasterVolume)return std::clamp((p+60)/72,0.0,1.0);
     if(i==ExtGain)return std::clamp((p+24)/48,0.0,1.0);

@@ -4,7 +4,7 @@
 #include "engine_generated.inc"
 _Static_assert(CTL == JV_BLOCK, "Desktop block size must match pinned preview");
 _Static_assert(FS == JV_SAMPLE_RATE, "FM-1 DSP must remain at 44100 Hz");
-enum { JV_DECLICK_FRAMES = 132 }; /* 3 ms at the native clock. */
+enum { JV_DECLICK_FRAMES = 132, JV_ONSET_FRAMES = 88 }; /* 3 ms / 2 ms at 44.1 kHz. */
 
 /* Eight independent articulation tracks. Track zero is only the lyric cursor.
  * No shared mutable DSP state survives jv_bind: different plugin instances may
@@ -192,6 +192,7 @@ void jv_note_on(jv_engine *e, int channel, int note, int vel, int chord, int not
         e->pan_current[slot]=e->pan_position[slot]*(float)e->controls[6];
         e->right_voice[slot]=*v;memset(e->right_f5[slot],0,sizeof e->right_f5[slot]);
         e->lateral_hold[slot]=0;
+        e->onset_frames[slot]=0;
         e->envelope[slot]=0;
         e->glide_from[slot]=e->glide_now[slot]=start_pitch;
         e->glide_elapsed[slot]=0;
@@ -355,10 +356,13 @@ void jv_render_input(jv_engine *e,const float *input_l,const float *input_r,floa
             memcpy(mono_r,mono,sizeof mono);e->right_voice[k]=*v;memcpy(e->right_f5[k],fmt_f5[k][0],sizeof e->right_f5[k]);
         }
         float pan0=e->pan_current[k],pan1=e->pan_position[k]*(float)e->controls[6];
+        unsigned onset=e->onset_frames[k];
         for(int i=0;i<CTL;++i) {
             float pan=pan0+(pan1-pan0)*(i+1)/CTL, gain=1.0f/(65536.0f*4096.0f);
+            if(onset<JV_ONSET_FRAMES){gain*=(float)onset/JV_ONSET_FRAMES;++onset;}
             mix_l[i]+=mono[i]*gain*(pan>0 ? 1-pan : 1);mix_r[i]+=mono_r[i]*gain*(pan<0 ? 1+pan : 1);
         }
+        e->onset_frames[k]=(uint16_t)onset;
         e->pan_current[k]=pan1;
         v->env_out = output_amp;
         if(finished)v->active=0; /* Render the final ramp before retiring the voice. */

@@ -56,7 +56,7 @@ class VoiceParameter : public RangeParameter {
     int index;
 public:
     explicit VoiceParameter(int i):RangeParameter(STR16(""),firstControlID+i,nullptr,
-        i==PhonemeGlide ? 1 : i==Smear ? -100 : i==ModRate ? .1 : i==MasterVolume ? -60 : i==ExtGain ? -24 : i==Shift ? -12 : i==SpeechRate ? 50 : i==Voices || i==Release ? 1 : i==PitchBendRange ? 1 : 0,
+        i==PhonemeGlide ? 1 : i==Smear ? -100 : i==ModRate ? .1 : i==MasterVolume ? -60 : i==ExtGain ? -24 : i==Shift ? -12 : i==SpeechRate ? 10 : i==Voices || i==Release ? 1 : i==PitchBendRange ? 1 : 0,
         i==PhonemeGlide ? 1000 : i==Glide ? 10 : i==GlideDirection ? 2 : i==ModDepth ? 50 : i==ExtGain ? 24 : i==ModRate || i==MasterVolume || i==Shift ? 12 : i==SpeechRate ? 600 : i==Detune ? 40 : i==Unison || i==ExtInput || i==Mono || i==Newspeak || i==Velo || i==Sub || i==FormantDecouple ? 1 : i==Voices ? 32 : i==Release ? 10000 : i==PitchBendRange ? 12 : 100,
         plainControl(i,controlDefaults[i]),i==GlideDirection ? 2 : i==Unison || i==ExtInput || i==Mono || i==Newspeak || i==Velo || i==Sub || i==FormantDecouple ? 1 : i==Voices ? 31 : i==PitchBendRange ? 11 : 0),index(i) {
         UString(info.title,128).fromAscii(controlNames[i]);
@@ -537,5 +537,5 @@ bool InitModule(){return true;}
 bool DeinitModule(){return true;}
 BEGIN_FACTORY_DEF("", "https://github.com/alexknip-producer/JVOICE", "")
 DEF_CLASS2(INLINE_UID_FROM_FUID(voice::classID),PClassInfo::kManyInstances,kVstAudioEffectClass,
-    "JVoice",0,"Instrument|Synth", "0.6.2",kVstVersionString,voice::Plugin::create)
+    "JVoice",0,"Instrument|Synth", "0.6.3",kVstVersionString,voice::Plugin::create)
 END_FACTORY

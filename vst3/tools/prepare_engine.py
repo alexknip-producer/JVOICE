@@ -18,6 +18,8 @@ for name in ('tables', 'lyrics'):
                     str(out / f'felucca_{name}.h')], check=True)
 core = (root / 'firmware/src/core.h').read_text()
 core = core.replace('(r - 32u) * 192u / 95u','(r - 32u) * 320u / 95u') # desktop CONS up to 600%
+assert core.count('32u + r : 64u')==1
+core = core.replace('32u + r : 64u', '6u + (r * 58u + 16u) / 32u : 64u') # desktop CONS down to about 10%
 core = re.sub(r'#define NPART 6\b', '#define NPART 33', core)
 core = core.replace('static track_t trk[NTRK];', 'static JV_TLS track_t *trk;')
 core = core.replace('static song_t song;', 'static JV_TLS song_t *song_ptr;\n#define song (*song_ptr)')
@@ -142,6 +144,9 @@ sing = sing.replace('if (s->i == s->nu) {', 'if (s->i == s->nu && !jv_timed_nucl
 needle = '        ms = 0;                                          /* the last of a coda, voiced: held */'
 assert sing.count(needle)==1
 sing = sing.replace(needle, '        ms = 80u;                                        /* final sonorant articulation */')
+needle = '    s->tb = (uint16_t)(ms ? sy_ms(ms) | 1u : 0u);'
+assert sing.count(needle)==1
+sing = sing.replace(needle, '    if (P->cls != PC_VOW && !ms) ms=1u; /* short consonants must advance */\n'+needle)
 sing = sing.replace('PHON[ph_fric(c)].dur', 'PHON[jv_fric(lang,c)].dur')
 sing = sing.replace('F = &PHON[ph_fric(c)];', 'F = jv_phon(lang,jv_fric(lang,c));')
 sing = sing.replace('if (s->i > s->nu && !s->cdon && s->i >= s->cd)', 'if (s->i > s->nu && !s->cdon && s->i >= s->cd && !jv_vowelless(s))')
@@ -293,6 +298,7 @@ context += '''    uint8_t cache_ready;
     unsigned declick_remaining;
     uint8_t declick_pending;
     uint16_t lateral_hold[NTRK];
+    uint16_t onset_frames[NTRK];
     float detune_position[NTRK], pan_position[NTRK], pan_current[NTRK];
     int8_t octave_offset[NTRK];
     int16_t formant_offset16[NTRK];

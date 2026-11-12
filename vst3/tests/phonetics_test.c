@@ -50,6 +50,15 @@ int main(void) {
     for(int lang=LG_ES;lang<LG_N;++lang)if(lang!=LG_RU)
         for(int c=0;c<PH_COUNT;++c)assert(jv_phon(lang,c)==&PHON[c]);
     jv_engine *e=jv_create();assert(e);int i[3],y[3],eh[3],ee[3];
+    // New minimum has a nonzero duration even for a short German burst.
+    assert(vcons_q6(95)==6 && vcons_q6(127)==64);
+    {sing_t burst={0};burst.np=1;burst.nu=1;burst.ph[0]=PH_T;burst.st=1;sy_cx=-58;
+     sy_enter(&burst,LG_GN);assert(burst.tb>0);}
+    // Each new voice starts at zero and finishes its extra 2 ms onset ramp.
+    jv_text(e,"aaaa",LG_EN);jv_note_on(e,0,60,100,0,1);
+    {float l[JV_BLOCK],r[JV_BLOCK];jv_render_stereo(e,l,r);assert(l[0]==0 && r[0]==0 && e->onset_frames[1]==64);
+     jv_render_stereo(e,l,r);assert(e->onset_frames[1]==JV_ONSET_FRAMES);}
+    jv_reset(e);
     assert(trk[1].p[P_E3]==5 && fabs(pow(10000.0,e->controls[12])-32)<1e-9);
     // Velocity is fixed by default, optional per MIDI note; unison phases spread.
     jv_note_on(e,0,60,30,0,1);assert(trk[1].v[0].vel==100);
