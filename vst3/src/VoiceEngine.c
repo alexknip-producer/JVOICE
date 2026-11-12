@@ -21,7 +21,8 @@ void jv_reset(jv_engine *e)
     sing_init();
     for(int k=0;k<NTRK;++k){e->grain[k].bits=(seed^(0x5a39u*(k+1)))&0x7fffu;if(!e->grain[k].bits)e->grain[k].bits=1;}
     e->controls[9]=7.0/31; /* eight poly voices until plugin parameters are applied */
-    e->controls[12]=72.0/127;
+    e->controls[1]=17.0/24; /* Shift: +5 semitones. */
+    e->controls[12]=.37628749457997646; /* Release: 32 ms. */
     e->controls[13]=1.0/11; /* Pitch bend remains +/-2 semitones by default. */
     e->controls[14]=60.0/72; /* Master Volume: 0 dB. */
     e->controls[15]=.5; /* External input gain: 0 dB above the +12 dB calibration. */
@@ -35,6 +36,7 @@ void jv_reset(jv_engine *e)
     const preset_t *p = &FORMANT_PRESETS[9]; /* SINGER EN */
     for (int k = 0; k < NTRK; ++k) {
         for (int j = 0; j < 8; ++j) trk[k].p[P_E0+j] = p->e[j];
+        trk[k].p[P_E3]=5;
         trk[k].p[P_VLANG] = LG_EN;
         trk[k].p[P_VOICE] = V_POLY;
         trk[k].p[P_VCONS] = 127; /* upstream's 100% consonant duration */

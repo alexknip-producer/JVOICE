@@ -50,6 +50,7 @@ int main(void) {
     for(int lang=LG_ES;lang<LG_N;++lang)if(lang!=LG_RU)
         for(int c=0;c<PH_COUNT;++c)assert(jv_phon(lang,c)==&PHON[c]);
     jv_engine *e=jv_create();assert(e);int i[3],y[3],eh[3],ee[3];
+    assert(trk[1].p[P_E3]==5 && fabs(pow(10000.0,e->controls[12])-32)<1e-9);
     // Velocity is fixed by default, optional per MIDI note; unison phases spread.
     jv_note_on(e,0,60,30,0,1);assert(trk[1].v[0].vel==100);
     jv_control(e,28,1);jv_note_on(e,0,62,30,0,2);assert(trk[2].v[0].vel==30);
