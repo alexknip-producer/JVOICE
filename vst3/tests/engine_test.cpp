@@ -82,7 +82,7 @@ int main() {
         assert(difference>base*(amount==1.0 ? .1:.02) && energy>.0001);
     }
     for(int nv=1;nv<=8;++nv) {
-        jv_reset(a);jv_text(a,"la",2);jv_control(a,voice::Voices,(nv-1)/7.0);jv_control(a,voice::Unison,1);
+        jv_reset(a);jv_text(a,"la",2);jv_control(a,voice::Voices,(nv-1)/31.0);jv_control(a,voice::Unison,1);
         jv_note_on(a,0,60,100,0,77);assert(jv_active(a)==nv);assert(jv_position(a)==1);
         jv_note_off(a,0,60,77);for(int k=0;k<1000;++k)jv_render(a,x);assert(jv_active(a)==0);
     }

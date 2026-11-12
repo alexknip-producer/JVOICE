@@ -5,10 +5,10 @@
 #include <cmath>
 namespace voice {
 // Slot 11 is retired; preserve subsequent parameter IDs and saved-state offsets.
-enum Control { SpeechRate, Shift, Resonance, Breath, Buzz, Artic, Image, Detune, Unison, Voices, ExtInput, ReservedControl, Release, PitchBendRange, MasterVolume, ExtGain, ModDepth, ModRate, Mono, Smear, Newspeak, PhonemeGlide, ReservedThickness, Grain, Glide, Swarm, GlideDirection, ModDecouple, Velo, controlCount };
+enum Control { SpeechRate, Shift, Resonance, Breath, Buzz, Artic, Image, Detune, Unison, Voices, ExtInput, ReservedControl, Release, PitchBendRange, MasterVolume, ExtGain, ModDepth, ModRate, Mono, Smear, Newspeak, PhonemeGlide, ReservedThickness, Grain, Glide, Swarm, GlideDirection, ModDecouple, Velo, Sub, controlCount };
 inline constexpr unsigned firstControlID = 10;
-inline constexpr const char* controlNames[] = {"Speech Rate", "Shift", "Q", "Breath", "Buzz", "Artic", "Image", "Detune", "Unison", "Voices", "Ext. input", "", "Release", "Pitch Bend Range", "Master Volume", "Ext. Input Gain", "Mod Depth", "Mod Rate", "Mono", "Smear", "Newspeak", "Slur", "", "Grain", "Glide", "Swarm", "Glide Direction", "Mod Decouple", "Velo"};
-inline constexpr std::array<double,controlCount> controlDefaults = {32.0/127, .5, 72.0/127, .05, 1, 1, 0, 0, 0, 1, 0, 0, 72.0/127, 1.0/11, 60.0/72, .5, .5, 49.0/119, 0, .5, 0, .5, .5, 0, 0, 0, 0, 0, 0};
+inline constexpr const char* controlNames[] = {"Speech Rate", "Shift", "Q", "Breath", "Buzz", "Artic", "Image", "Detune", "Unison", "Voices", "Ext. input", "", "Release", "Pitch Bend Range", "Master Volume", "Ext. Input Gain", "Mod Depth", "Mod Rate", "Mono", "Smear", "Newspeak", "Slew", "", "Grain", "Glide", "Swarm", "Glide Direction", "Mod Decouple", "Velo", "Sub"};
+inline constexpr std::array<double,controlCount> controlDefaults = {32.0/127, .5, 72.0/127, .05, 1, 1, 0, 0, 0, 7.0/31, 0, 0, 72.0/127, 1.0/11, 60.0/72, .5, .5, 49.0/119, 0, .5, 0, .5, .5, 0, 0, 0, 0, 0, 0, 0};
 inline double plainControl(int i,double n) {
     n=std::clamp(n,0.0,1.0);
     if(i==SpeechRate){double rank=n*127;return rank<32 ? 50+rank*50/32 : 100+(rank-32)*500/95;}
@@ -21,10 +21,10 @@ inline double plainControl(int i,double n) {
     if(i==GlideDirection)return std::round(n*2);
     if(i==Glide)return n*n*10;
     if(i==PhonemeGlide)return 100*std::pow(n<=.5 ? 100.0:10.0,2*n-1);
-    if(i==Unison || i==ExtInput || i==Mono || i==Newspeak || i==Velo)return n>=.5 ? 1 : 0;
+    if(i==Unison || i==ExtInput || i==Mono || i==Newspeak || i==Velo || i==Sub)return n>=.5 ? 1 : 0;
     if(i==Release)return std::pow(10000.0,n);
     if(i==PitchBendRange)return 1+std::round(n*11);
-    if(i==Voices)return 1+std::round(n*7);
+    if(i==Voices)return 1+std::round(n*31);
     return i==Shift ? n*24-12 : n*100;
 }
 inline double normalizedControl(int i,double p) {
@@ -38,10 +38,10 @@ inline double normalizedControl(int i,double p) {
     if(i==GlideDirection)return std::clamp(std::round(p)/2,0.0,1.0);
     if(i==Glide)return std::sqrt(std::clamp(p/10,0.0,1.0));
     if(i==PhonemeGlide)return std::clamp(.5+.5*std::log(std::max(p,1.0)/100)/std::log(p<=100 ? 100.0:10.0),0.0,1.0);
-    if(i==Unison || i==ExtInput || i==Mono || i==Newspeak || i==Velo)return p>=.5 ? 1 : 0;
+    if(i==Unison || i==ExtInput || i==Mono || i==Newspeak || i==Velo || i==Sub)return p>=.5 ? 1 : 0;
     if(i==Release)return std::clamp(std::log(std::max(p,1.0))/std::log(10000.0),0.0,1.0);
     if(i==PitchBendRange)return std::clamp((p-1)/11,0.0,1.0);
-    if(i==Voices)return std::clamp((p-1)/7,0.0,1.0);
+    if(i==Voices)return std::clamp((p-1)/31,0.0,1.0);
     return std::clamp(i==Shift ? (p+12)/24 : p/100,0.0,1.0);
 }
 }

@@ -25,6 +25,9 @@ int main(void) {
           dust.tail=0;for(int n=0;n<32767;++n){jv_grain_noise(10000);if(dust.tail==1)++hits[level];}
       }
       assert(hits[0]>hits[1]*3 && hits[1]>0);
+      controls[23]=1;dust.mix=1;dust.tail=0;dust.bits=1;int quiet=0,loud=0;
+      for(int n=0;n<32767;++n){int sample=jv_grain_noise(10000);assert(sample>=0 && sample<=10000);quiet+=sample<1000;loud+=sample>9000;}
+      assert(quiet>0 && loud>0);
     }
     // Quiet release samples keep their fractional precision after the voice gain.
     vmod_t quiet={0};quiet.amp0=quiet.amp1=24;double oldError=0,newError=0;
@@ -48,8 +51,26 @@ int main(void) {
     // Velocity is fixed by default, optional per MIDI note; unison phases spread.
     jv_note_on(e,0,60,30,0,1);assert(trk[1].v[0].vel==100);
     jv_control(e,28,1);jv_note_on(e,0,62,30,0,2);assert(trk[2].v[0].vel==30);
-    jv_reset(e);jv_control(e,8,1);jv_control(e,9,1.0/7);jv_note_on(e,0,60,80,0,1);
+    jv_reset(e);jv_control(e,8,1);jv_control(e,9,1.0/31);jv_note_on(e,0,60,80,0,1);
     assert(e->mod_offset[1]==0 && e->mod_offset[2]==.5);
+    // Sub adds a layer for 1–3, then replaces up to eight layers, always
+    // preserving the MIDI note for note-off and sustain of the whole stack.
+    { const int counts[]={1,2,3,4,5,6,32};
+      for(unsigned j=0;j<sizeof counts/sizeof *counts;++j){int count=counts[j],sub_count=count<4 ? 1:(count/2<8 ? count/2:8);
+        int total=count+(count<4);jv_reset(e);jv_control(e,8,1);jv_control(e,9,(count-1)/31.0);jv_control(e,29,1);
+        jv_text(e,"aaaa",LG_RU);jv_sustain(e,0,1);jv_note_on(e,0,60,100,0,1);assert(jv_active(e)==total);
+        int subs=0;for(int k=1;k<=total;++k){assert(trk[k].v[0].note==60);subs+=e->octave_offset[k]==-12;}
+        assert(subs==sub_count);if(count==2)assert(e->pan_position[3]==0);
+        jv_note_off(e,0,60,1);for(int k=1;k<=total;++k)assert(trk[k].v[0].gate);
+        jv_sustain(e,0,0);for(int k=1;k<=total;++k)assert(!trk[k].v[0].gate);
+      }
+      jv_reset(e);jv_control(e,29,1);jv_text(e,"aaaa",LG_RU);jv_note_on(e,0,60,100,0,1);assert(jv_active(e)==1 && e->octave_offset[1]==0);
+      jv_reset(e);jv_control(e,9,1);jv_text(e,"aaaa",LG_RU);
+      for(int k=0;k<32;++k)jv_note_on(e,0,48+k,100,k>0,100+k);
+      assert(jv_active(e)==32);float samples[JV_BLOCK];for(int k=0;k<8;++k){jv_render(e,samples);for(int i=0;i<JV_BLOCK;++i)assert(isfinite(samples[i]));}
+      for(int k=0;k<32;++k)jv_note_off(e,0,48+k,100+k);
+      for(int k=1;k<NTRK;++k)assert(!trk[k].v[0].gate);
+    }
     held_vowel(e,"i",i);held_vowel(e,"y",y);held_vowel(e,"eh",eh);held_vowel(e,"e",ee);
     const phon_t *iy=jv_phon(LG_RU,PH_UH),*ev=jv_phon(LG_RU,PH_E);
     int yTargets[]={iy->f1,iy->f2,iy->f3},eTargets[]={ev->f1,ev->f2,ev->f3};
@@ -130,7 +151,7 @@ int main(void) {
     }
     // Unison also replaces sounding voices when its voice pool is full.
     for(int external=0;external<2;++external)for(int count=2;count<=8;count+=6)for(int released=0;released<2;++released){
-        jv_reset(e);jv_control(e,8,1);jv_control(e,9,(count-1)/7.0);jv_control(e,6,.8);jv_control(e,10,external);
+        jv_reset(e);jv_control(e,8,1);jv_control(e,9,(count-1)/31.0);jv_control(e,6,.8);jv_control(e,10,external);
         jv_text(e,"aaaa",LG_RU);float in[JV_BLOCK],zero[JV_BLOCK]={0},left[JV_BLOCK],right[JV_BLOCK];
         for(int j=0;j<JV_BLOCK;++j)in[j]=.1f*sinf(j*.17f);
         jv_note_on(e,0,60,100,0,1);for(int k=0;k<30;++k)jv_render_input(e,in,zero,left,right);
@@ -156,11 +177,11 @@ int main(void) {
     assert(e->glide_now[3]==62 && e->glide_now[4]==69);
     // Mono and Unison start from the previous pitch, including release tails.
     for(int mode=0;mode<2;++mode){jv_reset(e);jv_control(e,24,sqrt(.1));jv_control(e,mode ? 8:18,1);
-        if(mode)jv_control(e,9,2.0/7);jv_text(e,"aaaa",LG_RU);jv_note_on(e,0,60,100,0,1);
+        if(mode)jv_control(e,9,2.0/31);jv_text(e,"aaaa",LG_RU);jv_note_on(e,0,60,100,0,1);
         for(int k=0;k<20;++k)jv_render(e,out);jv_note_off(e,0,60,1);jv_note_on(e,0,64,100,0,2);
         for(int k=1;k<=(mode ? 3:1);++k)assert(e->glide_from[k]==60);
     }
-    jv_reset(e);jv_control(e,8,1);jv_control(e,9,2.0/7);jv_control(e,24,sqrt(.1));jv_control(e,25,1);
+    jv_reset(e);jv_control(e,8,1);jv_control(e,9,2.0/31);jv_control(e,24,sqrt(.1));jv_control(e,25,1);
     jv_text(e,"aaaa",LG_RU);jv_note_on(e,0,60,100,0,1);for(int k=0;k<20;++k)jv_render(e,out);
     jv_note_on(e,0,64,100,0,2);
     assert(e->glide_from[1]==60 && e->glide_from[2]==60 && e->glide_from[3]==60);
@@ -184,7 +205,7 @@ int main(void) {
     jv_sustain(e,0,0);assert(!trk[1].v[0].gate && trk[2].v[0].gate);
     jv_note_off(e,0,60,-1);assert(!trk[2].v[0].gate);
     // All layers of a unison note are held and released together.
-    jv_reset(e);jv_control(e,8,1);jv_control(e,9,2.0/7);jv_text(e,"aaaa",LG_RU);jv_sustain(e,0,1);
+    jv_reset(e);jv_control(e,8,1);jv_control(e,9,2.0/31);jv_text(e,"aaaa",LG_RU);jv_sustain(e,0,1);
     jv_note_on(e,0,60,100,0,4);jv_note_off(e,0,60,4);
     for(int k=1;k<=3;++k)assert(trk[k].v[0].gate && !e->key_down[k]);
     jv_sustain(e,0,0);for(int k=1;k<=3;++k)assert(!trk[k].v[0].gate);

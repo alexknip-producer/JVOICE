@@ -17,7 +17,7 @@ void jv_reset(jv_engine *e)
     formant_nz = (int32_t)seed;
     sing_init();
     for(int k=0;k<NTRK;++k){e->grain[k].bits=(seed^(0x5a39u*(k+1)))&0x7fffu;if(!e->grain[k].bits)e->grain[k].bits=1;}
-    e->controls[9]=1; /* eight poly voices until plugin parameters are applied */
+    e->controls[9]=7.0/31; /* eight poly voices until plugin parameters are applied */
     e->controls[12]=72.0/127;
     e->controls[13]=1.0/11; /* Pitch bend remains +/-2 semitones by default. */
     e->controls[14]=60.0/72; /* Master Volume: 0 dB. */
@@ -52,7 +52,7 @@ void jv_control(jv_engine *e, int index, double value)
     jv_bind(e);
     value=value<0 ? 0 : value>1 ? 1 : value;
     e->controls[index]=value;
-    if(index==9){int cap=1+(int)(value*7+.5);for(int k=cap+1;k<NTRK;++k){if(trk[k].v[0].active)e->declick_pending=1;trk[k].v[0].active=trk[k].v[0].gate=0;}}
+    if(index==9){int cap=1+(int)(value*31+.5);if(e->controls[8]>=.5 && e->controls[29]>=.5 && cap<4)++cap;for(int k=cap+1;k<NTRK;++k){if(trk[k].v[0].active)e->declick_pending=1;trk[k].v[0].active=trk[k].v[0].gate=0;}}
     if(index==18 && value>=.5){
         uint32_t newest=0;
         for(int k=1;k<NTRK;++k)if(trk[k].v[0].active && trk[k].v[0].age>newest)newest=trk[k].v[0].age;
@@ -89,8 +89,8 @@ static double jv_glide_start(jv_engine *e,int channel,int note,int chord)
     if(e->glide_group[channel]!=e->glide_epoch){
         e->glide_group[channel]=e->glide_epoch;
         e->glide_source_count[channel]=e->glide_source_used[channel]=0;
-        uint32_t ages[8];int count=0;
-        for(int k=1;k<NTRK && count<8;++k){voice_t *v=&trk[k].v[0];
+        uint32_t ages[32];int count=0;
+        for(int k=1;k<NTRK && count<32;++k){voice_t *v=&trk[k].v[0];
             if(!v->active || trk[k].p[P_M1AMT]!=channel)continue;
             int duplicate=0;for(int j=0;j<count;++j)if(ages[j]==v->age)duplicate=1;
             if(!duplicate){ages[count]=v->age;e->glide_sources[channel][count++]=e->glide_now[k];}
@@ -132,10 +132,17 @@ void jv_note_on(jv_engine *e, int channel, int note, int vel, int chord, int not
         sing_block(&trk[0]);
     }
     const int unison=e->controls[8]>=.5;
-    const int cap=1+(int)(e->controls[9]*7+.5), nv=unison ? cap : 1;
+    const int requested=1+(int)(e->controls[9]*31+.5);
+    const int sub_on=unison && e->controls[29]>=.5;
+    const int nv=unison ? requested+(sub_on && requested<4 ? 1:0):1;
+    const int sub_count=sub_on ? (requested<4 ? 1:(requested/2<8 ? requested/2:8)):0;
+    const int main_count=nv-sub_count;
+    const int cap=unison ? nv:requested;
     const uint32_t age=++e->age;
     static const float VP[8]={-1,1,-.5f,.5f,-.75f,.75f,-.25f,.25f};
     for(int sub=0;sub<nv;++sub) {
+        const int is_sub=sub>=main_count;
+        const int group_count=is_sub ? sub_count:main_count, group_index=is_sub ? sub-main_count:sub;
         int slot=1;
         for(int k=1;k<=cap;++k) {
             if(!trk[k].v[0].active){slot=k;break;}
@@ -156,9 +163,10 @@ void jv_note_on(jv_engine *e, int channel, int note, int vel, int chord, int not
         if(unison && sub)v->ph[0]=noise32(&formant_nz); /* decorrelate layered oscillators */
         e->ids[slot] = note_id;t->p[P_M1AMT] = (int16_t)channel;
         e->key_down[slot]=1;
-        e->detune_position[slot]=unison ? (nv==1 ? 0 : 2.0f*sub/(nv-1)-1) : VP[slot-1];
+        e->octave_offset[slot]=is_sub ? -12:0;
+        e->detune_position[slot]=unison ? (group_count==1 ? 0 : 2.0f*group_index/(group_count-1)-1) : VP[(slot-1)%8];
         e->mod_offset[slot]=unison ? (double)sub/nv:fmod((slot-1)*.6180339887498949,1.0);
-        e->pan_position[slot]=unison ? (nv==1 ? 0 : 2.0f*sub/(nv-1)-1) : VP[slot-1];
+        e->pan_position[slot]=unison ? (group_count==1 ? 0 : 2.0f*group_index/(group_count-1)-1) : VP[(slot-1)%8];
         e->pan_current[slot]=e->pan_position[slot]*(float)e->controls[6];
         e->right_voice[slot]=*v;memset(e->right_f5[slot],0,sizeof e->right_f5[slot]);
         e->lateral_hold[slot]=0;
@@ -287,6 +295,7 @@ void jv_render_input(jv_engine *e,const float *input_l,const float *input_r,floa
             e->glide_elapsed[k]=e->glide_elapsed[k]+CTL<e->glide_duration[k] ? e->glide_elapsed[k]+CTL:e->glide_duration[k];
         }
         e->glide_now[k]=played;
+        played+=e->octave_offset[k];
         int32_t pitch16=clamp((int32_t)floor(played*16),0,2047);
         m.inc = pitch_inc((uint32_t)pitch16);
         int channel=t->p[P_M1AMT]&15;

@@ -220,7 +220,7 @@ int main(){
     jv_reset(e);jv_text(e,"la",2);for(int n=0;n<3;++n)jv_note_on(e,0,60+n,100,n>0,n);assert(jv_active(e)==3);
     jv_control(e,Mono,1);assert(jv_active(e)==1);
     // With Unison, Mono keeps one complete stack, not one oscillator.
-    jv_reset(e);jv_text(e,"la",2);jv_control(e,Mono,1);jv_control(e,Unison,1);jv_control(e,Voices,3.0/7);jv_control(e,Release,1);
+    jv_reset(e);jv_text(e,"la",2);jv_control(e,Mono,1);jv_control(e,Unison,1);jv_control(e,Voices,3.0/31);jv_control(e,Release,1);
     jv_note_on(e,0,60,100,0,1);assert(jv_active(e)==4);jv_note_off(e,0,60,1);
     jv_note_on(e,0,62,100,0,2);assert(jv_active(e)==4);jv_control(e,Release,0);jv_note_off(e,0,60,1);
     for(int k=0;k<100;++k)jv_render(e,ol);assert(jv_active(e)==4);

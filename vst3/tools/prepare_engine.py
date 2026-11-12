@@ -18,7 +18,7 @@ for name in ('tables', 'lyrics'):
                     str(out / f'felucca_{name}.h')], check=True)
 core = (root / 'firmware/src/core.h').read_text()
 core = core.replace('(r - 32u) * 192u / 95u','(r - 32u) * 320u / 95u') # desktop CONS up to 600%
-core = re.sub(r'#define NPART 6\b', '#define NPART 9', core)
+core = re.sub(r'#define NPART 6\b', '#define NPART 33', core)
 core = core.replace('static track_t trk[NTRK];', 'static JV_TLS track_t *trk;')
 core = core.replace('static song_t song;', 'static JV_TLS song_t *song_ptr;\n#define song (*song_ptr)')
 core = re.sub(r'#define RING_PUBLISH\(\).*', '#define RING_PUBLISH() ((void)0)', core)
@@ -246,7 +246,7 @@ static inline int32_t jv_grain_noise(int32_t original) {
     if((x>>1)<threshold)burst=1.0f;
     if(burst<0.0001f)burst=0;
     jv_grain->tail=burst;
-    return (int32_t)(original*(1.0f+5.0f*m*burst));
+    return (int32_t)(original*(1.0f-m*(1.0f-burst)));
 }
 /* +12 dB on external tonal excitation only. Keep headroom in the conversion:
  * a normal full-scale input must not clip at the old int16 carrier boundary. */
@@ -273,8 +273,9 @@ context += '''    uint8_t cache_ready;
     jv_grain_state grain[NTRK];
     double glide_from[NTRK], glide_now[NTRK];
     uint32_t glide_elapsed[NTRK], glide_duration[NTRK];
-    double glide_last[16], glide_sources[16][8];
-    uint8_t glide_last_valid[16], glide_source_count[16], glide_source_used[16];
+    double glide_last[16], glide_sources[16][32];
+    uint8_t glide_last_valid[16], glide_source_count[16];
+    uint32_t glide_source_used[16];
     uint32_t glide_epoch, glide_group[16];
     voice_t right_voice[NTRK];
     int32_t right_f5[NTRK][2];
@@ -286,6 +287,7 @@ context += '''    uint8_t cache_ready;
     uint8_t declick_pending;
     uint16_t lateral_hold[NTRK];
     float detune_position[NTRK], pan_position[NTRK], pan_current[NTRK];
+    int8_t octave_offset[NTRK];
 };
 static void jv_bind(struct jv_engine *e) {
     jv_control_values = e->controls;
