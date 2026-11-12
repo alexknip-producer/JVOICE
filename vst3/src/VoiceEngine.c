@@ -265,6 +265,11 @@ int jv_active(jv_engine *e)
     return n;
 }
 unsigned jv_position(jv_engine *e){jv_bind(e);return sing[0].nsy;}
+int jv_word_span(jv_engine *e,unsigned *start,unsigned *end){
+    if(!e || !start || !end)return 0;jv_bind(e);
+    const sing_t *s=&sing[0];if(!s->live || !s->tl || s->mel)return 0;
+    *start=s->to;*end=(unsigned)s->to+s->tl;return 1;
+}
 void jv_render_input(jv_engine *e,const float *input_l,const float *input_r,float *left,float *right)
 {
     jv_bind(e);

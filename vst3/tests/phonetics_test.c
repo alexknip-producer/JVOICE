@@ -59,6 +59,11 @@ int main(void) {
     {float l[JV_BLOCK],r[JV_BLOCK];jv_render_stereo(e,l,r);assert(l[0]==0 && r[0]==0 && e->onset_frames[1]==64);
      jv_render_stereo(e,l,r);assert(e->onset_frames[1]==JV_ONSET_FRAMES);}
     jv_reset(e);
+    // Last triggered word is reported in transliterated byte positions.
+    jv_text(e,"pulsare kvasare",LG_EN);jv_note_on(e,0,60,100,0,1);
+    {unsigned first=0,last=0;assert(jv_word_span(e,&first,&last) && first==0 && last==7);
+     int found=0;for(int k=0;k<12 && !found;++k){jv_note_on(e,0,60,100,0,k+2);assert(jv_word_span(e,&first,&last));found=first==8 && last==15;}assert(found);}
+    jv_reset(e);
     assert(trk[1].p[P_E3]==5 && fabs(pow(10000.0,e->controls[12])-32)<1e-9);
     // Velocity is fixed by default, optional per MIDI note; unison phases spread.
     jv_note_on(e,0,60,30,0,1);assert(trk[1].v[0].vel==100);

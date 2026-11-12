@@ -138,6 +138,13 @@ int main(){
     SendMessageW(subToggle,BM_SETCHECK,BST_CHECKED,0);SendMessageW(editor,WM_COMMAND,MAKEWPARAM(33,BN_CLICKED),0);assert(p->control(Sub)==1);
     auto monoToggle=GetDlgItem(editor,29);assert(monoToggle);SendMessageW(monoToggle,BM_SETCHECK,BST_CHECKED,0);SendMessageW(editor,WM_COMMAND,MAKEWPARAM(29,BN_CLICKED),0);assert(p->control(Mono)==1);
     ShowWindow(parent,SW_SHOW);UpdateWindow(parent);MSG msg{};
+    // Highlight the played word without stealing the text selection while editing.
+    p->pick(0);render();events.clear();
+    Event highlightNote{};highlightNote.type=Event::kNoteOnEvent;highlightNote.noteOn.pitch=60;highlightNote.noteOn.velocity=.8f;highlightNote.noteOn.noteId=50;
+    events.addEvent(highlightNote);render();events.clear();SetFocus(toggle);SendMessageW(editor,WM_TIMER,1,0);
+    DWORD first=0,last=0;SendMessageW(text,EM_GETSEL,reinterpret_cast<WPARAM>(&first),reinterpret_cast<LPARAM>(&last));assert(first==0 && last==8);
+    SetFocus(text);SendMessageW(text,EM_SETSEL,3,3);events.addEvent(highlightNote);render();events.clear();SendMessageW(editor,WM_TIMER,1,0);
+    SendMessageW(text,EM_GETSEL,reinterpret_cast<WPARAM>(&first),reinterpret_cast<LPARAM>(&last));assert(first==3 && last==3);
     auto lines=GetDlgItem(editor,21);assert(lines);
     SendMessageW(lines,CB_SHOWDROPDOWN,TRUE,0);assert(SendMessageW(lines,CB_GETDROPPEDSTATE,0,0));
     SendMessageW(lines,CB_SETCURSEL,5,0);SendMessageW(editor,WM_TIMER,1,0);

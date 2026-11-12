@@ -43,6 +43,12 @@ int main(){
     assert(plainControl(ModDepth,0)==0 && plainControl(ModDepth,1)==50 && plainControl(ModDepth,controlDefaults[ModDepth])==25);
     assert(std::abs(plainControl(ModRate,controlDefaults[ModRate])-5)<1e-12);
     assert(plainControl(ModRate,0)==.1 && plainControl(ModRate,1)==12);
+    // Publish only the latest triggered word, in the original UTF-16 text.
+    {Run words;assert(words.p->setLanguage(4));assert(words.p->setDocument(u8"Привет, мир"));words.start();
+     words.note();words.render();uint64_t word=words.p->currentWord();
+     assert(((word>>20)&15)==1 && ((word>>10)&1023)==0 && (word&1023)==6);
+     bool found=false;for(int i=0;i<12 && !found;++i){words.note();words.render();word=words.p->currentWord();found=((word>>10)&1023)==8 && (word&1023)==11;}
+     assert(found);words.p->pick(0);words.render();assert(words.p->currentWord()==0);}
     // Copy/paste state must never copy the editor's host handler or any live DSP storage.
     Run a,b,reference;auto* sa=new Spy;auto* sb=new Spy;a.p->setComponentHandler(sa);b.p->setComponentHandler(sb);
     a.p->setDocument("la luna");a.p->setParamNormalized(firstControlID+Shift,.3);

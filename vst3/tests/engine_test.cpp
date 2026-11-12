@@ -19,6 +19,7 @@ int main() {
     assert(voice::makeLine(u8"Привет, ёжик! Щука и любовь",4,line));
     assert(std::string(line.original.data()) == u8"Привет, ёжик! Щука и любовь");
     assert(std::string(line.sung.data()) == "privet, yozhik! shchuka i lyubov'");
+    assert(line.sourceStart[8]==8 && line.sourceEnd[13]==12);
     assert(voice::makeLine(u8"И Ы Е Э вечер эхо",4,line));
     assert(std::string(line.sung.data()) == "i y e eh vecher ehkho");
     assert(voice::makeLine(u8"Эхо",5,line));assert(std::string(line.sung.data())=="ekho");
@@ -26,6 +27,10 @@ int main() {
     assert(std::string(line.sung.data()) == "ueber schoene gruesse");
     assert(voice::makeLine(u8"Été français",6,line));
     assert(std::string(line.sung.data()) == "eitei fra~sais");
+    assert(voice::makeLine(u8"enfant",6,line));
+    assert(std::string(line.sung.data())=="a~fa~t" && line.sourceStart[0]==0 && line.sourceEnd[1]==2 && line.sourceEnd[5]==6);
+    assert(voice::makeLine(u8"😀 привет",4,line));
+    assert(std::string(line.sung.data())=="  privet" && line.sourceStart[2]==3 && line.sourceEnd[7]==9);
     std::string longRussian;
     for (int i=0;i<128;++i) longRussian += u8"щ";
     assert(voice::makeLine(longRussian,4,line));

@@ -37,6 +37,7 @@ class View : public CPluginView {
     HFONT font=nullptr;
     HINSTANCE module=nullptr;
     bool loading=false;
+    uint64_t seenWord=~uint64_t{0};
     int dragging=-1,dragY=0;double dragStart=0;
     uint32_t seenRevision=0;
     std::array<double,controlCount> lastDrawn{};
@@ -183,6 +184,7 @@ public:
                             if(rt.lines[rt.selected].sung[0]) {
                                 int velocity=std::clamp(int(n.velocity*127+0.5f),1,127);
                                 jv_note_on(engine,n.channel,n.pitch,velocity,chord,n.noteId);
+                                publishWord();
                                 chord=true;
                             }
                         }
@@ -279,6 +281,7 @@ public:
         beginEdit(1);setParamNormalized(1,line/double(lineCount-1));performEdit(1,line/double(lineCount-1));endEdit(1);
     }
     uint32_t version() const {return revision.load();}
+    uint64_t currentWord() const {return highlightedWord.load();}
     int currentLine() const {return selected.load();}
     tresult PLUGIN_API setComponentState(IBStream* state) override {return setState(state);}
     tresult PLUGIN_API getEditorState(IBStream* state) override {return getState(state);}
@@ -324,6 +327,13 @@ public:
         return kResultOk;
     }
 private:
+    void publishWord(){
+        unsigned first=0,last=0;const Line& line=rt.lines[rt.selected];
+        if(!jv_word_span(engine,&first,&last) || first>=last || last>=textBytes || !line.sung[first] || !line.sung[last-1]){highlightedWord.store(0);return;}
+        unsigned a=line.sourceStart[first],b=line.sourceEnd[last-1];
+        if(a>=b || b>=1024){highlightedWord.store(0);return;}
+        highlightedWord.store((uint64_t(appliedRevision)<<32)|(uint64_t(rt.selected+1)<<20)|(uint64_t(a)<<10)|b);
+    }
     void applyParameter(ParamID id,double v) {
         if(!std::isfinite(v))return;v=std::clamp(v,0.0,1.0);
         if(id==1)selectLine(int(v*(lineCount-1)+.5));
@@ -342,6 +352,7 @@ private:
         if(changed)selectLine(old);
     }
     void selectLine(int line) {
+        highlightedWord.store(0);
         rt.selected=std::clamp(line,0,lineCount-1);selected.store(rt.selected);
         jv_text(engine,rt.lines[rt.selected].sung.data(),rt.language);
     }
@@ -352,6 +363,7 @@ private:
     std::atomic<uint32_t> revision{1};uint32_t appliedRevision=0;
     std::atomic<int> selected{0};
     std::atomic<int> requestedLine{-1};
+    std::atomic<uint64_t> highlightedWord{0};
     std::array<uint8_t,16> held{};
     std::array<std::atomic<double>,controlCount> controls;
     FixedRateStream stream;
@@ -472,7 +484,7 @@ tresult PLUGIN_API View::attached(void* parent,FIDString type) {
         for(int col=0;col<n;++col){int i=indices[col];knobs[i]=CreateWindowExW(0,knobClass,L"",WS_CHILD|WS_VISIBLE|WS_TABSTOP,
             24+col*85,row ? 242:126,81,110,window,reinterpret_cast<HMENU>(INT_PTR(2000+i)),module,this);}}
     control(L"STATIC",L"Lyrics - one line per keyswitch. Up to 13 lines, 128 characters per line.",0,24,367,852,24,0);
-    text=control(L"EDIT",L"",ES_MULTILINE|ES_WANTRETURN|ES_AUTOHSCROLL|ES_AUTOVSCROLL|WS_HSCROLL|WS_VSCROLL|WS_TABSTOP,24,395,852,200,1000);
+    text=control(L"EDIT",L"",ES_MULTILINE|ES_WANTRETURN|ES_AUTOHSCROLL|ES_AUTOVSCROLL|ES_NOHIDESEL|WS_HSCROLL|WS_VSCROLL|WS_TABSTOP,24,395,852,200,1000);
     SendMessageW(text,EM_SETLIMITTEXT,lineCount*256+lineCount*2,0);
     control(L"BUTTON",L"Select cursor line",WS_TABSTOP,24,632,275,32,26);
     control(L"STATIC",L"Glide direction",0,320,638,120,24,0);
@@ -498,6 +510,17 @@ void View::refresh() {
         SendMessageW(language,CB_SETCURSEL,bank.language-1,0);seenRevision=version;loading=false;
     }
     if(!SendMessageW(linePick,CB_GETDROPPEDSTATE,0,0) && SendMessageW(linePick,CB_GETCURSEL,0,0)!=owner.currentLine())SendMessageW(linePick,CB_SETCURSEL,owner.currentLine(),0);
+    if(GetFocus()==text)seenWord=~uint64_t{0};
+    else {
+        uint64_t word=owner.currentWord();
+        if(uint32_t(word>>32)!=owner.version())word=0;
+        if(word!=seenWord){
+            if(word){int row=int((word>>20)&15)-1;LRESULT base=SendMessageW(text,EM_LINEINDEX,row,0);
+                if(base>=0)SendMessageW(text,EM_SETSEL,WPARAM(base+((word>>10)&1023)),LPARAM(base+(word&1023)));}
+            else if(seenWord && seenWord!=~uint64_t{0})SendMessageW(text,EM_SETSEL,WPARAM(-1),0);
+            seenWord=word;
+        }
+    }
     auto check=[&](HWND h,int i){auto state=owner.control(i)>=.5 ? BST_CHECKED:BST_UNCHECKED;if(SendMessageW(h,BM_GETCHECK,0,0)!=state)SendMessageW(h,BM_SETCHECK,state,0);};
     check(unison,Unison);check(mono,Mono);check(newspeak,Newspeak);check(external,ExtInput);check(velo,Velo);check(sub,Sub);
     if(bool(IsWindowEnabled(sub))!=(owner.control(Unison)>=.5))EnableWindow(sub,owner.control(Unison)>=.5);
@@ -537,5 +560,5 @@ bool InitModule(){return true;}
 bool DeinitModule(){return true;}
 BEGIN_FACTORY_DEF("", "https://github.com/alexknip-producer/JVOICE", "")
 DEF_CLASS2(INLINE_UID_FROM_FUID(voice::classID),PClassInfo::kManyInstances,kVstAudioEffectClass,
-    "JVoice",0,"Instrument|Synth", "0.6.3",kVstVersionString,voice::Plugin::create)
+    "JVoice",0,"Instrument|Synth", "0.6.4",kVstVersionString,voice::Plugin::create)
 END_FACTORY

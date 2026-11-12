@@ -8,7 +8,7 @@ permissions:
   contents: read
 jobs:
   build:
-    runs-on: windows-latest
+    runs-on: windows-2022
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -35,7 +35,7 @@ jobs:
       - name: Upload VST3 and instructions
         uses: actions/upload-artifact@v4
         with:
-          name: JVoice-0.6.3-win-x64
+          name: JVoice-0.6.4-win-x64
           path: |
             vst3/build/JVoice.vst3
             vst3/USAGE.ru.md

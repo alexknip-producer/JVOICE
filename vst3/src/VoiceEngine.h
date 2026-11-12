@@ -23,6 +23,8 @@ void jv_render_stereo(jv_engine *, float *left64, float *right64);
 void jv_render_input(jv_engine *, const float *inputLeft64, const float *inputRight64, float *left64, float *right64);
 int jv_active(jv_engine *);
 unsigned jv_position(jv_engine *);
+/* Byte range in the transliterated line for the latest triggered word. */
+int jv_word_span(jv_engine *, unsigned *start, unsigned *end);
 #ifdef __cplusplus
 }
 #endif
