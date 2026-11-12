@@ -164,7 +164,7 @@ void jv_note_on(jv_engine *e, int channel, int note, int vel, int chord, int not
         e->ids[slot] = note_id;t->p[P_M1AMT] = (int16_t)channel;
         e->key_down[slot]=1;
         e->octave_offset[slot]=is_sub ? -12:0;
-        double formant_width=fmin(12.0,(nv-1)*.5);
+        double formant_width=fmin(2.0,(nv-1)*.5);
         e->formant_offset16[slot]=unison && nv>1 ? (int16_t)lround((1.0-2.0*sub/(nv-1))*formant_width*16):0;
         e->detune_position[slot]=unison ? (group_count==1 ? 0 : 2.0f*group_index/(group_count-1)-1) : VP[(slot-1)%8];
         e->mod_offset[slot]=unison ? (double)sub/nv:fmod((slot-1)*.6180339887498949,1.0);

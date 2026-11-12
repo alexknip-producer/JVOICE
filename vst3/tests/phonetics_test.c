@@ -60,6 +60,9 @@ int main(void) {
     {float samples[JV_BLOCK];jv_render(e,samples);assert(jv_formant_offset16==0);
      jv_control(e,30,1);jv_render(e,samples);assert(jv_formant_offset16==-32);
      jv_control(e,30,0);jv_render(e,samples);assert(jv_formant_offset16==0);}
+    jv_reset(e);jv_control(e,8,1);jv_control(e,9,1);jv_text(e,"aaaa",LG_RU);jv_note_on(e,0,60,100,0,1);
+    assert(e->formant_offset16[1]==32 && e->formant_offset16[32]==-32);
+    for(int k=1;k<=32;++k)assert(abs(e->formant_offset16[k])<=32);
     // Sub adds a layer for 1–3, then replaces up to eight layers, always
     // preserving the MIDI note for note-off and sustain of the whole stack.
     { const int counts[]={1,2,3,4,5,6,32};
