@@ -133,6 +133,13 @@ int main(){
     SendMessageW(subToggle,BM_SETCHECK,BST_CHECKED,0);SendMessageW(editor,WM_COMMAND,MAKEWPARAM(33,BN_CLICKED),0);assert(p->control(Sub)==1);
     auto monoToggle=GetDlgItem(editor,29);assert(monoToggle);SendMessageW(monoToggle,BM_SETCHECK,BST_CHECKED,0);SendMessageW(editor,WM_COMMAND,MAKEWPARAM(29,BN_CLICKED),0);assert(p->control(Mono)==1);
     ShowWindow(parent,SW_SHOW);UpdateWindow(parent);MSG msg{};
+    auto lines=GetDlgItem(editor,21);assert(lines);
+    SendMessageW(lines,CB_SHOWDROPDOWN,TRUE,0);assert(SendMessageW(lines,CB_GETDROPPEDSTATE,0,0));
+    SendMessageW(lines,CB_SETCURSEL,5,0);SendMessageW(editor,WM_TIMER,1,0);
+    assert(SendMessageW(lines,CB_GETCURSEL,0,0)==5);
+    SendMessageW(editor,WM_COMMAND,MAKEWPARAM(21,CBN_SELCHANGE),0);assert(p->currentLine()==5);
+    SendMessageW(lines,CB_SHOWDROPDOWN,FALSE,0);p->pick(3);SendMessageW(editor,WM_TIMER,1,0);
+    assert(SendMessageW(lines,CB_GETCURSEL,0,0)==3);
     auto bend=GetDlgItem(editor,27);assert(bend);
     SendMessageW(bend,CB_SHOWDROPDOWN,TRUE,0);assert(SendMessageW(bend,CB_GETDROPPEDSTATE,0,0));
     SendMessageW(bend,CB_SETCURSEL,7,0);SendMessageW(editor,WM_TIMER,1,0);

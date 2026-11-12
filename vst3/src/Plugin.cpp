@@ -496,7 +496,7 @@ void View::refresh() {
         if(value!=current){DWORD first=0,last=0;SendMessageW(text,EM_GETSEL,reinterpret_cast<WPARAM>(&first),reinterpret_cast<LPARAM>(&last));SetWindowTextW(text,value.c_str());SendMessageW(text,EM_SETSEL,first,last);}
         SendMessageW(language,CB_SETCURSEL,bank.language-1,0);seenRevision=version;loading=false;
     }
-    if(SendMessageW(linePick,CB_GETCURSEL,0,0)!=owner.currentLine())SendMessageW(linePick,CB_SETCURSEL,owner.currentLine(),0);
+    if(!SendMessageW(linePick,CB_GETDROPPEDSTATE,0,0) && SendMessageW(linePick,CB_GETCURSEL,0,0)!=owner.currentLine())SendMessageW(linePick,CB_SETCURSEL,owner.currentLine(),0);
     auto check=[&](HWND h,int i){auto state=owner.control(i)>=.5 ? BST_CHECKED:BST_UNCHECKED;if(SendMessageW(h,BM_GETCHECK,0,0)!=state)SendMessageW(h,BM_SETCHECK,state,0);};
     check(unison,Unison);check(mono,Mono);check(newspeak,Newspeak);check(external,ExtInput);check(velo,Velo);check(sub,Sub);check(formantDecouple,FormantDecouple);
     if(bool(IsWindowEnabled(sub))!=(owner.control(Unison)>=.5))EnableWindow(sub,owner.control(Unison)>=.5);
