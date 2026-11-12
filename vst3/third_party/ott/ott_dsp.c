@@ -32,9 +32,9 @@
 #define OTT_XO_LOW   88.3     /* Hz, low/mid crossover                       */
 #define OTT_XO_HIGH  2500.0   /* Hz, mid/high crossover                      */
 
-#define OTT_ATTACK_MS    5.0  /* ms, at time_scale = 1.0                     */
+#define OTT_ATTACK_MS    1.0  /* JVoice: faster response to note transients  */
 #define OTT_RELEASE_MS  50.0  /* ms, at time_scale = 1.0                     */
-#define OTT_RMS_MS       2.5  /* ms, RMS detector window (one-pole tau)      */
+#define OTT_RMS_MS       0.5  /* JVoice: detect short peaks more quickly     */
 #define OTT_KNEE_DB      6.0  /* dB, soft knee width                         */
 
 #define OTT_UP_RATIO     4.0f   /* upward base ratio (all bands)             */

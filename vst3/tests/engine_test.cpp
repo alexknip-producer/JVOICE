@@ -2,11 +2,19 @@
 #include "TextBank.h"
 #include "VoiceEngine.h"
 #include "VoiceParameters.h"
+#include "ott_dsp.h"
 #include <cassert>
 #include <cmath>
 #include <iostream>
 
 int main() {
+    // Fast onset should not burst at the old 5 ms / 2.5 ms detector level.
+    {auto* l=ott_dsp_new(44100);auto* r=ott_dsp_new(44100);assert(l && r);
+     float in[64],outL[64],outR[64];double peak=0,sumsq=0;const int start=22016;
+     for(int b=0;b<400;++b){for(int i=0;i<64;++i){int t=b*64+i;float amp=t>=start && t<start+441 ? .55f:.01f;in[i]=amp*std::sin(6.28318530718*1000*t/44100);}
+       ott_dsp_process_stereo(l,r,in,in,outL,outR,64);
+       for(int i=0;i<64;++i){int t=b*64+i;if(t>=start && t<start+221){double v=std::abs(outL[i]);peak=std::max(peak,v);sumsq+=v*v;assert(outL[i]==outR[i]);}}}
+     assert(peak<2.3 && std::sqrt(sumsq/221)<.65);ott_dsp_free(l);ott_dsp_free(r);}
     voice::Line line;
     assert(voice::makeLine(u8"Привет, ёжик! Щука и любовь",4,line));
     assert(std::string(line.original.data()) == u8"Привет, ёжик! Щука и любовь");

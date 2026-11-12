@@ -26,4 +26,5 @@ articulation engine. Original firmware files remain unchanged.
 
 Squash vendors the independent OTT-style DSP core by Rui-727 (MIT), commit
 `312e32c7d77122c083b27b64040990a50107df47`; its license is in
-`vst3/third_party/ott/LICENSE`. It is not Xfer OTT.
+`vst3/third_party/ott/LICENSE`. JVoice changes its attack to 1 ms and RMS
+detector time to 0.5 ms for quicker transient control. It is not Xfer OTT.

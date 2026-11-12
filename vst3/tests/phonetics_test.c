@@ -57,19 +57,27 @@ int main(void) {
     assert(e->mod_offset[1]==0 && e->mod_offset[2]==.5);
     // Bloom alternates positive and negative offsets across stereo positions.
     jv_reset(e);jv_control(e,8,1);jv_control(e,9,4.0/31);jv_text(e,"aaaa",LG_RU);jv_note_on(e,0,60,100,0,1);
-    {int offsets[]={192,-192,0,96,-96};for(int k=1;k<=5;++k)assert(e->formant_offset16[k]==offsets[k-1] && trk[k].v[0].note==60);}
+    {int offsets[]={192,-192,0,-192,192};for(int k=1;k<=5;++k)assert(e->formant_offset16[k]==offsets[k-1] && trk[k].v[0].note==60);}
     jv_reset(e);jv_control(e,8,1);jv_control(e,9,3.0/31);jv_text(e,"aaaa",LG_RU);jv_note_on(e,0,60,100,0,1);
     {float samples[JV_BLOCK];jv_render(e,samples);assert(jv_formant_offset16==0);
-     jv_control(e,31,1.0/6);jv_render(e,samples);assert(jv_formant_offset16==-11);
-     jv_control(e,31,1.0/3);jv_render(e,samples);assert(jv_formant_offset16==-21);
+     jv_control(e,31,1.0/6);jv_render(e,samples);assert(jv_formant_offset16==32);
+     jv_control(e,31,1.0/3);jv_render(e,samples);assert(jv_formant_offset16==64);
      jv_control(e,31,0);jv_render(e,samples);assert(jv_formant_offset16==0);}
     jv_reset(e);jv_control(e,8,1);jv_control(e,9,1);jv_text(e,"aaaa",LG_RU);jv_note_on(e,0,60,100,0,1);
-    assert(e->formant_offset16[1]==192 && e->formant_offset16[2]==-192);
-    for(int k=1;k<=32;++k)assert(abs(e->formant_offset16[k])<=192);
+    {int low=0,high=0;for(int k=1;k<=32;++k){assert(abs(e->formant_offset16[k])<=192);low|=e->formant_offset16[k]==-192;high|=e->formant_offset16[k]==192;}assert(low && high);}
     {int lp=0,ln=0,rp=0,rn=0;for(int k=1;k<=32;++k){
         if(e->pan_position[k]<0){lp+=e->formant_offset16[k]>0;ln+=e->formant_offset16[k]<0;}
         if(e->pan_position[k]>0){rp+=e->formant_offset16[k]>0;rn+=e->formant_offset16[k]<0;}}
      assert(lp && ln && rp && rn);}
+    // Each octave has the same formant shifts on matching stereo positions.
+    for(int count=4;count<=32;++count)for(int sub=0;sub<2;++sub){
+        jv_reset(e);jv_control(e,8,1);jv_control(e,9,(count-1)/31.0);jv_control(e,29,sub);
+        jv_text(e,"aaaa",LG_RU);jv_note_on(e,0,60,100,0,1);
+        int low=sub ? (count/2<8 ? count/2:8):0,main=count-low;
+        for(int g=0;g<2;++g){int first=g ? main+1:1,n=g ? low:main;
+            for(int k=0;k<n/2;++k){int a=first+k,b=first+n-1-k;
+                if(n>2 || (sub && count>2))assert(e->formant_offset16[a]==e->formant_offset16[b]);}}
+    }
     jv_reset(e);jv_control(e,31,1.0/6);jv_text(e,"aaaa",LG_RU);
     for(int k=0;k<3;++k)jv_note_on(e,0,60+k,100,k>0,k);
     assert(e->formant_offset16[1]==0 && e->formant_offset16[2]==192 && e->formant_offset16[3]==-192);

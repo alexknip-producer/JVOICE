@@ -147,16 +147,6 @@ void jv_note_on(jv_engine *e, int channel, int note, int vel, int chord, int not
     const uint32_t age=++e->age;
     static const float VP[8]={-1,1,-.5f,.5f,-.75f,.75f,-.25f,.25f};
     static const float FP[9]={0,1,-1,.5f,-.5f,.75f,-.75f,.25f,-.25f};
-    int formant_rank[32]={0};
-    if(unison && nv>1){
-        float positions[32];int order[32];
-        for(int j=0;j<nv;++j){int low=j>=main_count,n=low ? sub_count:main_count,i=low ? j-main_count:j;
-            positions[j]=n==1 ? 0:2.0f*i/(n-1)-1;order[j]=j;}
-        for(int j=1;j<nv;++j){int k=j;while(k>0 && positions[order[k]]<positions[order[k-1]]){int t=order[k];order[k]=order[k-1];order[k-1]=t;--k;}}
-        for(int j=0;j<nv;++j){int rank;if((nv&1) && j==nv/2)rank=nv/2;
-            else {int i=j-((nv&1) && j>nv/2);rank=(i&1) ? nv-1-i/2:i/2;}
-            formant_rank[order[j]]=rank;}
-    }
     for(int sub=0;sub<nv;++sub) {
         const int is_sub=sub>=main_count;
         const int group_count=is_sub ? sub_count:main_count, group_index=is_sub ? sub-main_count:sub;
@@ -181,8 +171,19 @@ void jv_note_on(jv_engine *e, int channel, int note, int vel, int chord, int not
         e->ids[slot] = note_id;t->p[P_M1AMT] = (int16_t)channel;
         e->key_down[slot]=1;
         e->octave_offset[slot]=is_sub ? -12:0;
-        int rank=formant_rank[sub];
-        e->formant_offset16[slot]=unison ? (nv>1 ? (int16_t)lround((1.0-2.0*rank/(nv-1))*12.0*16):0):(int16_t)lround(FP[(slot-1)%9]*12.0*16);
+        /* Mirror the same formant on matching stereo positions within each
+         * octave, alternating the offsets of successive pairs. */
+        int16_t formant=0;
+        if(unison && group_count>1){
+            if(group_count==2)formant=(int16_t)((sub_on && nv>2 ? (is_sub ? -1:1):(group_index ? -1:1))*192);
+            else if(group_count==3)formant=(int16_t)((group_index==1 ? -1:1)*(is_sub ? -1:1)*192);
+            else {int pairs=group_count/2;
+                if((group_count&1) && group_index==pairs)formant=0;
+                else {int pair=group_index<pairs ? group_index:group_count-1-group_index;
+                    int rank=(pair&1) ? pairs-1-pair/2:pair/2;
+                    formant=(int16_t)lround((1.0-2.0*rank/(pairs-1))*192.0);}}
+        }else if(!unison)formant=(int16_t)lround(FP[(slot-1)%9]*192.0);
+        e->formant_offset16[slot]=formant;
         e->detune_position[slot]=unison ? (group_count==1 ? 0 : 2.0f*group_index/(group_count-1)-1) : VP[(slot-1)%8];
         e->mod_offset[slot]=unison ? (double)sub/nv:fmod((slot-1)*.6180339887498949,1.0);
         e->pan_position[slot]=unison ? (group_count==1 ? 0 : 2.0f*group_index/(group_count-1)-1) : VP[(slot-1)%8];

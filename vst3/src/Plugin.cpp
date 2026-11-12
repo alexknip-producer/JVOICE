@@ -537,5 +537,5 @@ bool InitModule(){return true;}
 bool DeinitModule(){return true;}
 BEGIN_FACTORY_DEF("", "https://github.com/alexknip-producer/JVOICE", "")
 DEF_CLASS2(INLINE_UID_FROM_FUID(voice::classID),PClassInfo::kManyInstances,kVstAudioEffectClass,
-    "JVoice",0,"Instrument|Synth", "0.6.0",kVstVersionString,voice::Plugin::create)
+    "JVoice",0,"Instrument|Synth", "0.6.1",kVstVersionString,voice::Plugin::create)
 END_FACTORY
