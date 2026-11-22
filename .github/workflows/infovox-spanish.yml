@@ -1,0 +1,76 @@
+name: Infovox 230 - Spanish Male
+on:
+  push:
+    branches:
+      - tools/infovox-spanish-20261122
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  render:
+    runs-on: windows-2022
+    timeout-minutes: 15
+    steps:
+      - name: Download and install genuine Infovox 230 SAPI5
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $url = 'https://github.com/joshknnd1982/infovox230-v22-sapi5/releases/download/v1.1.2/Infovox230SAPI_Setup.exe'
+          $setup = Join-Path $env:RUNNER_TEMP 'Infovox230SAPI_Setup.exe'
+          Invoke-WebRequest -Uri $url -OutFile $setup
+          $sha = (Get-FileHash -Algorithm SHA256 $setup).Hash.ToLower()
+          Write-Output "Installer SHA256: $sha"
+          if ($sha -ne 'b436576fc2272e60fba8f04340e78afc07cfa7657dcde85adab916fe046820df') { throw 'Installer SHA256 mismatch' }
+          $p = Start-Process -FilePath $setup -ArgumentList @('/VERYSILENT','/SUPPRESSMSGBOXES','/NORESTART','/SP-','/TYPE=full') -Wait -PassThru
+          Write-Output "Installer exit code: $($p.ExitCode)"
+          if ($p.ExitCode -ne 0) { throw "Infovox installation failed: $($p.ExitCode)" }
+      - name: Render four phrases using Castilian Spanish Male
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $output = Join-Path $env:GITHUB_WORKSPACE 'Infovox_Spanish_Male_Descending.wav'
+          $sp = New-Object -ComObject SAPI.SpVoice
+          $names = @()
+          $found = $null
+          $all = $sp.GetVoices()
+          for ($i=0; $i -lt $all.Count; $i++) {
+            $v = $all.Item($i)
+            $name = [string]$v.GetDescription()
+            $names += $name
+            if ($name -match 'Infovox230' -and $name -match 'Castilian Spanish Male') { $found = $v }
+          }
+          $names | Set-Content -Encoding UTF8 (Join-Path $env:GITHUB_WORKSPACE 'voices.txt')
+          Write-Output "Voices: $($names -join '; ')"
+          if ($null -eq $found) { throw 'Infovox230 Castilian Spanish Male voice unavailable' }
+          $sp.Voice = $found
+          $sp.Rate = -1
+          $sp.Volume = 100
+          $stream = New-Object -ComObject SAPI.SpFileStream
+          $stream.Format.Type = 22
+          $stream.Open($output, 3, $false)
+          try {
+            $sp.AudioOutputStream = $stream
+            $phrase = @(
+              '\Pit=155\Música \Pit=126\electrónica'
+              '\Pit=153\Figura \Pit=126\rítmica'
+              '\Pit=150\Arte \Pit=123\política'
+              '\Pit=153\La \Pit=141\era \Pit=127\atómica'
+            )
+            $text = $phrase -join ' \Pau=380\ '
+            Write-Output "Synthesis content: $text"
+            [void]$sp.Speak($text, 0)
+            [void]$sp.WaitUntilDone(-1)
+          } finally { $stream.Close() }
+          $info = Get-Item $output
+          Write-Output "Output size: $($info.Length) bytes"
+          if ($info.Length -lt 10000) { throw 'Synthesis output too short' }
+      - name: Save output or diagnostic logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: infovox-spanish-male-result
+          path: |
+            Infovox_Spanish_Male_Descending.wav
+            voices.txt
+          if-no-files-found: warn
+          retention-days: 30
