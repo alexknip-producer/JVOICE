@@ -28,11 +28,10 @@ jobs:
           $p = Start-Process -FilePath $setup -ArgumentList @('/VERYSILENT','/SUPPRESSMSGBOXES','/NORESTART','/SP-','/TYPE=full') -Wait -PassThru
           Write-Output "Installer exit code: $($p.ExitCode)"
           if ($p.ExitCode -ne 0) { throw "Infovox installation failed: $($p.ExitCode)" }
-      - name: Render five phrases with genuine Infovox French Male
+      - name: Generate complete text natively through Infovox French Male
         shell: pwsh
         run: |
           $ErrorActionPreference = 'Stop'
-          New-Item -ItemType Directory -Path 'infovox_phrases' -Force | Out-Null
           $sp = New-Object -ComObject SAPI.SpVoice
           $found = $null
           $names = @()
@@ -46,53 +45,67 @@ jobs:
           $names | Set-Content -Encoding UTF8 'voices.txt'
           if ($null -eq $found) { throw 'Infovox230 French Male voice unavailable' }
           $sp.Voice = $found
+          $sp.Rate = 0
           $sp.Volume = 100
+          # Correct engine control syntax: every tag has its own trailing \.
+          # Pitch is the engine's \Pit tag value, NOT pitch in Hz.
+          # Single full SAPI synthesis: no trimming, time stretching or audio edits.
           $phrases = @(
-            @{ Text = 'Inspiration'; Pitch = 55 },
-            @{ Text = 'Expiration'; Pitch = 50 },
-            @{ Text = 'Contraction'; Pitch = 45 },
-            @{ Text = 'Décontraction'; Pitch = 40 },
-            @{ Text = 'La forme'; Pitch = 35 }
+            @{Text='Inspiration'; Pitch=130},
+            @{Text='Expiration'; Pitch=112},
+            @{Text='Contraction'; Pitch=95},
+            @{Text='Décontraction'; Pitch=80},
+            @{Text='La forme'; Pitch=70}
           )
-          $i = 0
-          foreach ($phrase in $phrases) {
-            $filename = Join-Path $env:GITHUB_WORKSPACE ('infovox_phrases/phrase_{0:d2}.wav' -f ($i + 1))
-            $stream = New-Object -ComObject SAPI.SpFileStream
-            $stream.Format.Type = 22
-            $stream.Open($filename, 3, $false)
-            try {
-              $sp.AudioOutputStream = $stream
-              $utterance = '\Pit={0}\Spd=30\{1}' -f $phrase.Pitch, $phrase.Text
-              Write-Output "Infovox French Male: $utterance"
-              [void]$sp.Speak($utterance, 0)
-              [void]$sp.WaitUntilDone(-1)
-            } finally {
-              $stream.Close()
+          $speed = 40
+          $parts = @()
+          for ($i=0; $i -lt $phrases.Count; $i++) {
+            if ($i -gt 0) {
+              $parts += ('\Pau=850\')
             }
-            $bytes = (Get-Item $filename).Length
-            Write-Output "Phrase $($i + 1) output: $bytes bytes"
-            if ($bytes -lt 1000) { throw "Phrase $($i + 1) output unexpectedly short" }
-            $i++
+            # Full \Spd=40\ and \Pit=N\ closures; no spoken "espidé" or "pitch".
+            $parts += ('\Spd={0}\\Pit={1}\{2}' -f $speed, $phrases[$i].Pitch, $phrases[$i].Text)
           }
-      - name: Assemble phrases and verify WAV
+          $utterance = $parts -join ' '
+          Write-Output "Synthesizing native Infovox text:"
+          Write-Output $utterance
+          $output = Join-Path $env:GITHUB_WORKSPACE 'Infovox_French_Male_Slow_Descending_FIXED.wav'
+          $stream = New-Object -ComObject SAPI.SpFileStream
+          $stream.Format.Type = 22
+          $stream.Open($output, 3, $false)
+          try {
+            $sp.AudioOutputStream = $stream
+            [void]$sp.Speak($utterance, 0)
+            [void]$sp.WaitUntilDone(-1)
+          } finally {
+            $stream.Close()
+          }
+          $bytes = (Get-Item $output).Length
+          Write-Output "Fresh Infovox output: $bytes bytes"
+          if ($bytes -lt 20000) { throw 'Infovox render unexpectedly short' }
+          $report = @(
+            'Genuine Infovox230 French Male'
+            'New synthesis from text, no source audio processing'
+            'Speed 40 (Infovox \Spd tag)'
+            'Pitch tag values 130,112,95,80,70 (lowest La forme)'
+            'Five phrases, pause 850ms between phrases'
+            "WAV bytes: $bytes"
+            "Exact text: $utterance"
+          )
+          $report | Set-Content -Encoding UTF8 'render_report.txt'
+      - name: Verify freshly synthesized WAV duration
         shell: pwsh
         run: |
           $ErrorActionPreference = 'Stop'
-          python -m pip install --disable-pip-version-check numpy soundfile
-          python tools/infovox_french_phrase_mix.py
-          if (!(Test-Path 'Infovox_French_Male_Slow_Descending.wav')) { throw 'No final WAV' }
-          $final = Get-Item 'Infovox_French_Male_Slow_Descending.wav'
-          Write-Output "Final WAV: $($final.Length) bytes"
-          if ($final.Length -lt 20000) { throw 'Final WAV unexpectedly short' }
+          python -c "import wave; f='Infovox_French_Male_Slow_Descending_FIXED.wav'; w=wave.open(f,'rb'); d=w.getnframes()/w.getframerate(); print('Infovox WAV:', w.getframerate(), 'Hz,', round(d,2), 'seconds'); assert d>6.0; w.close()"
       - name: Save genuine Infovox render
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: infovox-french-male-slow-descending
+          name: infovox-french-male-slow-descending-fixed
           path: |
-            Infovox_French_Male_Slow_Descending.wav
+            Infovox_French_Male_Slow_Descending_FIXED.wav
             render_report.txt
             voices.txt
-            infovox_phrases/*.wav
           if-no-files-found: warn
           retention-days: 30
