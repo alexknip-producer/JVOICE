@@ -49,13 +49,13 @@ jobs:
           $sp.Volume = 100
           # Each control tag must be fully delimited, and tags separated by spaces
           # so the opening backslash of the next tag is not a doubled backslash.
-          # Pitch=85 for the first FOUR phrases; only "La forme" drops to 62.
+          # Pitch=50 for the first FOUR phrases; only "La forme" drops to 62.
           $phrases = @(
-            @{Text='Inspiration'; Pitch=85},
-            @{Text='Expiration'; Pitch=85},
-            @{Text='Contraction'; Pitch=85},
-            @{Text='Décontraction'; Pitch=85},
-            @{Text='La forme'; Pitch=62}
+            @{Text='Inspiration'; Pitch=50},
+            @{Text='Expiration'; Pitch=50},
+            @{Text='Contraction'; Pitch=50},
+            @{Text='Décontraction'; Pitch=50},
+            @{Text='La forme'; Pitch=33}
           )
           $speed = 58
           $parts = @()
@@ -67,7 +67,7 @@ jobs:
           }
           $utterance = $parts -join ' '
           Write-Output "Infovox original synthesis text: $utterance"
-          $output = Join-Path $env:GITHUB_WORKSPACE 'Infovox_French_Male_Low_Final_Lower.wav'
+          $output = Join-Path $env:GITHUB_WORKSPACE 'Infovox_French_Male_Deep_Last_Lower.wav'
           $stream = New-Object -ComObject SAPI.SpFileStream
           $stream.Format.Type = 22
           $stream.Open($output, 3, $false)
@@ -82,8 +82,8 @@ jobs:
           if ($bytes -lt 20000) { throw 'Synthesized WAV unexpectedly short' }
           $report = @(
             'Infovox 230 French Male: newly synthesized, no audio processing'
-            'Pitch of first four phrases: 85 (Infovox Pit tag)'
-            'Pitch of last phrase: 62'
+            'Pitch of first four phrases: 50 (Infovox Pit tag)'
+            'Pitch of last phrase: 33'
             'Speed all phrases: 58 (prior 40)'
             'Between-phrase pauses: 650 ms'
             "Output: $bytes bytes"
@@ -94,14 +94,14 @@ jobs:
         shell: pwsh
         run: |
           $ErrorActionPreference = 'Stop'
-          python -c "import wave; f='Infovox_French_Male_Low_Final_Lower.wav'; w=wave.open(f,'rb'); d=w.getnframes()/w.getframerate(); print('Infovox WAV:', w.getframerate(), 'Hz,', round(d,2), 'seconds'); assert d>6.0; w.close()"
+          python -c "import wave; f='Infovox_French_Male_Deep_Last_Lower.wav'; w=wave.open(f,'rb'); d=w.getnframes()/w.getframerate(); print('Infovox WAV:', w.getframerate(), 'Hz,', round(d,2), 'seconds'); assert d>6.0; w.close()"
       - name: Save genuine Infovox render
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: infovox-french-male-low-last-phrase
+          name: infovox-french-male-deep-last-phrase
           path: |
-            Infovox_French_Male_Low_Final_Lower.wav
+            Infovox_French_Male_Deep_Last_Lower.wav
             render_report.txt
             voices.txt
           if-no-files-found: warn
