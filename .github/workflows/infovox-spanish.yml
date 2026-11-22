@@ -11,6 +11,10 @@ jobs:
     runs-on: windows-2022
     timeout-minutes: 15
     steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
       - name: Download and install genuine Infovox 230 SAPI5
         shell: pwsh
         run: |
@@ -24,14 +28,14 @@ jobs:
           $p = Start-Process -FilePath $setup -ArgumentList @('/VERYSILENT','/SUPPRESSMSGBOXES','/NORESTART','/SP-','/TYPE=full') -Wait -PassThru
           Write-Output "Installer exit code: $($p.ExitCode)"
           if ($p.ExitCode -ne 0) { throw "Infovox installation failed: $($p.ExitCode)" }
-      - name: Render four phrases using Castilian Spanish Male
+      - name: Render Infovox 230 words (authentic Castilian Spanish Male)
         shell: pwsh
         run: |
           $ErrorActionPreference = 'Stop'
-          $output = Join-Path $env:GITHUB_WORKSPACE 'Infovox_Spanish_Male_Descending.wav'
+          New-Item -ItemType Directory -Path 'infovox_words' -Force | Out-Null
           $sp = New-Object -ComObject SAPI.SpVoice
-          $names = @()
           $found = $null
+          $names = @()
           $all = $sp.GetVoices()
           for ($i=0; $i -lt $all.Count; $i++) {
             $v = $all.Item($i)
@@ -39,38 +43,42 @@ jobs:
             $names += $name
             if ($name -match 'Infovox230' -and $name -match 'Castilian Spanish Male') { $found = $v }
           }
-          $names | Set-Content -Encoding UTF8 (Join-Path $env:GITHUB_WORKSPACE 'voices.txt')
-          Write-Output "Voices: $($names -join '; ')"
+          $names | Set-Content -Encoding UTF8 'voices.txt'
           if ($null -eq $found) { throw 'Infovox230 Castilian Spanish Male voice unavailable' }
           $sp.Voice = $found
           $sp.Rate = -1
           $sp.Volume = 100
-          $stream = New-Object -ComObject SAPI.SpFileStream
-          $stream.Format.Type = 22
-          $stream.Open($output, 3, $false)
-          try {
-            $sp.AudioOutputStream = $stream
-            $phrase = @(
-              '\Pit=155\Música \Pit=126\electrónica'
-              '\Pit=153\Figura \Pit=126\rítmica'
-              '\Pit=150\Arte \Pit=123\política'
-              '\Pit=153\La \Pit=141\era \Pit=127\atómica'
-            )
-            $text = $phrase -join ' \Pau=380\ '
-            Write-Output "Synthesis content: $text"
-            [void]$sp.Speak($text, 0)
-            [void]$sp.WaitUntilDone(-1)
-          } finally { $stream.Close() }
-          $info = Get-Item $output
-          Write-Output "Output size: $($info.Length) bytes"
-          if ($info.Length -lt 10000) { throw 'Synthesis output too short' }
+          $words = @('Música','electrónica','Figura','rítmica','Arte','política','La','era','atómica')
+          for ($i=0; $i -lt $words.Count; $i++) {
+            $filename = 'infovox_words/word_{0:d2}.wav' -f $i
+            $stream = New-Object -ComObject SAPI.SpFileStream
+            $stream.Format.Type = 22
+            $stream.Open((Join-Path $env:GITHUB_WORKSPACE $filename), 3, $false)
+            try {
+              $sp.AudioOutputStream = $stream
+              [void]$sp.Speak($words[$i], 0)
+              [void]$sp.WaitUntilDone(-1)
+            } finally {
+              $stream.Close()
+            }
+            $b = (Get-Item $filename).Length
+            Write-Output "Infovox $i '$($words[$i])': $b bytes"
+            if ($b -lt 1500) { throw "Word $i output unexpectedly short" }
+          }
+      - name: Apply falling pitch to each word and slow by one-third
+        shell: pwsh
+        run: |
+          python -m pip install --disable-pip-version-check numpy soundfile praat-parselmouth
+          python tools/infovox_spanish_wordfalls.py
+          if (!(Test-Path 'Infovox_Spanish_Male_Wordfalls_Slower.wav')) { throw 'No final WAV' }
       - name: Save output or diagnostic logs
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: infovox-spanish-male-result
+          name: infovox-spanish-male-wordfalls
           path: |
-            Infovox_Spanish_Male_Descending.wav
+            Infovox_Spanish_Male_Wordfalls_Slower.wav
+            render_report.txt
             voices.txt
           if-no-files-found: warn
           retention-days: 30
